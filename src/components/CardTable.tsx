@@ -3,14 +3,19 @@ import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSett
 import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 import { compareCompanies } from '../gradingCalculator';
+import type { LookupStatus } from '../priceLookup';
 
 interface Props {
   cards: GradingCard[];
   calculations: CardCalculation[];
   settings: AppSettings;
+  lookupStatuses: Map<string, LookupStatus>;
   onUpdateCard: (id: string, updates: Partial<GradingCard>) => void;
   onDeleteCard: (id: string) => void;
   onAddCard: () => void;
+  onLookupCard: (card: GradingCard) => void;
+  onLookupAll: () => void;
+  lookupInProgress: boolean;
 }
 
 function fmt(n: number): string {
@@ -23,7 +28,10 @@ function fmtMult(n: number): string {
   return `${n >= 0 ? '+' : ''}${n.toFixed(2)}x`;
 }
 
-export default function CardTable({ cards, calculations, settings, onUpdateCard, onDeleteCard, onAddCard }: Props) {
+export default function CardTable({
+  cards, calculations, settings, lookupStatuses,
+  onUpdateCard, onDeleteCard, onAddCard, onLookupCard, onLookupAll, lookupInProgress,
+}: Props) {
   const [search, setSearch] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -55,6 +63,8 @@ export default function CardTable({ cards, calculations, settings, onUpdateCard,
     });
   };
 
+  const cardsWithNames = cards.filter((c) => c.cardName.trim());
+
   return (
     <div>
       <div className="table-controls">
@@ -68,6 +78,23 @@ export default function CardTable({ cards, calculations, settings, onUpdateCard,
         <button className="btn-add-card" onClick={onAddCard}>
           + Add Card
         </button>
+        {cardsWithNames.length > 0 && (
+          <button
+            className="btn-lookup-all"
+            onClick={onLookupAll}
+            disabled={lookupInProgress}
+            title="Fetch prices from PriceCharting for all cards"
+          >
+            {lookupInProgress ? (
+              <>
+                <span className="lookup-spinner" />
+                Looking up...
+              </>
+            ) : (
+              'Lookup All Prices'
+            )}
+          </button>
+        )}
       </div>
 
       <div className="table-wrapper">
@@ -121,6 +148,7 @@ export default function CardTable({ cards, calculations, settings, onUpdateCard,
             {filteredCards.map((card) => {
               const calc = calcMap.get(card.id);
               const gradeResults = calc ? new Map(calc.grades.map((g) => [g.grade, g])) : new Map();
+              const lookupStatus = lookupStatuses.get(card.id);
 
               return (
                 <CardRow
@@ -129,10 +157,12 @@ export default function CardTable({ cards, calculations, settings, onUpdateCard,
                   gradeResults={gradeResults}
                   settings={settings}
                   expanded={expandedRows.has(card.id)}
+                  lookupStatus={lookupStatus}
                   onToggleExpand={() => toggleExpand(card.id)}
                   onUpdate={(updates) => onUpdateCard(card.id, updates)}
                   onUpdateGrade={(grade, value) => updateGradeValue(card.id, card, grade, value)}
                   onDelete={() => onDeleteCard(card.id)}
+                  onLookup={() => onLookupCard(card)}
                 />
               );
             })}
@@ -154,13 +184,15 @@ interface CardRowProps {
   gradeResults: Map<GradeNumber, { grade: GradeNumber; expectedPrice: number; gradingFee: number; upcharge: number; totalCost: number; profit: number; multiplier: number }>;
   settings: AppSettings;
   expanded: boolean;
+  lookupStatus?: LookupStatus;
   onToggleExpand: () => void;
   onUpdate: (updates: Partial<GradingCard>) => void;
   onUpdateGrade: (grade: GradeNumber, value: number) => void;
   onDelete: () => void;
+  onLookup: () => void;
 }
 
-function CardRow({ card, gradeResults, settings, expanded, onToggleExpand, onUpdate, onUpdateGrade, onDelete }: CardRowProps) {
+function CardRow({ card, gradeResults, settings, expanded, lookupStatus, onToggleExpand, onUpdate, onUpdateGrade, onDelete, onLookup }: CardRowProps) {
   const effectiveCompany = card.noGrading ? null : (card.company ?? settings.defaultCompany);
 
   return (
@@ -177,12 +209,36 @@ function CardRow({ card, gradeResults, settings, expanded, onToggleExpand, onUpd
 
         {/* Card Name */}
         <td>
-          <input
-            className="cell-input cell-input--name"
-            value={card.cardName}
-            onChange={(e) => onUpdate({ cardName: e.target.value })}
-            placeholder="Card name"
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <input
+              className="cell-input cell-input--name"
+              value={card.cardName}
+              onChange={(e) => onUpdate({ cardName: e.target.value })}
+              placeholder="Card name"
+            />
+            {lookupStatus?.status === 'done' && lookupStatus.result?.url && (
+              <a
+                href={lookupStatus.result.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="lookup-link"
+                title={`Matched: ${lookupStatus.result.matchedTitle || 'View on PriceCharting'}`}
+              >
+                PC
+              </a>
+            )}
+          </div>
+          {lookupStatus?.status === 'done' && lookupStatus.result?.matchedTitle && (
+            <div className="lookup-matched" title={lookupStatus.result.matchedTitle}>
+              Matched: {lookupStatus.result.matchedTitle}
+            </div>
+          )}
+          {lookupStatus?.status === 'error' && (
+            <div className="lookup-error">{lookupStatus.error}</div>
+          )}
+          {lookupStatus?.status === 'not-found' && (
+            <div className="lookup-error">No prices found</div>
+          )}
         </td>
 
         {/* Game */}
@@ -347,6 +403,16 @@ function CardRow({ card, gradeResults, settings, expanded, onToggleExpand, onUpd
 
         {/* Actions */}
         <td className="td-center row-actions">
+          <button
+            className="row-action-btn"
+            onClick={onLookup}
+            disabled={!card.cardName.trim() || lookupStatus?.status === 'loading'}
+            title="Lookup prices on PriceCharting"
+          >
+            {lookupStatus?.status === 'loading' ? (
+              <span className="lookup-spinner" />
+            ) : '🔍'}
+          </button>
           <button
             className="row-action-btn row-action-btn--delete"
             onClick={onDelete}
