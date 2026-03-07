@@ -3,6 +3,8 @@ import type { GradingCard, GradingCompany, AppSettings } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
+import { lookupCard, lookupBatch, applyPricesToCard } from './priceLookup';
+import type { LookupStatus } from './priceLookup';
 import FileDropZone from './components/FileDropZone';
 import CompanySelector from './components/CompanySelector';
 import CardTable from './components/CardTable';
@@ -31,6 +33,8 @@ export default function App() {
   const [cards, setCards] = useState<GradingCard[]>(loadCards);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [errors, setErrors] = useState<string[]>([]);
+  const [lookupStatuses, setLookupStatuses] = useState<Map<string, LookupStatus>>(new Map());
+  const [lookupInProgress, setLookupInProgress] = useState(false);
 
   // Persist
   useEffect(() => { localStorage.setItem(STORAGE_CARDS, JSON.stringify(cards)); }, [cards]);
@@ -120,14 +124,85 @@ export default function App() {
     ? settings.defaultServiceLevel[settings.defaultCompany]
     : '';
 
+  // ───── Price Lookup ─────
+
+  const handleLookupCard = useCallback(async (card: GradingCard) => {
+    if (!card.cardName.trim()) return;
+
+    setLookupStatuses((prev) => {
+      const next = new Map(prev);
+      next.set(card.id, { cardId: card.id, status: 'loading' });
+      return next;
+    });
+
+    try {
+      const result = await lookupCard(card);
+
+      if (result.raw === 0 && result.grade9 === 0 && result.psa10 === 0) {
+        setLookupStatuses((prev) => {
+          const next = new Map(prev);
+          next.set(card.id, { cardId: card.id, status: 'not-found', result });
+          return next;
+        });
+      } else {
+        // Apply prices to card
+        const updates = applyPricesToCard(card, result);
+        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, ...updates } : c)));
+
+        setLookupStatuses((prev) => {
+          const next = new Map(prev);
+          next.set(card.id, { cardId: card.id, status: 'done', result });
+          return next;
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Lookup failed';
+      setLookupStatuses((prev) => {
+        const next = new Map(prev);
+        next.set(card.id, { cardId: card.id, status: 'error', error: message });
+        return next;
+      });
+    }
+  }, []);
+
+  const handleLookupAll = useCallback(async () => {
+    const cardsToLookup = cards.filter((c) => c.cardName.trim());
+    if (cardsToLookup.length === 0) return;
+
+    setLookupInProgress(true);
+
+    await lookupBatch(cardsToLookup, (status) => {
+      setLookupStatuses((prev) => {
+        const next = new Map(prev);
+        next.set(status.cardId, status);
+        return next;
+      });
+
+      // If we got results, apply them
+      if (status.status === 'done' && status.result) {
+        const result = status.result;
+        setCards((prev) =>
+          prev.map((c) => {
+            if (c.id !== status.cardId) return c;
+            const updates = applyPricesToCard(c, result);
+            return { ...c, ...updates };
+          })
+        );
+      }
+    });
+
+    setLookupInProgress(false);
+  }, [cards]);
+
   return (
     <div className="app">
       <SettingsPanel settings={settings} onUpdate={setSettings} />
 
       <header className="app-header">
+        <img src="/logo.svg" alt="Grading Calculator Logo" className="app-logo" />
         <h1 className="app-title">Grading Calculator</h1>
         <p className="app-byline">by BlissVibes</p>
-        <p className="app-version">v0.1.0</p>
+        <p className="app-version">v0.1.1</p>
         <p className="app-subtitle">
           Calculate grading profits, fees & upcharges for PSA, TAG, Beckett, ARS, and CGC
         </p>
@@ -173,9 +248,13 @@ export default function App() {
           cards={cards}
           calculations={calculations}
           settings={settings}
+          lookupStatuses={lookupStatuses}
           onUpdateCard={updateCard}
           onDeleteCard={deleteCard}
           onAddCard={addCard}
+          onLookupCard={handleLookupCard}
+          onLookupAll={handleLookupAll}
+          lookupInProgress={lookupInProgress}
         />
 
         {/* Company Comparison */}

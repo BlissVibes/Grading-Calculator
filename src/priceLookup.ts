@@ -1,0 +1,204 @@
+import type { GradingCard, GradeNumber } from './types';
+
+// ───── Types ─────
+
+export interface PriceLookupResult {
+  raw: number;
+  grade7: number;
+  grade8: number;
+  grade9: number;
+  grade9_5: number;
+  psa10: number;
+  url: string;
+  matchedTitle?: string;
+  allResults?: { title: string; url: string }[];
+}
+
+export interface LookupStatus {
+  cardId: string;
+  status: 'pending' | 'loading' | 'done' | 'error' | 'not-found';
+  result?: PriceLookupResult;
+  error?: string;
+}
+
+// ───── API Base URL ─────
+// In development, Vercel dev serves API routes from the same origin.
+// In production, the API is at the same domain.
+// For local dev without Vercel, we fall back to a CORS proxy approach.
+
+function getApiBase(): string {
+  // If running on Vercel (production or preview), API is same origin
+  if (window.location.hostname.includes('vercel.app') || window.location.hostname === 'localhost') {
+    return '';
+  }
+  // GitHub Pages or other static hosts can't call /api directly
+  // User would need to set a custom API URL in that case
+  return localStorage.getItem('gc_api_base') || '';
+}
+
+// ───── Rate Limiter ─────
+// PriceCharting is polite at ~1 req/sec. We use 1.2s gap to be safe.
+
+class RateLimiter {
+  private queue: (() => Promise<void>)[] = [];
+  private running = false;
+  private delayMs: number;
+
+  constructor(delayMs = 1200) {
+    this.delayMs = delayMs;
+  }
+
+  async enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await fn();
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      });
+      this.processQueue();
+    });
+  }
+
+  private async processQueue() {
+    if (this.running) return;
+    this.running = true;
+
+    while (this.queue.length > 0) {
+      const task = this.queue.shift()!;
+      await task();
+      if (this.queue.length > 0) {
+        await new Promise((r) => setTimeout(r, this.delayMs));
+      }
+    }
+
+    this.running = false;
+  }
+
+  clear() {
+    this.queue = [];
+  }
+}
+
+const limiter = new RateLimiter(1200);
+
+// ───── Query Builder ─────
+// Build the best search query from card data
+
+function buildQuery(card: GradingCard): string {
+  const parts: string[] = [];
+
+  // Card name is most important
+  if (card.cardName) {
+    // Clean up common suffixes that might confuse search
+    let name = card.cardName
+      .replace(/\s*\(.*?\)\s*/g, ' ')  // remove parenthetical info
+      .replace(/\s+/g, ' ')
+      .trim();
+    parts.push(name);
+  }
+
+  // Card number helps disambiguate
+  if (card.cardNumber) {
+    parts.push(card.cardNumber);
+  }
+
+  // Set name for context
+  if (card.set) {
+    parts.push(card.set);
+  }
+
+  return parts.join(' ');
+}
+
+// ───── Single Card Lookup ─────
+
+export async function lookupCard(card: GradingCard): Promise<PriceLookupResult> {
+  const query = buildQuery(card);
+  if (!query) throw new Error('No card name to search for');
+
+  const apiBase = getApiBase();
+  const url = `${apiBase}/api/price-lookup?q=${encodeURIComponent(query)}`;
+
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => ({}));
+    throw new Error(data.error || `Lookup failed: ${resp.status}`);
+  }
+
+  return resp.json();
+}
+
+// ───── Apply Prices to Card ─────
+
+export function applyPricesToCard(
+  card: GradingCard,
+  prices: PriceLookupResult,
+): Partial<GradingCard> {
+  const gradeValues: Partial<Record<GradeNumber, number>> = { ...card.gradeValues };
+
+  // Only fill in values that are > 0 from PriceCharting
+  // and don't overwrite user-entered values unless they're 0
+  if (prices.raw > 0 && !card.rawPrice) {
+    // rawPrice field
+  }
+  if (prices.grade9 > 0) gradeValues[9] = prices.grade9;
+  if (prices.psa10 > 0) gradeValues[10] = prices.psa10;
+  if (prices.grade9_5 > 0) gradeValues[9.5] = prices.grade9_5;
+  if (prices.grade8 > 0) gradeValues[8] = prices.grade8;
+  if (prices.grade7 > 0) gradeValues[7] = prices.grade7;
+
+  return {
+    rawPrice: prices.raw > 0 ? prices.raw : card.rawPrice,
+    gradeValues,
+  };
+}
+
+// ───── Batch Lookup with Rate Limiting ─────
+
+export async function lookupBatch(
+  cards: GradingCard[],
+  onProgress: (status: LookupStatus) => void,
+): Promise<void> {
+  // Clear any pending lookups
+  limiter.clear();
+
+  for (const card of cards) {
+    if (!card.cardName) {
+      onProgress({ cardId: card.id, status: 'error', error: 'No card name' });
+      continue;
+    }
+
+    onProgress({ cardId: card.id, status: 'loading' });
+
+    try {
+      const result = await limiter.enqueue(() => lookupCard(card));
+
+      if (result.raw === 0 && result.grade9 === 0 && result.psa10 === 0) {
+        onProgress({ cardId: card.id, status: 'not-found', result });
+      } else {
+        onProgress({ cardId: card.id, status: 'done', result });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Lookup failed';
+      onProgress({ cardId: card.id, status: 'error', error: message });
+    }
+  }
+}
+
+// ───── Fetch from specific PriceCharting URL ─────
+
+export async function lookupByPath(path: string): Promise<PriceLookupResult> {
+  const apiBase = getApiBase();
+  const url = `${apiBase}/api/price-lookup?mode=prices&path=${encodeURIComponent(path)}`;
+
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => ({}));
+    throw new Error(data.error || `Lookup failed: ${resp.status}`);
+  }
+
+  return resp.json();
+}

@@ -58,6 +58,21 @@ body { min-height: 100vh; }
 
 .app-header { text-align: center; padding: 32px 0 40px; }
 
+.app-logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 4px 12px rgba(204, 0, 0, 0.4));
+  animation: logo-spin 20s linear infinite;
+  animation-play-state: paused;
+}
+.app-logo:hover { animation-play-state: running; }
+
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .app-title {
   font-size: 2rem;
   font-weight: 700;
@@ -279,6 +294,43 @@ body { min-height: 100vh; }
   white-space: nowrap;
 }
 .btn-add-card:hover { background: var(--accent-hover); }
+
+/* ===== Lookup Button & Status ===== */
+.btn-lookup-all {
+  padding: 7px 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--neutral); background: transparent;
+  color: var(--neutral); font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-lookup-all:hover { background: var(--neutral); color: #000; }
+.btn-lookup-all:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-lookup-all:disabled:hover { background: transparent; color: var(--neutral); }
+
+.lookup-spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid transparent; border-top-color: currentColor;
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.lookup-link {
+  display: inline-block; padding: 1px 5px; border-radius: 3px;
+  font-size: 0.65rem; font-weight: 700; text-decoration: none;
+  background: rgba(230, 184, 0, 0.15); color: var(--neutral);
+  white-space: nowrap; flex-shrink: 0;
+}
+.lookup-link:hover { opacity: 0.7; }
+
+.lookup-matched {
+  font-size: 0.7rem; color: var(--text-muted); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.lookup-error {
+  font-size: 0.7rem; color: var(--loss); margin-top: 1px;
+}
 
 /* ===== Card Table ===== */
 .table-wrapper {
