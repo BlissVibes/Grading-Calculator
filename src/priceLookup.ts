@@ -90,13 +90,9 @@ const limiter = new RateLimiter(1200);
 function buildQuery(card: GradingCard): string {
   const parts: string[] = [];
 
-  // Card name is most important
+  // Card name is most important — preserve parenthetical info like (Full Art), (JP)
   if (card.cardName) {
-    // Clean up common suffixes that might confuse search
-    let name = card.cardName
-      .replace(/\s*\(.*?\)\s*/g, ' ')  // remove parenthetical info
-      .replace(/\s+/g, ' ')
-      .trim();
+    const name = card.cardName.replace(/\s+/g, ' ').trim();
     parts.push(name);
   }
 
@@ -108,6 +104,18 @@ function buildQuery(card: GradingCard): string {
   // Set name for context
   if (card.set) {
     parts.push(card.set);
+  }
+
+  // Card game helps disambiguate on PriceCharting (e.g. "pokemon" prefix)
+  if (card.cardGame) {
+    // PriceCharting uses simplified game names
+    const gameMap: Record<string, string> = {
+      'Pokémon': 'pokemon',
+      'Magic: The Gathering': 'magic the gathering',
+      'Yu-Gi-Oh!': 'yugioh',
+    };
+    const mapped = gameMap[card.cardGame];
+    if (mapped) parts.unshift(mapped);
   }
 
   return parts.join(' ');
