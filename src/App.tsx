@@ -81,6 +81,7 @@ export default function App() {
       quantity: 1,
       company: settings.defaultCompany,
       serviceLevel: null,
+      noGrading: false,
       scoring: false,
       notes: '',
       source: 'manual',

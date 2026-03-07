@@ -161,16 +161,18 @@ interface CardRowProps {
 }
 
 function CardRow({ card, gradeResults, settings, expanded, onToggleExpand, onUpdate, onUpdateGrade, onDelete }: CardRowProps) {
-  const effectiveCompany = card.company ?? settings.defaultCompany;
+  const effectiveCompany = card.noGrading ? null : (card.company ?? settings.defaultCompany);
 
   return (
     <>
-      <tr>
+      <tr style={card.noGrading ? { opacity: 0.5 } : undefined}>
         {/* Expand */}
         <td>
-          <button className="expand-btn" onClick={onToggleExpand} title="Compare companies">
-            {expanded ? '▼' : '▶'}
-          </button>
+          {!card.noGrading && (
+            <button className="expand-btn" onClick={onToggleExpand} title="Compare companies">
+              {expanded ? '▼' : '▶'}
+            </button>
+          )}
         </td>
 
         {/* Card Name */}
@@ -270,6 +272,7 @@ function CardRow({ card, gradeResults, settings, expanded, onToggleExpand, onUpd
 
         {/* Profit columns */}
         {settings.visibleGrades.map((g) => {
+          if (card.noGrading) return <td key={`profit-${g}`} className="td-center profit-zero">—</td>;
           const result = gradeResults.get(g);
           const profit = result?.profit ?? 0;
           const cls = profit > 0 ? 'profit-positive' : profit < 0 ? 'profit-negative' : 'profit-zero';
@@ -282,6 +285,7 @@ function CardRow({ card, gradeResults, settings, expanded, onToggleExpand, onUpd
 
         {/* Multiplier columns */}
         {settings.visibleGrades.map((g) => {
+          if (card.noGrading) return <td key={`mult-${g}`} className="td-center"><span className="multiplier multiplier--neutral">—</span></td>;
           const result = gradeResults.get(g);
           const mult = result?.multiplier ?? 0;
           const cls = mult > 0 ? 'multiplier--positive' : mult < 0 ? 'multiplier--negative' : 'multiplier--neutral';
@@ -296,15 +300,22 @@ function CardRow({ card, gradeResults, settings, expanded, onToggleExpand, onUpd
         <td className="td-center">
           <select
             className="company-cell-select"
-            value={card.company ?? ''}
-            onChange={(e) => onUpdate({ company: (e.target.value || null) as GradingCompany | null })}
+            value={card.noGrading ? '__none' : (card.company ?? '')}
+            onChange={(e) => {
+              if (e.target.value === '__none') {
+                onUpdate({ noGrading: true, company: null, serviceLevel: null });
+              } else {
+                onUpdate({ noGrading: false, company: (e.target.value || null) as GradingCompany | null });
+              }
+            }}
           >
             <option value="">Default{settings.defaultCompany ? ` (${settings.defaultCompany})` : ''}</option>
             {GRADING_COMPANIES.map((c) => (
               <option key={c} value={c}>{COMPANY_LABELS[c]}</option>
             ))}
+            <option value="__none">No Grading</option>
           </select>
-          {effectiveCompany && (
+          {effectiveCompany && !card.noGrading && (
             <select
               className="company-cell-select"
               value={card.serviceLevel ?? ''}
@@ -347,7 +358,7 @@ function CardRow({ card, gradeResults, settings, expanded, onToggleExpand, onUpd
       </tr>
 
       {/* Inline comparison */}
-      {expanded && (
+      {expanded && !card.noGrading && (
         <InlineComparison card={card} settings={settings} />
       )}
     </>

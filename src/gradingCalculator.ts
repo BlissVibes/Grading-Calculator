@@ -39,7 +39,10 @@ function getScoringFee(company: GradingCompany, scoring: boolean): number {
 export function calculateCard(
   card: GradingCard,
   settings: AppSettings,
-): CardCalculation {
+): CardCalculation | null {
+  // Cards marked "No Grading" are excluded from calculations
+  if (card.noGrading) return null;
+
   const company = card.company ?? settings.defaultCompany ?? 'PSA';
   const serviceLevelId = card.serviceLevel ?? settings.defaultServiceLevel[company];
 
@@ -79,7 +82,9 @@ export function calculateAll(
   cards: GradingCard[],
   settings: AppSettings,
 ): CardCalculation[] {
-  return cards.map((card) => calculateCard(card, settings));
+  return cards
+    .map((card) => calculateCard(card, settings))
+    .filter((c): c is CardCalculation => c !== null);
 }
 
 // ───── Company Comparison ─────
@@ -132,6 +137,7 @@ export function compareBatchCompanies(
     let count = 0;
 
     for (const card of cards) {
+      if (card.noGrading) continue;
       const expectedPrice = card.gradeValues[grade] ?? 0;
       if (expectedPrice === 0) continue;
 

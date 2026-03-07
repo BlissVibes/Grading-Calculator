@@ -104,6 +104,7 @@ function makeCard(overrides: Partial<GradingCard>): GradingCard {
     quantity: 1,
     company: null,
     serviceLevel: null,
+    noGrading: false,
     scoring: false,
     notes: '',
     source: 'import',
