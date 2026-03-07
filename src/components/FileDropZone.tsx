@@ -59,10 +59,19 @@ export default function FileDropZone({ onImport }: Props) {
         </div>
       </div>
 
+      {/* Explicit button for mobile – some browsers don't forward clicks from divs to hidden inputs */}
+      <button
+        className="drop-zone__paste-btn drop-zone__paste-btn--primary"
+        style={{ marginTop: 12, width: '100%' }}
+        onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+      >
+        Choose File
+      </button>
+
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,.txt"
+        accept=".csv,.txt,text/csv,text/plain,application/vnd.ms-excel"
         multiple
         style={{ display: 'none' }}
         onChange={(e) => {
