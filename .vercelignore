@@ -1,10 +1,5 @@
 .git
 .github
-node_modules
-src
-tsconfig.json
-tsconfig.app.json
-vite.config.ts
 README.md
 .env.local
 .env.*.local
