@@ -1,8 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// ───── PriceCharting field → grade mapping ─────
-// Prices in VGPC.chart_data are stored in cents as arrays of [timestamp, price]
-// We want the latest (last) value from each array.
+// ───── Types ─────
 
 interface PriceResult {
   raw: number;
@@ -19,20 +17,21 @@ interface SearchResult {
   url: string;
 }
 
-// ───── Search for a card ─────
+// ───── Search via PriceCharting directly ─────
 
-async function searchCard(query: string): Promise<SearchResult[]> {
+async function searchPriceCharting(query: string): Promise<SearchResult[]> {
   const url = `https://www.pricecharting.com/search-products?q=${encodeURIComponent(query)}&type=prices`;
   const resp = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
     },
   });
 
-  if (!resp.ok) throw new Error(`Search failed: ${resp.status}`);
+  if (!resp.ok) return [];
   const html = await resp.text();
 
-  // Parse search results: extract <td class="title"><a href="...">Name</a></td>
   const results: SearchResult[] = [];
   const re = /<td\s+class="title">\s*<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
   let m;
@@ -46,13 +45,91 @@ async function searchCard(query: string): Promise<SearchResult[]> {
   return results;
 }
 
-// ───── Fetch prices from a card detail page ─────
+// ───── Fallback: Search via Google ─────
+// Google search with "site:pricecharting.com" reliably finds the right card
 
-async function fetchPrices(cardPath: string): Promise<PriceResult> {
-  const url = `https://www.pricecharting.com${cardPath}`;
+async function searchViaGoogle(query: string): Promise<SearchResult[]> {
+  const googleQuery = `site:pricecharting.com ${query}`;
+  const url = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}&num=5`;
   const resp = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+  });
+
+  if (!resp.ok) return [];
+  const html = await resp.text();
+
+  // Extract PriceCharting URLs from Google results
+  // Google wraps links in <a href="/url?q=https://www.pricecharting.com/...&...">
+  const results: SearchResult[] = [];
+  const re = /href="\/url\?q=(https?:\/\/www\.pricecharting\.com\/game\/[^&"]+)[&"]/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const fullUrl = decodeURIComponent(m[1]);
+    // Extract path from full URL
+    const path = fullUrl.replace('https://www.pricecharting.com', '');
+    // Build a title from the path: /game/pokemon-base-set/charizard → charizard
+    const segments = path.split('/');
+    const title = segments[segments.length - 1]
+      ?.replace(/-/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase()) ?? '';
+
+    // Skip duplicate URLs
+    if (!results.some((r) => r.url === path)) {
+      results.push({ url: path, title });
+    }
+  }
+
+  // Also try matching direct hrefs to pricecharting.com (some Google formats)
+  if (results.length === 0) {
+    const re2 = /href="(https?:\/\/www\.pricecharting\.com\/game\/[^"]+)"/gi;
+    while ((m = re2.exec(html)) !== null) {
+      const fullUrl = decodeURIComponent(m[1]);
+      const path = fullUrl.replace('https://www.pricecharting.com', '');
+      const segments = path.split('/');
+      const title = segments[segments.length - 1]
+        ?.replace(/-/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase()) ?? '';
+
+      if (!results.some((r) => r.url === path)) {
+        results.push({ url: path, title });
+      }
+    }
+  }
+
+  return results;
+}
+
+// ───── Combined search: PriceCharting first, Google fallback ─────
+
+async function searchCard(query: string): Promise<SearchResult[]> {
+  // Try PriceCharting directly first
+  let results = await searchPriceCharting(query);
+
+  // If PriceCharting search failed, use Google as fallback
+  if (results.length === 0) {
+    results = await searchViaGoogle(query);
+  }
+
+  return results;
+}
+
+// ───── Fetch prices from a card detail page ─────
+
+async function fetchPrices(cardPath: string): Promise<PriceResult> {
+  // Handle both full URLs and paths
+  const url = cardPath.startsWith('http')
+    ? cardPath
+    : `https://www.pricecharting.com${cardPath}`;
+
+  const resp = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
     },
   });
 
@@ -62,15 +139,12 @@ async function fetchPrices(cardPath: string): Promise<PriceResult> {
   // Extract VGPC.chart_data JSON from the page
   const chartMatch = html.match(/VGPC\.chart_data\s*=\s*(\{[\s\S]*?\});/);
   if (!chartMatch) {
-    // Fallback: try to extract prices from the price table directly
     return extractTablePrices(html, url);
   }
 
   try {
     const data = JSON.parse(chartMatch[1]);
 
-    // Each field is an array of [timestamp, priceInCents]
-    // Get the latest (last) entry's price value
     const getLatest = (arr: number[][] | undefined): number => {
       if (!arr || arr.length === 0) return 0;
       const last = arr[arr.length - 1];
@@ -94,7 +168,6 @@ async function fetchPrices(cardPath: string): Promise<PriceResult> {
 // ───── Fallback: extract from HTML table ─────
 
 function extractTablePrices(html: string, url: string): PriceResult {
-  // Look for price spans/cells with dollar amounts
   const pricePattern = /\$([0-9,]+(?:\.[0-9]{2})?)/g;
   const prices: number[] = [];
   let m;
@@ -102,8 +175,6 @@ function extractTablePrices(html: string, url: string): PriceResult {
     prices.push(parseFloat(m[1].replace(/,/g, '')));
   }
 
-  // The typical order on PriceCharting detail pages:
-  // Ungraded, Grade 7, Grade 8, Grade 9, Grade 9.5, PSA 10
   return {
     raw: prices[0] ?? 0,
     grade7: prices[1] ?? 0,
@@ -118,7 +189,6 @@ function extractTablePrices(html: string, url: string): PriceResult {
 // ───── API Handler ─────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -140,12 +210,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (typeof q === 'string' && q.trim()) {
       const results = await searchCard(q.trim());
 
-      // If only searching, return the list
       if (mode === 'search') {
         return res.status(200).json({ results });
       }
 
-      // Default: search + fetch prices for the top result
       if (results.length === 0) {
         return res.status(404).json({ error: 'No cards found', query: q });
       }
