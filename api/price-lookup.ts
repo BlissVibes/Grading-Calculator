@@ -160,6 +160,52 @@ function looksLikeSealed(title: string): boolean {
   return false;
 }
 
+/**
+ * Extract the card number from a string (query or title).
+ * Handles formats: #131, 131/200, 002/019, #002, 131
+ * Returns the primary number (before any slash) as a string to preserve leading zeros.
+ */
+function extractCardNumber(s: string): string | null {
+  // "#131", "#002" — explicit hash-prefixed number
+  const hashMatch = s.match(/#(\d{1,4})/);
+  if (hashMatch) return hashMatch[1];
+
+  // "002/019", "131/200" — slash-separated (card/setSize)
+  const slashMatch = s.match(/\b(\d{1,4})\/(\d{1,4})\b/);
+  if (slashMatch) return slashMatch[1];
+
+  return null;
+}
+
+/**
+ * Extract ALL numbers that look like card numbers from a title.
+ * Returns them as strings (preserving leading zeros).
+ */
+function extractAllNumbers(s: string): string[] {
+  const nums: string[] = [];
+  // "#271", "#002"
+  for (const m of s.matchAll(/#(\d{1,4})/g)) nums.push(m[1]);
+  // "002/019"
+  for (const m of s.matchAll(/\b(\d{1,4})\/\d{1,4}\b/g)) nums.push(m[1]);
+  // Standalone numbers like "271" in title (but not years like 2024)
+  for (const m of s.matchAll(/\b(\d{1,4})\b/g)) {
+    const n = m[1];
+    if (n.length <= 3 || n.startsWith('0')) {
+      if (!nums.includes(n)) nums.push(n);
+    }
+  }
+  return nums;
+}
+
+/** Compare card numbers — handles leading-zero equivalence (002 == 2) */
+function cardNumbersMatch(a: string, b: string): boolean {
+  // Exact string match (preserves leading zeros: 002 === 002)
+  if (a === b) return true;
+  // Numeric match (002 == 2)
+  if (parseInt(a, 10) === parseInt(b, 10)) return true;
+  return false;
+}
+
 function scoreResult(query: string, resultTitle: string): number {
   const qNorm = normalizeForMatch(query);
   const tNorm = normalizeForMatch(resultTitle);
@@ -197,19 +243,28 @@ function scoreResult(query: string, resultTitle: string): number {
     score += 20; // card name appears as substring in title
   }
 
-  // ── Card-number matching ──
-  // If the query contains a card number (e.g. #131 or 131/200), reward results
-  // that contain that number and heavily penalize sealed products that just happen
-  // to match other set-name tokens.
-  const cardNumMatch = query.match(/#?(\d{2,4})(?:\/\d+)?\b/);
-  if (cardNumMatch) {
-    const num = cardNumMatch[1];
-    const resultHasNum = tTokens.some((t) => t === num || t === `#${num}`);
-    if (resultHasNum) {
-      score += 25; // result title contains the specific card number
+  // ── Card-number matching — THE most important metric ──
+  // When a query specifies a card number, matching/mismatching that number
+  // should dominate the final score.
+  const queryCardNum = extractCardNumber(query);
+  if (queryCardNum) {
+    const resultNums = extractAllNumbers(resultTitle);
+
+    if (resultNums.length > 0) {
+      const hasExactMatch = resultNums.some((rn) => cardNumbersMatch(rn, queryCardNum));
+      if (hasExactMatch) {
+        score += 100; // dominant bonus — right card number
+      } else {
+        score -= 80;  // dominant penalty — WRONG card number (e.g. #271 vs #002)
+      }
+    }
+    // No number in result title at all — mild penalty
+    // (some PriceCharting titles omit the number)
+    else {
+      score -= 10;
     }
 
-    // Heavy penalty for sealed/compilation results when a card number is in the query
+    // Sealed product penalty on top of number mismatch
     if (looksLikeSealed(resultTitle)) {
       score -= 50;
     }
@@ -225,8 +280,11 @@ function rankResults(query: string, results: SearchResult[]): SearchResult[] {
   if (results.length <= 1) return results;
 
   return [...results].sort((a, b) => {
-    const scoreA = scoreResult(query, a.title);
-    const scoreB = scoreResult(query, b.title);
+    // Score against title AND URL slug (PriceCharting URLs contain the card identifier)
+    const slugA = a.url.split('/').pop()?.replace(/-/g, ' ') ?? '';
+    const slugB = b.url.split('/').pop()?.replace(/-/g, ' ') ?? '';
+    const scoreA = Math.max(scoreResult(query, a.title), scoreResult(query, slugA));
+    const scoreB = Math.max(scoreResult(query, b.title), scoreResult(query, slugB));
     return scoreB - scoreA;
   });
 }
