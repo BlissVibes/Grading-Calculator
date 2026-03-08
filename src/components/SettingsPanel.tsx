@@ -109,6 +109,27 @@ export default function SettingsPanel({ settings, onUpdate }: Props) {
             </div>
           </div>
 
+          {/* Default Language */}
+          <div className="settings-section-title">Default Language</div>
+          <div className="settings-item">
+            <span className="settings-item__label">New Cards Default</span>
+            <select
+              className="settings-select"
+              value={settings.defaultLanguage ?? 'EN'}
+              onChange={(e) => onUpdate({ ...settings, defaultLanguage: e.target.value })}
+            >
+              <option value="EN">English (EN)</option>
+              <option value="JP">Japanese (JP)</option>
+              <option value="KR">Korean (KR)</option>
+              <option value="CN">Chinese (CN)</option>
+              <option value="DE">German (DE)</option>
+              <option value="FR">French (FR)</option>
+              <option value="IT">Italian (IT)</option>
+              <option value="ES">Spanish (ES)</option>
+              <option value="PT">Portuguese (PT)</option>
+            </select>
+          </div>
+
           {/* Default Company */}
           <div className="settings-section-title">Default Company</div>
           <div className="settings-item">

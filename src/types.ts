@@ -78,6 +78,7 @@ export interface GradingCard {
   cardGame: string;
   cardNumber: string;
   set: string;
+  language: string;                    // e.g. 'EN', 'JP', 'KR', 'CN', 'DE', etc.
   pricePaid: number;
   rawPrice: number;
   gradeValues: Partial<Record<GradeNumber, number>>;  // grade → expected price
@@ -128,6 +129,7 @@ export interface AppSettings {
   defaultCompany: GradingCompany | null;
   defaultServiceLevel: Record<GradingCompany, string>;
   feeOverrides: Record<GradingCompany, Partial<CompanyFeeStructure>>;
+  defaultLanguage: string;             // e.g. 'EN', 'JP' — applied to new cards
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -149,4 +151,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
     ARS: {},
     CGC: {},
   },
+  defaultLanguage: 'EN',
 };

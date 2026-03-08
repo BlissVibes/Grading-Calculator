@@ -98,6 +98,7 @@ function makeCard(overrides: Partial<GradingCard>): GradingCard {
     cardGame: 'Pokémon',
     cardNumber: '',
     set: '',
+    language: 'EN',
     pricePaid: 0,
     rawPrice: 0,
     gradeValues: {},

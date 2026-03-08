@@ -69,8 +69,10 @@ async function searchPriceCharting(query: string): Promise<SearchResult[]> {
   const re = /<td\s+class="title">\s*<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
   let m;
   while ((m = re.exec(html)) !== null) {
+    // Decode HTML entities in the URL (e.g. &amp; → &) so the path is valid
+    const decodedUrl = m[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
     results.push({
-      url: m[1],
+      url: decodedUrl,
       title: m[2].trim(),
     });
   }
