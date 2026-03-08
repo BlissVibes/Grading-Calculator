@@ -296,6 +296,13 @@ function buildQueryVariants(query: string): string[] {
   const variants: string[] = [query];
   const lower = query.toLowerCase();
 
+  // ── Card number formats: "008/025", "#131", "131/200" ──
+  // PriceCharting often chokes on "008/025" — try without the /setSize part
+  const withoutSlashPart = query.replace(/\b(\d{1,4})\/\d{1,4}\b/g, '$1');
+  if (withoutSlashPart !== query) {
+    variants.push(withoutSlashPart); // "Surfing Pikachu 008 [set]" instead of "008/025"
+  }
+
   // Strip game name prefix for a simpler query
   const stripped = query.replace(/^(pokemon|magic the gathering|yugioh)\s+/i, '');
   if (stripped !== query) variants.push(stripped);
@@ -320,10 +327,10 @@ function buildQueryVariants(query: string): string[] {
     variants.push(query.replace(/['\u2019]/g, ''));
   }
 
-  // Try with simplified name: drop parenthetical and card number as last resort
+  // Try with simplified name: drop parenthetical and card numbers (anywhere in query)
   const simplified = query
     .replace(/\s*\(.*?\)\s*/g, ' ')
-    .replace(/\s*#?\d+\s*$/, '')
+    .replace(/\s*#?\d{1,4}(?:\/\d{1,4})?\s*/g, ' ')  // strip card numbers anywhere
     .replace(/\s+/g, ' ')
     .trim();
   if (simplified !== query && simplified.length > 2) {
