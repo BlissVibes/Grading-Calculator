@@ -103,18 +103,139 @@ async function searchViaGoogle(query: string): Promise<SearchResult[]> {
   return results;
 }
 
-// ───── Combined search: PriceCharting first, Google fallback ─────
+// ───── Relevance Scoring ─────
+// Score how well a search result title matches the original query
 
-async function searchCard(query: string): Promise<SearchResult[]> {
-  // Try PriceCharting directly first
-  let results = await searchPriceCharting(query);
+function normalizeForMatch(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/['']/g, '')            // remove apostrophes
+    .replace(/[-–—]/g, ' ')          // dashes to spaces
+    .replace(/[^a-z0-9#.\s]/g, ' ') // strip special chars
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  // If PriceCharting search failed, use Google as fallback
-  if (results.length === 0) {
-    results = await searchViaGoogle(query);
+function tokenize(s: string): string[] {
+  return normalizeForMatch(s).split(' ').filter(Boolean);
+}
+
+function scoreResult(query: string, resultTitle: string): number {
+  const qNorm = normalizeForMatch(query);
+  const tNorm = normalizeForMatch(resultTitle);
+
+  // Exact match (after normalization) is perfect
+  if (qNorm === tNorm) return 1000;
+
+  const qTokens = tokenize(query);
+  const tTokens = tokenize(resultTitle);
+
+  let score = 0;
+
+  // Count how many query tokens appear in the title
+  for (const qt of qTokens) {
+    // Skip generic game-name tokens for scoring — they add noise
+    if (['pokemon', 'magic', 'yugioh', 'the', 'gathering'].includes(qt)) continue;
+    if (tTokens.some((tt) => tt === qt)) {
+      score += 10; // exact token match
+    } else if (tTokens.some((tt) => tt.includes(qt) || qt.includes(tt))) {
+      score += 5;  // partial token match
+    }
   }
 
-  return results;
+  // Penalize if the title has many extra tokens the query doesn't have
+  const extraTokens = tTokens.filter(
+    (tt) => !qTokens.some((qt) => tt === qt || tt.includes(qt) || qt.includes(tt))
+  );
+  score -= extraTokens.length * 1;
+
+  // Bonus: title contains the card name substring
+  // Extract card name (first significant part of query, before numbers/set)
+  const cardNamePart = qTokens.filter((t) => !/^\d+$/.test(t) && !['pokemon', 'magic', 'yugioh', 'the', 'gathering'].includes(t));
+  const cardNameStr = cardNamePart.join(' ');
+  if (cardNameStr && tNorm.includes(cardNameStr)) {
+    score += 20; // card name appears as substring in title
+  }
+
+  return score;
+}
+
+function rankResults(query: string, results: SearchResult[]): SearchResult[] {
+  if (results.length <= 1) return results;
+
+  return [...results].sort((a, b) => {
+    const scoreA = scoreResult(query, a.title);
+    const scoreB = scoreResult(query, b.title);
+    return scoreB - scoreA;
+  });
+}
+
+// ───── Query Variants ─────
+// Generate alternative queries if the original doesn't match
+
+function buildQueryVariants(query: string): string[] {
+  const variants: string[] = [query];
+  const lower = query.toLowerCase();
+
+  // Strip game name prefix for a simpler query
+  const stripped = query.replace(/^(pokemon|magic the gathering|yugioh)\s+/i, '');
+  if (stripped !== query) variants.push(stripped);
+
+  // "Mega X ex" → "M X-EX" (PriceCharting naming)
+  if (/\bmega\b/i.test(lower)) {
+    variants.push(query.replace(/\bmega\s+/i, 'M ').replace(/\bex\b/i, 'EX'));
+  }
+
+  // "VMAX" → "V-MAX" variant
+  if (/\bvmax\b/i.test(lower)) {
+    variants.push(query.replace(/\bVMAX\b/gi, 'V-MAX'));
+  }
+
+  // "VSTAR" → "V-STAR" variant
+  if (/\bvstar\b/i.test(lower)) {
+    variants.push(query.replace(/\bVSTAR\b/gi, 'V-STAR'));
+  }
+
+  // Try without apostrophes: "Team Rocket's" → "Team Rockets"
+  if (query.includes("'") || query.includes('\u2019')) {
+    variants.push(query.replace(/['\u2019]/g, ''));
+  }
+
+  // Try with simplified name: drop parenthetical and card number as last resort
+  const simplified = query
+    .replace(/\s*\(.*?\)\s*/g, ' ')
+    .replace(/\s*#?\d+\s*$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (simplified !== query && simplified.length > 2) {
+    variants.push(simplified);
+  }
+
+  // Deduplicate
+  return [...new Set(variants)];
+}
+
+// ───── Combined search: PriceCharting first, Google fallback, with retries ─────
+
+async function searchCard(query: string): Promise<SearchResult[]> {
+  const variants = buildQueryVariants(query);
+
+  for (const variant of variants) {
+    // Try PriceCharting directly first
+    let results = await searchPriceCharting(variant);
+
+    // If PriceCharting search failed, use Google as fallback
+    if (results.length === 0) {
+      results = await searchViaGoogle(variant);
+    }
+
+    if (results.length > 0) {
+      // Rank results by relevance to the ORIGINAL query
+      return rankResults(query, results);
+    }
+  }
+
+  return [];
 }
 
 // ───── Fetch prices from a card detail page ─────
