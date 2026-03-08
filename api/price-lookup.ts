@@ -149,6 +149,17 @@ function tokenize(s: string): string[] {
   return normalizeForMatch(s).split(' ').filter(Boolean);
 }
 
+// Keywords that indicate a sealed product or compilation — not an individual card page
+const SEALED_KEYWORDS = ['pack', 'booster', 'box', 'collection', 'tin', 'bundle', 'deck', 'set box', 'promo pack'];
+
+function looksLikeSealed(title: string): boolean {
+  const t = title.toLowerCase();
+  if (SEALED_KEYWORDS.some((kw) => t.includes(kw))) return true;
+  // "Vol7", "Vol. 3" etc. — compilation volumes
+  if (/\bvol\.?\s*\d+\b/.test(t)) return true;
+  return false;
+}
+
 function scoreResult(query: string, resultTitle: string): number {
   const qNorm = normalizeForMatch(query);
   const tNorm = normalizeForMatch(resultTitle);
@@ -164,7 +175,7 @@ function scoreResult(query: string, resultTitle: string): number {
   // Count how many query tokens appear in the title
   for (const qt of qTokens) {
     // Skip generic game-name tokens for scoring — they add noise
-    if (['pokemon', 'magic', 'yugioh', 'the', 'gathering'].includes(qt)) continue;
+    if (['pokemon', 'magic', 'yugioh', 'the', 'gathering', 'japanese', 'korean', 'chinese', 'german', 'french'].includes(qt)) continue;
     if (tTokens.some((tt) => tt === qt)) {
       score += 10; // exact token match
     } else if (tTokens.some((tt) => tt.includes(qt) || qt.includes(tt))) {
@@ -180,10 +191,31 @@ function scoreResult(query: string, resultTitle: string): number {
 
   // Bonus: title contains the card name substring
   // Extract card name (first significant part of query, before numbers/set)
-  const cardNamePart = qTokens.filter((t) => !/^\d+$/.test(t) && !['pokemon', 'magic', 'yugioh', 'the', 'gathering'].includes(t));
+  const cardNamePart = qTokens.filter((t) => !/^\d+$/.test(t) && !['pokemon', 'magic', 'yugioh', 'the', 'gathering', 'japanese', 'korean', 'chinese'].includes(t));
   const cardNameStr = cardNamePart.join(' ');
   if (cardNameStr && tNorm.includes(cardNameStr)) {
     score += 20; // card name appears as substring in title
+  }
+
+  // ── Card-number matching ──
+  // If the query contains a card number (e.g. #131 or 131/200), reward results
+  // that contain that number and heavily penalize sealed products that just happen
+  // to match other set-name tokens.
+  const cardNumMatch = query.match(/#?(\d{2,4})(?:\/\d+)?\b/);
+  if (cardNumMatch) {
+    const num = cardNumMatch[1];
+    const resultHasNum = tTokens.some((t) => t === num || t === `#${num}`);
+    if (resultHasNum) {
+      score += 25; // result title contains the specific card number
+    }
+
+    // Heavy penalty for sealed/compilation results when a card number is in the query
+    if (looksLikeSealed(resultTitle)) {
+      score -= 50;
+    }
+  } else if (looksLikeSealed(resultTitle)) {
+    // Even without a card number, slightly penalise sealed products
+    score -= 15;
   }
 
   return score;
