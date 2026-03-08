@@ -212,7 +212,7 @@ export default function App() {
         <img src="/logo.svg" alt="Grading Calculator Logo" className="app-logo" />
         <h1 className="app-title">Grading Calculator</h1>
         <p className="app-byline">by BlissVibes</p>
-        <p className="app-version">v0.1.2.3</p>
+        <p className="app-version">v0.1.2.4</p>
         <p className="app-subtitle">
           Calculate grading profits, fees & upcharges for PSA, TAG, Beckett, ARS, and CGC
         </p>
