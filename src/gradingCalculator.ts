@@ -50,8 +50,9 @@ export function calculateCard(
 
   const grades: GradeResult[] = [];
 
-  // Upcharge is based on the card's declared value at submission (raw/current market value),
-  // not the expected graded selling price. PSA charges this fee at time of submission.
+  // Cost basis: pricePaid overrides rawPrice when present
+  const costBasis = card.pricePaid || card.rawPrice || 0;
+  // Declared value for upcharge: raw market value at submission
   const declaredValue = card.rawPrice || card.pricePaid || 0;
   const upcharge = getUpcharge(company, declaredValue);
 
@@ -60,8 +61,8 @@ export function calculateCard(
     const baseFee = getBaseFee(company, serviceLevelId, settings);
     const scoringFee = getScoringFee(company, card.scoring);
     const totalCost = baseFee + upcharge + scoringFee;
-    const profit = expectedPrice - card.pricePaid - totalCost;
-    const multiplier = card.pricePaid > 0 ? profit / card.pricePaid : 0;
+    const profit = expectedPrice - costBasis - totalCost;
+    const multiplier = costBasis > 0 ? profit / costBasis : 0;
 
     grades.push({
       grade,
@@ -101,6 +102,7 @@ export function compareCompanies(
   settings: AppSettings,
 ): CompanyComparisonResult[] {
   const expectedPrice = card.gradeValues[grade] ?? 0;
+  const costBasis = card.pricePaid || card.rawPrice || 0;
   const declaredValue = card.rawPrice || card.pricePaid || 0;
 
   return (['PSA', 'TAG', 'Beckett', 'ARS', 'CGC'] as GradingCompany[]).map((company) => {
@@ -109,8 +111,8 @@ export function compareCompanies(
     const upcharge = getUpcharge(company, declaredValue);
     const scoringFee = company === 'TAG' && card.scoring ? getScoringFee(company, true) : 0;
     const totalCost = baseFee + upcharge + scoringFee;
-    const profit = expectedPrice - card.pricePaid - totalCost;
-    const multiplier = card.pricePaid > 0 ? profit / card.pricePaid : 0;
+    const profit = expectedPrice - costBasis - totalCost;
+    const multiplier = costBasis > 0 ? profit / costBasis : 0;
 
     return {
       company,
@@ -147,13 +149,14 @@ export function compareBatchCompanies(
       const expectedPrice = card.gradeValues[grade] ?? 0;
       if (expectedPrice === 0) continue;
 
+      const costBasis = card.pricePaid || card.rawPrice || 0;
       const declaredValue = card.rawPrice || card.pricePaid || 0;
       const baseFee = getBaseFee(company, serviceLevelId, settings);
       const upcharge = getUpcharge(company, declaredValue);
       const scoringFee = company === 'TAG' && card.scoring ? getScoringFee(company, true) : 0;
       const cost = baseFee + upcharge + scoringFee;
-      const profit = expectedPrice - card.pricePaid - cost;
-      const multiplier = card.pricePaid > 0 ? profit / card.pricePaid : 0;
+      const profit = expectedPrice - costBasis - cost;
+      const multiplier = costBasis > 0 ? profit / costBasis : 0;
 
       totalFees += baseFee + scoringFee;
       totalUpcharges += upcharge;
