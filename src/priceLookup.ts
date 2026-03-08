@@ -82,7 +82,7 @@ class RateLimiter {
   }
 }
 
-const limiter = new RateLimiter(1200);
+const limiter = new RateLimiter(2000);
 
 // ───── Query Builder ─────
 // Build the best search query from card data
@@ -181,17 +181,35 @@ export async function lookupBatch(
 
     onProgress({ cardId: card.id, status: 'loading' });
 
-    try {
-      const result = await limiter.enqueue(() => lookupCard(card));
+    let retries = 0;
+    const maxRetries = 2;
 
-      if (result.raw === 0 && result.grade9 === 0 && result.psa10 === 0) {
-        onProgress({ cardId: card.id, status: 'not-found', result });
-      } else {
-        onProgress({ cardId: card.id, status: 'done', result });
+    while (retries <= maxRetries) {
+      try {
+        const result = await limiter.enqueue(() => lookupCard(card));
+
+        if (result.raw === 0 && result.grade9 === 0 && result.psa10 === 0) {
+          onProgress({ cardId: card.id, status: 'not-found', result });
+        } else {
+          onProgress({ cardId: card.id, status: 'done', result });
+        }
+        break; // success — exit retry loop
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Lookup failed';
+
+        // If rate limited, pause and retry
+        if (message.includes('429') || message.includes('Rate limit')) {
+          retries++;
+          if (retries <= maxRetries) {
+            // Exponential backoff: 5s, 10s
+            await new Promise((r) => setTimeout(r, 5000 * retries));
+            continue;
+          }
+        }
+
+        onProgress({ cardId: card.id, status: 'error', error: message });
+        break;
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Lookup failed';
-      onProgress({ cardId: card.id, status: 'error', error: message });
     }
   }
 }

@@ -17,10 +17,29 @@ interface SearchResult {
   url: string;
 }
 
-// ───── Search via PriceCharting directly ─────
+// ───── Rate-limit / block detection ─────
 
-async function searchPriceCharting(query: string): Promise<SearchResult[]> {
-  const url = `https://www.pricecharting.com/search-products?q=${encodeURIComponent(query)}&type=prices`;
+class RateLimitError extends Error {
+  constructor(status: number) {
+    super(`Rate limited (${status})`);
+    this.name = 'RateLimitError';
+  }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Simple server-side delay between external requests
+let lastFetchTime = 0;
+const MIN_FETCH_GAP_MS = 800; // 800ms between requests to PriceCharting
+
+async function throttledFetch(url: string): Promise<Response> {
+  const now = Date.now();
+  const elapsed = now - lastFetchTime;
+  if (elapsed < MIN_FETCH_GAP_MS) {
+    await sleep(MIN_FETCH_GAP_MS - elapsed);
+  }
+  lastFetchTime = Date.now();
+
   const resp = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -28,6 +47,20 @@ async function searchPriceCharting(query: string): Promise<SearchResult[]> {
       'Accept-Language': 'en-US,en;q=0.9',
     },
   });
+
+  // Detect rate limiting / blocking — propagate so we stop retrying
+  if (resp.status === 403 || resp.status === 429 || resp.status === 503) {
+    throw new RateLimitError(resp.status);
+  }
+
+  return resp;
+}
+
+// ───── Search via PriceCharting directly ─────
+
+async function searchPriceCharting(query: string): Promise<SearchResult[]> {
+  const url = `https://www.pricecharting.com/search-products?q=${encodeURIComponent(query)}&type=prices`;
+  const resp = await throttledFetch(url);
 
   if (!resp.ok) return [];
   const html = await resp.text();
@@ -51,13 +84,7 @@ async function searchPriceCharting(query: string): Promise<SearchResult[]> {
 async function searchViaGoogle(query: string): Promise<SearchResult[]> {
   const googleQuery = `site:pricecharting.com ${query}`;
   const url = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}&num=5`;
-  const resp = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-  });
+  const resp = await throttledFetch(url);
 
   if (!resp.ok) return [];
   const html = await resp.text();
@@ -221,17 +248,23 @@ async function searchCard(query: string): Promise<SearchResult[]> {
   const variants = buildQueryVariants(query);
 
   for (const variant of variants) {
-    // Try PriceCharting directly first
-    let results = await searchPriceCharting(variant);
+    try {
+      // Try PriceCharting directly first
+      let results = await searchPriceCharting(variant);
 
-    // If PriceCharting search failed, use Google as fallback
-    if (results.length === 0) {
-      results = await searchViaGoogle(variant);
-    }
+      // If PriceCharting search failed, use Google as fallback
+      if (results.length === 0) {
+        results = await searchViaGoogle(variant);
+      }
 
-    if (results.length > 0) {
-      // Rank results by relevance to the ORIGINAL query
-      return rankResults(query, results);
+      if (results.length > 0) {
+        // Rank results by relevance to the ORIGINAL query
+        return rankResults(query, results);
+      }
+    } catch (err) {
+      // If rate-limited, stop trying more variants — they'll all fail
+      if (err instanceof RateLimitError) throw err;
+      // Other errors: try next variant
     }
   }
 
@@ -246,13 +279,7 @@ async function fetchPrices(cardPath: string): Promise<PriceResult> {
     ? cardPath
     : `https://www.pricecharting.com${cardPath}`;
 
-  const resp = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-  });
+  const resp = await throttledFetch(url);
 
   if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
   const html = await resp.text();
@@ -349,6 +376,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(400).json({ error: 'Missing query parameter: q or path' });
   } catch (err: unknown) {
+    if (err instanceof RateLimitError) {
+      return res.status(429).json({ error: 'Rate limited by PriceCharting. Please wait a moment and try again.' });
+    }
     const message = err instanceof Error ? err.message : 'Unknown error';
     return res.status(500).json({ error: message });
   }
