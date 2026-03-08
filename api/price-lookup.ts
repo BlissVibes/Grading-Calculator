@@ -243,19 +243,24 @@ function scoreResult(query: string, resultTitle: string): number {
     score += 20; // card name appears as substring in title
   }
 
-  // ── Card-number matching — THE most important metric ──
+  // ── Card-number matching — important but must agree with card name ──
   // When a query specifies a card number, matching/mismatching that number
-  // should dominate the final score.
+  // should heavily influence the final score — but only the full bonus is
+  // awarded when the card name ALSO matches.  This prevents "Hop's Trevenant 237"
+  // beating "Pikachu 237" when we searched for "Pikachu 237".
   const queryCardNum = extractCardNumber(query);
+  const hasCardNameMatch = !!(cardNameStr && tNorm.includes(cardNameStr));
   if (queryCardNum) {
     const resultNums = extractAllNumbers(resultTitle);
 
     if (resultNums.length > 0) {
       const hasExactMatch = resultNums.some((rn) => cardNumbersMatch(rn, queryCardNum));
-      if (hasExactMatch) {
-        score += 100; // dominant bonus — right card number
+      if (hasExactMatch && hasCardNameMatch) {
+        score += 100; // both card name and number match — high confidence
+      } else if (hasExactMatch && !hasCardNameMatch) {
+        score += 15;  // right number but wrong name — only a mild bonus
       } else {
-        score -= 80;  // dominant penalty — WRONG card number (e.g. #271 vs #002)
+        score -= 80;  // WRONG card number (e.g. #271 vs #002)
       }
     }
     // No number in result title at all — mild penalty

@@ -377,6 +377,7 @@ body { min-height: 100vh; }
 }
 .cell-input--narrow { width: 65px; }
 .cell-input--name { min-width: 140px; }
+.cell-input--set  { min-width: 110px; }
 
 .cell-select {
   background: transparent; border: 1px solid transparent;

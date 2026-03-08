@@ -268,7 +268,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, onToggl
         {/* Set */}
         <td>
           <input
-            className="cell-input"
+            className="cell-input cell-input--set"
             value={card.set}
             onChange={(e) => onUpdate({ set: e.target.value })}
             placeholder="Set"
