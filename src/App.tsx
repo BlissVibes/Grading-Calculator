@@ -3,7 +3,7 @@ import type { GradingCard, GradingCompany, AppSettings } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
-import { lookupCard, lookupBatch, applyPricesToCard } from './priceLookup';
+import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage } from './priceLookup';
 import type { LookupStatus } from './priceLookup';
 import FileDropZone from './components/FileDropZone';
 import CompanySelector from './components/CompanySelector';
@@ -18,7 +18,15 @@ const STORAGE_SETTINGS = 'gc_settings';
 function loadCards(): GradingCard[] {
   try {
     const raw = localStorage.getItem(STORAGE_CARDS);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const cards: GradingCard[] = JSON.parse(raw);
+    // Backfill language for cards saved before language support was added
+    for (const card of cards) {
+      if (!card.language) {
+        card.language = detectLanguage(card.cardName);
+      }
+    }
+    return cards;
   } catch { return []; }
 }
 
@@ -55,13 +63,14 @@ export default function App() {
       setErrors((prev) => [...prev, error]);
       return;
     }
-    // Apply default company to imported cards
+    // Apply default company and detect language for imported cards
     const withDefaults = imported.map((c) => ({
       ...c,
       company: settings.defaultCompany,
+      language: c.language || detectLanguage(c.cardName) || settings.defaultLanguage,
     }));
     setCards((prev) => [...prev, ...withDefaults]);
-  }, [settings.defaultCompany]);
+  }, [settings.defaultCompany, settings.defaultLanguage]);
 
   // Card CRUD
   const updateCard = useCallback((id: string, updates: Partial<GradingCard>) => {
@@ -79,6 +88,7 @@ export default function App() {
       cardGame: 'Pokémon',
       cardNumber: '',
       set: '',
+      language: settings.defaultLanguage ?? 'EN',
       pricePaid: 0,
       rawPrice: 0,
       gradeValues: {},
@@ -91,7 +101,7 @@ export default function App() {
       source: 'manual',
     };
     setCards((prev) => [...prev, newCard]);
-  }, [settings.defaultCompany]);
+  }, [settings.defaultCompany, settings.defaultLanguage]);
 
   // Company selection
   const handleCompanyChange = useCallback((company: GradingCompany | null) => {
@@ -202,7 +212,7 @@ export default function App() {
         <img src="/logo.svg" alt="Grading Calculator Logo" className="app-logo" />
         <h1 className="app-title">Grading Calculator</h1>
         <p className="app-byline">by BlissVibes</p>
-        <p className="app-version">v0.1.2.2</p>
+        <p className="app-version">v0.1.2.3</p>
         <p className="app-subtitle">
           Calculate grading profits, fees & upcharges for PSA, TAG, Beckett, ARS, and CGC
         </p>

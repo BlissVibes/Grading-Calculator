@@ -84,6 +84,30 @@ class RateLimiter {
 
 const limiter = new RateLimiter(2000);
 
+// ───── Language Detection ─────
+// Detect card language from name using Unicode script ranges and explicit codes
+
+const KNOWN_LANG_CODES = new Set(['EN', 'JP', 'KR', 'CN', 'DE', 'FR', 'IT', 'ES', 'PT', 'NL', 'PL', 'RU', 'TH', 'ID']);
+
+export function detectLanguage(name: string): string {
+  if (!name) return 'EN';
+
+  // Explicit (XX) code takes highest priority
+  const matches = [...name.matchAll(/\(([A-Z]{2,3})\)/g)];
+  for (const m of [...matches].reverse()) {
+    if (KNOWN_LANG_CODES.has(m[1])) return m[1];
+  }
+
+  // Hiragana or Katakana → Japanese
+  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(name)) return 'JP';
+  // Hangul → Korean
+  if (/[\uAC00-\uD7AF\u1100-\u11FF]/.test(name)) return 'KR';
+  // CJK ideographs without kana → Chinese
+  if (/[\u4E00-\u9FFF\u3400-\u4DBF]/.test(name)) return 'CN';
+
+  return 'EN';
+}
+
 // ───── Query Builder ─────
 // Build the best search query from card data
 
@@ -116,6 +140,25 @@ function buildQuery(card: GradingCard): string {
     };
     const mapped = gameMap[card.cardGame];
     if (mapped) parts.unshift(mapped);
+  }
+
+  // Include language keyword for non-English cards so PriceCharting returns
+  // results from the correct language category (e.g. pokemon-japanese-*)
+  const lang = card.language || detectLanguage(card.cardName);
+  if (lang && lang !== 'EN') {
+    const langWordMap: Record<string, string> = {
+      JP: 'japanese',
+      KR: 'korean',
+      CN: 'chinese',
+      DE: 'german',
+      FR: 'french',
+      IT: 'italian',
+      ES: 'spanish',
+      PT: 'portuguese',
+    };
+    const langWord = langWordMap[lang];
+    // Insert language after game prefix (index 1) so query is e.g. "pokemon japanese Kingdra ex #131"
+    if (langWord) parts.splice(1, 0, langWord);
   }
 
   return parts.join(' ');
