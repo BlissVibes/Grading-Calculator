@@ -206,6 +206,14 @@ body { min-height: 100vh; }
 .drop-zone__paste-btn--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .drop-zone__paste-btn--primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.drop-zone__clear-btn {
+  margin-top: 10px; padding: 6px 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--loss); background: transparent;
+  color: var(--loss); font-size: 0.82rem; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+.drop-zone__clear-btn:hover { background: var(--loss); color: #fff; }
+
 /* ===== Error/Warning ===== */
 .error-list { display: flex; flex-direction: column; gap: 8px; }
 .error-item {
@@ -506,6 +514,12 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
   transition: opacity 0.15s; margin: 3px auto 0; cursor: pointer;
 }
 .link-btn:hover { opacity: 0.75; }
+
+.lookup-btn-inline {
+  flex-shrink: 0; font-size: 0.85rem !important;
+  padding: 1px 3px !important; line-height: 1;
+}
+.lookup-btn-inline:disabled { opacity: 0.35; }
 .link-btn--ebay {
   background: rgba(229, 75, 107, 0.14); color: #e54b6b;
 }
