@@ -61,6 +61,7 @@ export interface CompanyFeeStructure {
   scoringOptions?: ScoringOption[];   // TAG specific
   insuranceFee?: number;              // per $100 of declared value
   shippingEstimate?: number;          // base return shipping
+  pricingUrl?: string;                // link to official pricing page
 }
 
 // ───── Grade Values ─────
