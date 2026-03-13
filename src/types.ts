@@ -162,5 +162,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
     CGC: {},
   },
   defaultLanguage: 'EN',
-  profitThresholds: { green: 100, yellow: 25, highlightGrade: 10 },
+  profitThresholds: { green: 50, yellow: 25, highlightGrade: 10 },
 };

@@ -228,7 +228,7 @@ export default function CardTable({
               const lookupStatus = lookupStatuses.get(card.id);
 
               // Determine profit highlight tier based on configured grade (default G10)
-              const thresholds = settings.profitThresholds ?? { green: 100, yellow: 25, highlightGrade: 10 };
+              const thresholds = settings.profitThresholds ?? { green: 50, yellow: 25, highlightGrade: 10 };
               const highlightGrade = thresholds.highlightGrade ?? 10;
               const highlightProfit = card.noGrading ? null : (gradeResults.get(highlightGrade)?.profit ?? null);
               const profitTier = (highlightProfit === null)

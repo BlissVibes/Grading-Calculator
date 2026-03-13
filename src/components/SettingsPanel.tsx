@@ -182,10 +182,10 @@ export default function SettingsPanel({ settings, onUpdate }: Props) {
               type="number"
               step="5"
               min="0"
-              value={settings.profitThresholds?.green ?? 100}
+              value={settings.profitThresholds?.green ?? 50}
               onChange={(e) => onUpdate({
                 ...settings,
-                profitThresholds: { ...(settings.profitThresholds ?? { green: 100, yellow: 25 }), green: parseFloat(e.target.value) || 0 },
+                profitThresholds: { ...(settings.profitThresholds ?? { green: 50, yellow: 25 }), green: parseFloat(e.target.value) || 0 },
               })}
             />
             <span style={{ color: 'var(--neutral)', fontSize: '0.82rem', fontWeight: 600 }}>● Yellow min ($)</span>
@@ -197,7 +197,7 @@ export default function SettingsPanel({ settings, onUpdate }: Props) {
               value={settings.profitThresholds?.yellow ?? 25}
               onChange={(e) => onUpdate({
                 ...settings,
-                profitThresholds: { ...(settings.profitThresholds ?? { green: 100, yellow: 25 }), yellow: parseFloat(e.target.value) || 0 },
+                profitThresholds: { ...(settings.profitThresholds ?? { green: 50, yellow: 25 }), yellow: parseFloat(e.target.value) || 0 },
               })}
             />
           </div>
@@ -215,7 +215,7 @@ export default function SettingsPanel({ settings, onUpdate }: Props) {
                   style={{ fontSize: '0.72rem', padding: '3px 10px' }}
                   onClick={() => onUpdate({
                     ...settings,
-                    profitThresholds: { ...(settings.profitThresholds ?? { green: 100, yellow: 25, highlightGrade: 10 }), highlightGrade: g },
+                    profitThresholds: { ...(settings.profitThresholds ?? { green: 50, yellow: 25, highlightGrade: 10 }), highlightGrade: g },
                   })}
                 >
                   G{g}
