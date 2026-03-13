@@ -205,6 +205,24 @@ export default function SettingsPanel({ settings, onUpdate }: Props) {
             Below yellow min → <span style={{ color: 'var(--loss)' }}>red</span>.
             Set yellow to 0 to disable red highlighting.
           </div>
+          <div className="settings-item" style={{ marginTop: 8 }}>
+            <span className="settings-item__label">Highlight based on</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {([9, 10] as const).map((g) => (
+                <button
+                  key={g}
+                  className={`comparison-grade-tab${(settings.profitThresholds?.highlightGrade ?? 10) === g ? ' comparison-grade-tab--active' : ''}`}
+                  style={{ fontSize: '0.72rem', padding: '3px 10px' }}
+                  onClick={() => onUpdate({
+                    ...settings,
+                    profitThresholds: { ...(settings.profitThresholds ?? { green: 100, yellow: 25, highlightGrade: 10 }), highlightGrade: g },
+                  })}
+                >
+                  G{g}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Fee Editor */}
           <div className="settings-section-title">Edit Fees</div>

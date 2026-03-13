@@ -227,13 +227,14 @@ export default function CardTable({
               const gradeResults = calc ? new Map(calc.grades.map((g) => [g.grade, g])) : new Map();
               const lookupStatus = lookupStatuses.get(card.id);
 
-              // Determine profit highlight tier based on Grade 10 profit
-              const thresholds = settings.profitThresholds ?? { green: 100, yellow: 25 };
-              const g10Profit = card.noGrading ? null : (gradeResults.get(10)?.profit ?? null);
-              const profitTier = (g10Profit === null)
+              // Determine profit highlight tier based on configured grade (default G10)
+              const thresholds = settings.profitThresholds ?? { green: 100, yellow: 25, highlightGrade: 10 };
+              const highlightGrade = thresholds.highlightGrade ?? 10;
+              const highlightProfit = card.noGrading ? null : (gradeResults.get(highlightGrade)?.profit ?? null);
+              const profitTier = (highlightProfit === null)
                 ? null
-                : g10Profit >= thresholds.green ? 'green'
-                : g10Profit >= thresholds.yellow ? 'yellow'
+                : highlightProfit >= thresholds.green ? 'green'
+                : highlightProfit >= thresholds.yellow ? 'yellow'
                 : 'red';
 
               return (

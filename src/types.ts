@@ -126,8 +126,9 @@ export interface CompanyComparisonResult {
 // ───── Settings ─────
 
 export interface ProfitThresholds {
-  green: number;   // profit >= green → green row
-  yellow: number;  // profit >= yellow (and < green) → yellow row; below yellow → red row
+  green: number;        // profit >= green → green row
+  yellow: number;       // profit >= yellow (and < green) → yellow row; below yellow → red row
+  highlightGrade: 9 | 10;  // which grade's profit to use for highlighting
 }
 
 export interface AppSettings {
@@ -161,5 +162,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
     CGC: {},
   },
   defaultLanguage: 'EN',
-  profitThresholds: { green: 100, yellow: 25 },
+  profitThresholds: { green: 100, yellow: 25, highlightGrade: 10 },
 };
