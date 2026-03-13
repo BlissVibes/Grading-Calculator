@@ -225,23 +225,36 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, onToggl
                 PKC
               </button>
             )}
-            {lookupStatus?.status === 'done' && lookupStatus.result?.url && (
-              <a
-                href={lookupStatus.result.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="lookup-link"
-                title={`Matched: ${lookupStatus.result.matchedTitle || 'View on PriceCharting'}`}
-              >
-                PC
-              </a>
-            )}
+            {/* Show PriceCharting link — from live lookup or persisted card data */}
+            {(() => {
+              const url = lookupStatus?.status === 'done' ? lookupStatus.result?.url : card.priceChartingUrl;
+              const title = lookupStatus?.status === 'done' ? lookupStatus.result?.matchedTitle : card.priceChartingTitle;
+              if (!url) return null;
+              return (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="lookup-link"
+                  title={`Matched: ${title || 'View on PriceCharting'}`}
+                >
+                  PC
+                </a>
+              );
+            })()}
           </div>
-          {lookupStatus?.status === 'done' && lookupStatus.result?.matchedTitle && (
-            <div className="lookup-matched" title={lookupStatus.result.matchedTitle}>
-              Matched: {lookupStatus.result.matchedTitle}
-            </div>
-          )}
+          {/* Matched title — from live lookup or persisted card data */}
+          {(() => {
+            const matchedTitle = lookupStatus?.status === 'done'
+              ? lookupStatus.result?.matchedTitle
+              : (!lookupStatus || lookupStatus.status === 'pending') ? card.priceChartingTitle : undefined;
+            if (!matchedTitle) return null;
+            return (
+              <div className="lookup-matched" title={matchedTitle}>
+                Matched: {matchedTitle}
+              </div>
+            );
+          })()}
           {lookupStatus?.status === 'error' && (
             <div className="lookup-error">{lookupStatus.error}</div>
           )}

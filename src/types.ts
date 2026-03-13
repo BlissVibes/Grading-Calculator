@@ -88,6 +88,8 @@ export interface GradingCard {
   noGrading: boolean;                  // exclude from grading calculations entirely
   scoring: boolean;                    // TAG scoring add-on
   pokemonCenter: boolean;              // Pokemon Center stamped variant (higher value)
+  priceChartingUrl?: string;           // last successfully matched PriceCharting URL
+  priceChartingTitle?: string;         // last successfully matched card title
   notes: string;
   source: 'manual' | 'import';
 }
