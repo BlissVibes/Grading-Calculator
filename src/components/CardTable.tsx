@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSettings } from '../types';
+import { useState, useEffect, useRef } from 'react';
+import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSettings, CompanyFeeStructure } from '../types';
 import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 import { compareCompanies } from '../gradingCalculator';
 import type { LookupStatus } from '../priceLookup';
+import { exportCSV, downloadCSV, EXPORT_SORT_OPTIONS } from '../csvExporter';
+import type { ExportSortKey } from '../csvExporter';
 
 interface Props {
   cards: GradingCard[];
@@ -28,6 +30,123 @@ function fmtMult(n: number): string {
   return `${n >= 0 ? '+' : ''}${n.toFixed(2)}x`;
 }
 
+function fmtMoney(n: number): string {
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 });
+}
+
+// ───── Company Info Popover ─────
+
+function CompanyInfoPopover({ fees }: { fees: CompanyFeeStructure }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="company-info-wrap" ref={ref}>
+      <button
+        className="company-info-btn"
+        onClick={() => setOpen((v) => !v)}
+        title={`View ${fees.company} fee structure`}
+      >
+        ⓘ
+      </button>
+      {open && (
+        <div className="company-info-panel">
+          <div className="company-info-panel__title">{fees.company} Fee Structure</div>
+
+          {/* Service Levels */}
+          <div className="company-info-section">Service Levels</div>
+          <table className="company-info-table">
+            <thead>
+              <tr>
+                <th>Tier</th>
+                <th>Fee</th>
+                <th>Turnaround</th>
+                <th>Max Value</th>
+                {fees.serviceLevels.some((sl) => sl.minCards) && <th>Min Cards</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {fees.serviceLevels.map((sl) => (
+                <tr key={sl.id}>
+                  <td>{sl.name}</td>
+                  <td>{fmtMoney(sl.baseFee)}</td>
+                  <td>{sl.turnaround}</td>
+                  <td>{sl.maxDeclaredValue ? fmtMoney(sl.maxDeclaredValue) : '—'}</td>
+                  {fees.serviceLevels.some((s) => s.minCards) && <td>{sl.minCards ?? '—'}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Value Upcharges */}
+          <div className="company-info-section">Value Upcharges</div>
+          <table className="company-info-table">
+            <thead>
+              <tr><th>Card Value</th><th>Extra Fee</th></tr>
+            </thead>
+            <tbody>
+              {fees.valueUpcharges.map((u, i) => (
+                <tr key={i}>
+                  <td>
+                    {fmtMoney(u.minValue)}
+                    {u.maxValue !== null ? ` – ${fmtMoney(u.maxValue)}` : '+'}
+                  </td>
+                  <td>{u.fee === 0 ? 'None' : `+${fmtMoney(u.fee)}`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Additional Services */}
+          {fees.scoringOptions && fees.scoringOptions.length > 0 && (
+            <>
+              <div className="company-info-section">Additional Services</div>
+              <table className="company-info-table">
+                <tbody>
+                  {fees.scoringOptions.map((opt) => (
+                    <tr key={opt.name}>
+                      <td>{opt.name}</td>
+                      <td>+{fmtMoney(opt.additionalFee)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {/* Shipping */}
+          {fees.shippingEstimate !== undefined && (
+            <div className="company-info-note">
+              Est. return shipping: ~{fmtMoney(fees.shippingEstimate)}
+            </div>
+          )}
+
+          {/* Pricing page link */}
+          {fees.pricingUrl && (
+            <a
+              href={fees.pricingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="company-info-link"
+            >
+              View official pricing page ↗
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CardTable({
   cards, calculations, settings, lookupStatuses,
   onUpdateCard, onDeleteCard, onAddCard, onLookupCard, onLookupAll, lookupInProgress,
@@ -36,6 +155,8 @@ export default function CardTable({
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportSort, setExportSort] = useState<ExportSortKey>('g10-price');
 
   const handleSort = (key: string) => {
     setSortKey((prev) => {
@@ -159,7 +280,57 @@ export default function CardTable({
             )}
           </button>
         )}
+        {cards.length > 0 && (
+          <button
+            className="btn-export"
+            onClick={() => setShowExportModal(true)}
+            title="Export cards as CSV (Collectr-compatible)"
+          >
+            Export CSV
+          </button>
+        )}
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="modal-overlay" onClick={() => setShowExportModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Export CSV</div>
+            <p className="modal-desc">
+              Exports a Collectr-compatible CSV with your grading data appended as extra columns.
+              Re-importable into Collectr (extra columns are ignored by Collectr).
+            </p>
+            <label className="modal-label">Sort by:</label>
+            <select
+              className="modal-select"
+              value={exportSort}
+              onChange={(e) => setExportSort(e.target.value as ExportSortKey)}
+            >
+              {EXPORT_SORT_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>{opt.label}</option>
+              ))}
+            </select>
+            <div className="modal-actions">
+              <button
+                className="modal-btn modal-btn--primary"
+                onClick={() => {
+                  const csv = exportCSV(cards, calculations, settings, exportSort);
+                  downloadCSV(csv, `grading-export-${new Date().toISOString().slice(0, 10)}.csv`);
+                  setShowExportModal(false);
+                }}
+              >
+                Download
+              </button>
+              <button
+                className="modal-btn"
+                onClick={() => setShowExportModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="table-wrapper">
         <table className="card-table">
@@ -228,7 +399,7 @@ export default function CardTable({
               const lookupStatus = lookupStatuses.get(card.id);
 
               // Determine profit highlight tier based on configured grade (default G10)
-              const thresholds = settings.profitThresholds ?? { green: 100, yellow: 25, highlightGrade: 10 };
+              const thresholds = settings.profitThresholds ?? { green: 50, yellow: 25, highlightGrade: 10 };
               const highlightGrade = thresholds.highlightGrade ?? 10;
               const highlightProfit = card.noGrading ? null : (gradeResults.get(highlightGrade)?.profit ?? null);
               const profitTier = (highlightProfit === null)
@@ -468,23 +639,28 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
         {/* Company per-card */}
         <td className="td-center">
-          <select
-            className="company-cell-select"
-            value={card.noGrading ? '__none' : (card.company ?? '')}
-            onChange={(e) => {
-              if (e.target.value === '__none') {
-                onUpdate({ noGrading: true, company: null, serviceLevel: null });
-              } else {
-                onUpdate({ noGrading: false, company: (e.target.value || null) as GradingCompany | null });
-              }
-            }}
-          >
-            <option value="">Default{settings.defaultCompany ? ` (${settings.defaultCompany})` : ''}</option>
-            {GRADING_COMPANIES.map((c) => (
-              <option key={c} value={c}>{COMPANY_LABELS[c]}</option>
-            ))}
-            <option value="__none">No Grading</option>
-          </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center' }}>
+            <select
+              className="company-cell-select"
+              value={card.noGrading ? '__none' : (card.company ?? '')}
+              onChange={(e) => {
+                if (e.target.value === '__none') {
+                  onUpdate({ noGrading: true, company: null, serviceLevel: null });
+                } else {
+                  onUpdate({ noGrading: false, company: (e.target.value || null) as GradingCompany | null });
+                }
+              }}
+            >
+              <option value="">Default{settings.defaultCompany ? ` (${settings.defaultCompany})` : ''}</option>
+              {GRADING_COMPANIES.map((c) => (
+                <option key={c} value={c}>{COMPANY_LABELS[c]}</option>
+              ))}
+              <option value="__none">No Grading</option>
+            </select>
+            {effectiveCompany && !card.noGrading && (
+              <CompanyInfoPopover fees={COMPANY_FEES[effectiveCompany]} />
+            )}
+          </div>
           {effectiveCompany && !card.noGrading && (
             <select
               className="company-cell-select"

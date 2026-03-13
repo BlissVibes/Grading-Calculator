@@ -61,6 +61,7 @@ export interface CompanyFeeStructure {
   scoringOptions?: ScoringOption[];   // TAG specific
   insuranceFee?: number;              // per $100 of declared value
   shippingEstimate?: number;          // base return shipping
+  pricingUrl?: string;                // link to official pricing page
 }
 
 // ───── Grade Values ─────
@@ -162,5 +163,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
     CGC: {},
   },
   defaultLanguage: 'EN',
-  profitThresholds: { green: 100, yellow: 25, highlightGrade: 10 },
+  profitThresholds: { green: 50, yellow: 25, highlightGrade: 10 },
 };

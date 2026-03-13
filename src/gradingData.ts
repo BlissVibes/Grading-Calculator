@@ -59,6 +59,7 @@ export const PSA_FEES: CompanyFeeStructure = {
     { minValue: 10000, maxValue: null, fee: 300 },
   ],
   shippingEstimate: 15,
+  pricingUrl: 'https://www.psacard.com/services/tradingcardgrading',
 };
 
 // ───── TAG Fee Structure ─────
@@ -115,6 +116,7 @@ export const TAG_FEES: CompanyFeeStructure = {
     { name: 'Scoring (Subgrades)', additionalFee: 5 },
   ],
   shippingEstimate: 12,
+  pricingUrl: 'https://www.taggrading.com/grading-pricing',
 };
 
 // ───── Beckett (BGS/BVG) Fee Structure ─────
@@ -167,6 +169,7 @@ export const BECKETT_FEES: CompanyFeeStructure = {
     { minValue: 5000, maxValue: null, fee: 250 },
   ],
   shippingEstimate: 15,
+  pricingUrl: 'https://www.beckett.com/grading/card-grading-pricing',
 };
 
 // ───── ARS (Authentic Restoration & Sealing) Fee Structure ─────
@@ -211,6 +214,7 @@ export const ARS_FEES: CompanyFeeStructure = {
     { minValue: 2500, maxValue: null, fee: 100 },
   ],
   shippingEstimate: 12,
+  pricingUrl: 'https://www.arsgrading.com/pricing',
 };
 
 // ───── CGC Fee Structure ─────
@@ -271,6 +275,7 @@ export const CGC_FEES: CompanyFeeStructure = {
     { minValue: 10001, maxValue: null, fee: 300 },
   ],
   shippingEstimate: 14,
+  pricingUrl: 'https://www.cgccards.com/submit/grading-tiers/',
 };
 
 // ───── All companies map ─────
