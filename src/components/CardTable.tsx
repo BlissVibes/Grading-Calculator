@@ -4,6 +4,8 @@ import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 import { compareCompanies } from '../gradingCalculator';
 import type { LookupStatus } from '../priceLookup';
+import { exportCSV, downloadCSV, EXPORT_SORT_OPTIONS } from '../csvExporter';
+import type { ExportSortKey } from '../csvExporter';
 
 interface Props {
   cards: GradingCard[];
@@ -153,6 +155,8 @@ export default function CardTable({
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportSort, setExportSort] = useState<ExportSortKey>('g10-price');
 
   const handleSort = (key: string) => {
     setSortKey((prev) => {
@@ -276,7 +280,57 @@ export default function CardTable({
             )}
           </button>
         )}
+        {cards.length > 0 && (
+          <button
+            className="btn-export"
+            onClick={() => setShowExportModal(true)}
+            title="Export cards as CSV (Collectr-compatible)"
+          >
+            Export CSV
+          </button>
+        )}
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="modal-overlay" onClick={() => setShowExportModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Export CSV</div>
+            <p className="modal-desc">
+              Exports a Collectr-compatible CSV with your grading data appended as extra columns.
+              Re-importable into Collectr (extra columns are ignored by Collectr).
+            </p>
+            <label className="modal-label">Sort by:</label>
+            <select
+              className="modal-select"
+              value={exportSort}
+              onChange={(e) => setExportSort(e.target.value as ExportSortKey)}
+            >
+              {EXPORT_SORT_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>{opt.label}</option>
+              ))}
+            </select>
+            <div className="modal-actions">
+              <button
+                className="modal-btn modal-btn--primary"
+                onClick={() => {
+                  const csv = exportCSV(cards, calculations, settings, exportSort);
+                  downloadCSV(csv, `grading-export-${new Date().toISOString().slice(0, 10)}.csv`);
+                  setShowExportModal(false);
+                }}
+              >
+                Download
+              </button>
+              <button
+                className="modal-btn"
+                onClick={() => setShowExportModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="table-wrapper">
         <table className="card-table">

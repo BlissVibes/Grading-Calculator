@@ -314,6 +314,54 @@ body { min-height: 100vh; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ===== Export Button ===== */
+.btn-export {
+  padding: 7px 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.btn-export:hover { background: var(--accent); color: #fff; }
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.6); display: flex;
+  align-items: center; justify-content: center;
+}
+.modal-content {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 24px 28px; width: 420px;
+  max-width: 90vw; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+.modal-title {
+  font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: var(--text);
+}
+.modal-desc {
+  font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;
+}
+.modal-label {
+  display: block; font-size: 0.78rem; font-weight: 600;
+  color: var(--text-muted); margin-bottom: 6px;
+}
+.modal-select {
+  width: 100%; padding: 8px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 0.85rem; margin-bottom: 20px;
+}
+.modal-select:focus { border-color: var(--accent); outline: none; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-btn {
+  padding: 8px 18px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-muted); font-size: 0.85rem; cursor: pointer;
+}
+.modal-btn:hover { background: var(--surface); }
+.modal-btn--primary {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
+.modal-btn--primary:hover { opacity: 0.9; }
+
 .lookup-link {
   display: inline-block; padding: 1px 5px; border-radius: 3px;
   font-size: 0.65rem; font-weight: 700; text-decoration: none;
