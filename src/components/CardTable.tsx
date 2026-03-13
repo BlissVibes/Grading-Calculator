@@ -35,17 +35,22 @@ function fmtMoney(n: number): string {
 }
 
 /** Build an eBay sold-listings search URL for a card. */
-function buildEbayUrl(card: GradingCard): string {
+function buildEbayUrl(card: GradingCard, company: GradingCompany | null): string {
   // Always include language for 151 set — EN and JP share the same set name
   const force151Language = /\b151\b/.test(card.set);
   const languagePart = (force151Language && card.language) ? card.language : null;
+
+  // Include grading company + grade 10 (e.g. "PSA 10", "TAG 10", "BGS 10")
+  const companyLabel = company === 'Beckett' ? 'BGS' : company;
+  const gradePart = companyLabel ? `${companyLabel} 10` : null;
 
   const query = [
     card.cardGame,
     languagePart,
     card.set,
     card.cardName,
-    card.cardNumber?.replace(/\/\d+$/, ''),  // strip denominator (116/091 → 116)
+    card.cardNumber?.replace(/\/\d+$/, ''),
+    gradePart,
   ]
     .filter(Boolean)
     .join(' ');
@@ -705,7 +710,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               </select>
               {card.cardName.trim() && (
                 <a
-                  href={buildEbayUrl(card)}
+                  href={buildEbayUrl(card, effectiveCompany)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="link-btn link-btn--ebay"
