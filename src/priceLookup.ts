@@ -142,6 +142,13 @@ function buildQuery(card: GradingCard): string {
     if (mapped) parts.unshift(mapped);
   }
 
+  // Pokemon Center stamped cards are listed separately on PriceCharting
+  // and sell for significantly more. Add "pokemon center" to the query
+  // to ensure we match the correct (stamped) variant.
+  if (card.pokemonCenter) {
+    parts.push('pokemon center');
+  }
+
   // Include language keyword for non-English cards so PriceCharting returns
   // results from the correct language category (e.g. pokemon-japanese-*)
   const lang = card.language || detectLanguage(card.cardName);

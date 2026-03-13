@@ -170,6 +170,60 @@ export default function SettingsPanel({ settings, onUpdate }: Props) {
             </div>
           ))}
 
+          {/* Profit Row Highlights */}
+          <div className="settings-section-title">Row Profit Highlights</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>
+            Rows are highlighted based on best profit across visible grades.
+          </div>
+          <div className="settings-fee-grid">
+            <span style={{ color: 'var(--gain)', fontSize: '0.82rem', fontWeight: 600 }}>● Green min ($)</span>
+            <input
+              className="settings-fee-input"
+              type="number"
+              step="5"
+              min="0"
+              value={settings.profitThresholds?.green ?? 100}
+              onChange={(e) => onUpdate({
+                ...settings,
+                profitThresholds: { ...(settings.profitThresholds ?? { green: 100, yellow: 25 }), green: parseFloat(e.target.value) || 0 },
+              })}
+            />
+            <span style={{ color: 'var(--neutral)', fontSize: '0.82rem', fontWeight: 600 }}>● Yellow min ($)</span>
+            <input
+              className="settings-fee-input"
+              type="number"
+              step="5"
+              min="0"
+              value={settings.profitThresholds?.yellow ?? 25}
+              onChange={(e) => onUpdate({
+                ...settings,
+                profitThresholds: { ...(settings.profitThresholds ?? { green: 100, yellow: 25 }), yellow: parseFloat(e.target.value) || 0 },
+              })}
+            />
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
+            Below yellow min → <span style={{ color: 'var(--loss)' }}>red</span>.
+            Set yellow to 0 to disable red highlighting.
+          </div>
+          <div className="settings-item" style={{ marginTop: 8 }}>
+            <span className="settings-item__label">Highlight based on</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {([9, 10] as const).map((g) => (
+                <button
+                  key={g}
+                  className={`comparison-grade-tab${(settings.profitThresholds?.highlightGrade ?? 10) === g ? ' comparison-grade-tab--active' : ''}`}
+                  style={{ fontSize: '0.72rem', padding: '3px 10px' }}
+                  onClick={() => onUpdate({
+                    ...settings,
+                    profitThresholds: { ...(settings.profitThresholds ?? { green: 100, yellow: 25, highlightGrade: 10 }), highlightGrade: g },
+                  })}
+                >
+                  G{g}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Fee Editor */}
           <div className="settings-section-title">Edit Fees</div>
           <div className="settings-item">

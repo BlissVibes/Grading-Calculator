@@ -87,6 +87,9 @@ export interface GradingCard {
   serviceLevel: string | null;         // per-card override (null = use global)
   noGrading: boolean;                  // exclude from grading calculations entirely
   scoring: boolean;                    // TAG scoring add-on
+  pokemonCenter: boolean;              // Pokemon Center stamped variant (higher value)
+  priceChartingUrl?: string;           // last successfully matched PriceCharting URL
+  priceChartingTitle?: string;         // last successfully matched card title
   notes: string;
   source: 'manual' | 'import';
 }
@@ -122,6 +125,12 @@ export interface CompanyComparisonResult {
 
 // ───── Settings ─────
 
+export interface ProfitThresholds {
+  green: number;        // profit >= green → green row
+  yellow: number;       // profit >= yellow (and < green) → yellow row; below yellow → red row
+  highlightGrade: 9 | 10;  // which grade's profit to use for highlighting
+}
+
 export interface AppSettings {
   darkMode: boolean;
   visibleGrades: GradeNumber[];
@@ -130,6 +139,7 @@ export interface AppSettings {
   defaultServiceLevel: Record<GradingCompany, string>;
   feeOverrides: Record<GradingCompany, Partial<CompanyFeeStructure>>;
   defaultLanguage: string;             // e.g. 'EN', 'JP' — applied to new cards
+  profitThresholds: ProfitThresholds;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -152,4 +162,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
     CGC: {},
   },
   defaultLanguage: 'EN',
+  profitThresholds: { green: 100, yellow: 25, highlightGrade: 10 },
 };

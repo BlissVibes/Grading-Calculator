@@ -97,6 +97,7 @@ export default function App() {
       serviceLevel: null,
       noGrading: false,
       scoring: false,
+      pokemonCenter: false,
       notes: '',
       source: 'manual',
     };
@@ -155,9 +156,13 @@ export default function App() {
           return next;
         });
       } else {
-        // Apply prices to card
+        // Apply prices to card and persist the matched card info for display after reload
         const updates = applyPricesToCard(card, result);
-        setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, ...updates } : c)));
+        setCards((prev) => prev.map((c) => (c.id === card.id ? {
+          ...c, ...updates,
+          priceChartingUrl: result.url || c.priceChartingUrl,
+          priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
+        } : c)));
 
         setLookupStatuses((prev) => {
           const next = new Map(prev);
@@ -195,7 +200,11 @@ export default function App() {
           prev.map((c) => {
             if (c.id !== status.cardId) return c;
             const updates = applyPricesToCard(c, result);
-            return { ...c, ...updates };
+            return {
+              ...c, ...updates,
+              priceChartingUrl: result.url || c.priceChartingUrl,
+              priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
+            };
           })
         );
       }
