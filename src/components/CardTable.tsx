@@ -507,6 +507,17 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
                 PKC
               </button>
             )}
+            {/* Lookup price button — always visible next to card name */}
+            <button
+              className="row-action-btn lookup-btn-inline"
+              onClick={onLookup}
+              disabled={!card.cardName.trim() || lookupStatus?.status === 'loading'}
+              title="Lookup prices on PriceCharting"
+            >
+              {lookupStatus?.status === 'loading' ? (
+                <span className="lookup-spinner" />
+              ) : '🔍'}
+            </button>
             {/* Show PriceCharting link — from live lookup or persisted card data */}
             {(() => {
               const url = lookupStatus?.status === 'done' ? lookupStatus.result?.url : card.priceChartingUrl;
@@ -680,29 +691,31 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               <CompanyInfoPopover fees={COMPANY_FEES[effectiveCompany]} />
             )}
           </div>
-          {card.cardName.trim() && (
-            <a
-              href={buildEbayUrl(card)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link-btn link-btn--ebay"
-              onClick={(e) => e.stopPropagation()}
-            >
-              eBay
-            </a>
-          )}
           {effectiveCompany && !card.noGrading && (
-            <select
-              className="company-cell-select"
-              value={card.serviceLevel ?? ''}
-              onChange={(e) => onUpdate({ serviceLevel: e.target.value || null })}
-              style={{ marginTop: 2, display: 'block' }}
-            >
-              <option value="">Default</option>
-              {COMPANY_FEES[effectiveCompany].serviceLevels.map((sl) => (
-                <option key={sl.id} value={sl.id}>{sl.name}</option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center', marginTop: 2 }}>
+              <select
+                className="company-cell-select"
+                value={card.serviceLevel ?? ''}
+                onChange={(e) => onUpdate({ serviceLevel: e.target.value || null })}
+              >
+                <option value="">Default</option>
+                {COMPANY_FEES[effectiveCompany].serviceLevels.map((sl) => (
+                  <option key={sl.id} value={sl.id}>{sl.name}</option>
+                ))}
+              </select>
+              {card.cardName.trim() && (
+                <a
+                  href={buildEbayUrl(card)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link-btn link-btn--ebay"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ margin: 0, flexShrink: 0 }}
+                >
+                  eBay
+                </a>
+              )}
+            </div>
           )}
         </td>
 
@@ -723,16 +736,6 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
         {/* Actions */}
         <td className="td-center row-actions">
-          <button
-            className="row-action-btn"
-            onClick={onLookup}
-            disabled={!card.cardName.trim() || lookupStatus?.status === 'loading'}
-            title="Lookup prices on PriceCharting"
-          >
-            {lookupStatus?.status === 'loading' ? (
-              <span className="lookup-spinner" />
-            ) : '🔍'}
-          </button>
           <button
             className="row-action-btn row-action-btn--delete"
             onClick={onDelete}

@@ -2,9 +2,11 @@ import { useState, useRef, useCallback } from 'react';
 
 interface Props {
   onImport: (content: string, filename: string) => void;
+  onClearAll?: () => void;
+  hasCards?: boolean;
 }
 
-export default function FileDropZone({ onImport }: Props) {
+export default function FileDropZone({ onImport, onClearAll, hasCards }: Props) {
   const [active, setActive] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
   const [pasteText, setPasteText] = useState('');
@@ -86,6 +88,19 @@ export default function FileDropZone({ onImport }: Props) {
       >
         {showPaste ? 'Hide text import' : 'Or paste a TCGPlayer text export'}
       </button>
+
+      {hasCards && onClearAll && (
+        <button
+          className="drop-zone__clear-btn"
+          onClick={() => {
+            if (window.confirm('Are you sure you want to clear all cards? This cannot be undone.')) {
+              onClearAll();
+            }
+          }}
+        >
+          Clear All Cards
+        </button>
+      )}
 
       {showPaste && (
         <div className="drop-zone__paste-area">

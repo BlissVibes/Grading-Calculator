@@ -229,7 +229,11 @@ export default function App() {
 
       <main className="app-main">
         {/* File Import */}
-        <FileDropZone onImport={handleImport} />
+        <FileDropZone
+          onImport={handleImport}
+          onClearAll={() => { setCards([]); setLookupStatuses(new Map()); }}
+          hasCards={cards.length > 0}
+        />
 
         {/* Errors */}
         {errors.length > 0 && (
