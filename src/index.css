@@ -363,6 +363,13 @@ body { min-height: 100vh; }
 }
 .card-table th.th-right { text-align: right; }
 .card-table th.th-center { text-align: center; }
+.card-table th.th-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.card-table th.th-sortable:hover { background: var(--surface2); }
+
+.sort-icon { margin-left: 3px; font-size: 0.7rem; opacity: 0.35; }
+.sort-icon--active { opacity: 1; color: var(--profit); }
+
+.sort-active-label { color: var(--text-muted); font-size: 0.8rem; }
 
 .card-table tbody tr {
   border-bottom: 1px solid var(--border); transition: background 0.1s;

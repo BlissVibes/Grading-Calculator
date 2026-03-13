@@ -34,6 +34,21 @@ export default function CardTable({
 }: Props) {
   const [search, setSearch] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (key: string) => {
+    setSortKey((prev) => {
+      if (prev !== key) { setSortDir('asc'); return key; }  // new column → asc
+      if (sortDir === 'asc') { setSortDir('desc'); return key; }  // second click → desc
+      setSortDir('asc'); return null;  // third click → cancel
+    });
+  };
+
+  const SortIcon = ({ col }: { col: string }) => {
+    if (sortKey !== col) return <span className="sort-icon sort-icon--none">⇅</span>;
+    return <span className="sort-icon sort-icon--active">{sortDir === 'asc' ? '↑' : '↓'}</span>;
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedRows((prev) => {
@@ -56,6 +71,55 @@ export default function CardTable({
   });
 
   const calcMap = new Map(calculations.map((c) => [c.cardId, c]));
+
+  const getGradeResult = (cardId: string, grade: GradeNumber) => {
+    const calc = calcMap.get(cardId);
+    return calc?.grades.find((g) => g.grade === grade);
+  };
+
+  const sortedCards = sortKey
+    ? [...filteredCards].sort((a, b) => {
+        let av: number | string = 0;
+        let bv: number | string = 0;
+        const gradeNum = (key: string) => parseFloat(key.split('-')[1]) as GradeNumber;
+
+        switch (true) {
+          case sortKey === 'name':
+            av = a.cardName.toLowerCase(); bv = b.cardName.toLowerCase(); break;
+          case sortKey === 'game':
+            av = a.cardGame.toLowerCase() || 'z';
+            bv = b.cardGame.toLowerCase() || 'z';
+            // Tie-break by card name
+            if (av === bv) { av = a.cardName.toLowerCase(); bv = b.cardName.toLowerCase(); }
+            break;
+          case sortKey === 'set':
+            av = a.set.toLowerCase(); bv = b.set.toLowerCase(); break;
+          case sortKey === 'paid':
+            av = a.pricePaid; bv = b.pricePaid; break;
+          case sortKey === 'raw':
+            av = a.rawPrice; bv = b.rawPrice; break;
+          case sortKey.startsWith('price-'): {
+            const g = gradeNum(sortKey);
+            av = a.gradeValues[g] ?? 0; bv = b.gradeValues[g] ?? 0; break;
+          }
+          case sortKey.startsWith('profit-'): {
+            const g = gradeNum(sortKey);
+            av = getGradeResult(a.id, g)?.profit ?? 0;
+            bv = getGradeResult(b.id, g)?.profit ?? 0; break;
+          }
+          case sortKey.startsWith('mult-'): {
+            const g = gradeNum(sortKey);
+            av = getGradeResult(a.id, g)?.multiplier ?? 0;
+            bv = getGradeResult(b.id, g)?.multiplier ?? 0; break;
+          }
+        }
+
+        const cmp = typeof av === 'string' && typeof bv === 'string'
+          ? av.localeCompare(bv)
+          : (av as number) - (bv as number);
+        return sortDir === 'asc' ? cmp : -cmp;
+      })
+    : filteredCards;
 
   const updateGradeValue = (id: string, card: GradingCard, grade: GradeNumber, value: number) => {
     onUpdateCard(id, {
@@ -102,34 +166,47 @@ export default function CardTable({
           <thead>
             <tr>
               <th style={{ width: 30 }}></th>
-              <th>Card Name</th>
-              <th>Game</th>
-              <th>Set</th>
+              <th className="th-sortable" onClick={() => handleSort('name')}>
+                Card Name <SortIcon col="name" />
+              </th>
+              <th className="th-sortable" onClick={() => handleSort('game')}>
+                Game <SortIcon col="game" />
+              </th>
+              <th className="th-sortable" onClick={() => handleSort('set')}>
+                Set <SortIcon col="set" />
+              </th>
               <th>#</th>
-              <th className="th-right">Paid</th>
-              <th className="th-right">Raw</th>
+              <th className="th-right th-sortable" onClick={() => handleSort('paid')}>
+                Paid <SortIcon col="paid" />
+              </th>
+              <th className="th-right th-sortable" onClick={() => handleSort('raw')}>
+                Raw <SortIcon col="raw" />
+              </th>
               {settings.visibleGrades.map((g) => (
-                <th key={`price-${g}`} className="th-center grade-col">
+                <th key={`price-${g}`} className="th-center grade-col th-sortable" onClick={() => handleSort(`price-${g}`)}>
                   <span className="grade-header">
                     Grade {g}
                     <span className="grade-header__sub">Price</span>
                   </span>
+                  <SortIcon col={`price-${g}`} />
                 </th>
               ))}
               {settings.visibleGrades.map((g) => (
-                <th key={`profit-${g}`} className="th-center grade-col">
+                <th key={`profit-${g}`} className="th-center grade-col th-sortable" onClick={() => handleSort(`profit-${g}`)}>
                   <span className="grade-header">
                     G{g} Profit
                     <span className="grade-header__sub">After Fees</span>
                   </span>
+                  <SortIcon col={`profit-${g}`} />
                 </th>
               ))}
               {settings.visibleGrades.map((g) => (
-                <th key={`mult-${g}`} className="th-center grade-col">
+                <th key={`mult-${g}`} className="th-center grade-col th-sortable" onClick={() => handleSort(`mult-${g}`)}>
                   <span className="grade-header">
                     G{g} Multi
                     <span className="grade-header__sub">ROI</span>
                   </span>
+                  <SortIcon col={`mult-${g}`} />
                 </th>
               ))}
               <th className="th-center">Company</th>
@@ -145,7 +222,7 @@ export default function CardTable({
                 </td>
               </tr>
             )}
-            {filteredCards.map((card) => {
+            {sortedCards.map((card) => {
               const calc = calcMap.get(card.id);
               const gradeResults = calc ? new Map(calc.grades.map((g) => [g.grade, g])) : new Map();
               const lookupStatus = lookupStatuses.get(card.id);
@@ -170,8 +247,9 @@ export default function CardTable({
         </table>
       </div>
       <div className="table-footer">
-        {filteredCards.length} card{filteredCards.length !== 1 ? 's' : ''}
+        {sortedCards.length} card{sortedCards.length !== 1 ? 's' : ''}
         {search && ` matching "${search}"`}
+        {sortKey && <span className="sort-active-label"> · sorted by {sortKey.replace('-', ' g')} {sortDir}</span>}
       </div>
     </div>
   );
