@@ -499,6 +499,17 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
 
 .scoring-check { accent-color: var(--tag); cursor: pointer; width: 15px; height: 15px; }
 
+/* ── eBay link button ── */
+.link-btn {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 0.72rem; font-weight: 600; text-decoration: none;
+  transition: opacity 0.15s; margin: 3px auto 0; cursor: pointer;
+}
+.link-btn:hover { opacity: 0.75; }
+.link-btn--ebay {
+  background: rgba(229, 75, 107, 0.14); color: #e54b6b;
+}
+
 /* ── Company Info Popover ── */
 .company-info-wrap { position: relative; display: inline-block; }
 
