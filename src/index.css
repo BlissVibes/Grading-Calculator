@@ -371,6 +371,30 @@ body { min-height: 100vh; }
 
 .sort-active-label { color: var(--text-muted); font-size: 0.8rem; }
 
+/* ── Profit row highlights ── */
+.card-table tbody tr.row-profit-green {
+  background: linear-gradient(90deg, rgba(46,204,113,0.10) 0%, transparent 80%);
+  border-left: 3px solid var(--gain);
+}
+.card-table tbody tr.row-profit-yellow {
+  background: linear-gradient(90deg, rgba(230,184,0,0.10) 0%, transparent 80%);
+  border-left: 3px solid var(--neutral);
+}
+.card-table tbody tr.row-profit-red {
+  background: linear-gradient(90deg, rgba(231,76,60,0.10) 0%, transparent 80%);
+  border-left: 3px solid var(--loss);
+}
+/* Light mode uses stronger tints to remain visible */
+body.light .card-table tbody tr.row-profit-green {
+  background: linear-gradient(90deg, rgba(26,158,85,0.12) 0%, transparent 80%);
+}
+body.light .card-table tbody tr.row-profit-yellow {
+  background: linear-gradient(90deg, rgba(181,137,0,0.12) 0%, transparent 80%);
+}
+body.light .card-table tbody tr.row-profit-red {
+  background: linear-gradient(90deg, rgba(192,57,43,0.12) 0%, transparent 80%);
+}
+
 .card-table tbody tr {
   border-bottom: 1px solid var(--border); transition: background 0.1s;
 }

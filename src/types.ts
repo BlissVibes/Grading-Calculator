@@ -125,6 +125,11 @@ export interface CompanyComparisonResult {
 
 // ───── Settings ─────
 
+export interface ProfitThresholds {
+  green: number;   // profit >= green → green row
+  yellow: number;  // profit >= yellow (and < green) → yellow row; below yellow → red row
+}
+
 export interface AppSettings {
   darkMode: boolean;
   visibleGrades: GradeNumber[];
@@ -133,6 +138,7 @@ export interface AppSettings {
   defaultServiceLevel: Record<GradingCompany, string>;
   feeOverrides: Record<GradingCompany, Partial<CompanyFeeStructure>>;
   defaultLanguage: string;             // e.g. 'EN', 'JP' — applied to new cards
+  profitThresholds: ProfitThresholds;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -155,4 +161,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
     CGC: {},
   },
   defaultLanguage: 'EN',
+  profitThresholds: { green: 100, yellow: 25 },
 };

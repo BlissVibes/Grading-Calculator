@@ -227,6 +227,15 @@ export default function CardTable({
               const gradeResults = calc ? new Map(calc.grades.map((g) => [g.grade, g])) : new Map();
               const lookupStatus = lookupStatuses.get(card.id);
 
+              // Determine profit highlight tier based on Grade 10 profit
+              const thresholds = settings.profitThresholds ?? { green: 100, yellow: 25 };
+              const g10Profit = card.noGrading ? null : (gradeResults.get(10)?.profit ?? null);
+              const profitTier = (g10Profit === null)
+                ? null
+                : g10Profit >= thresholds.green ? 'green'
+                : g10Profit >= thresholds.yellow ? 'yellow'
+                : 'red';
+
               return (
                 <CardRow
                   key={card.id}
@@ -235,6 +244,7 @@ export default function CardTable({
                   settings={settings}
                   expanded={expandedRows.has(card.id)}
                   lookupStatus={lookupStatus}
+                  profitTier={profitTier}
                   onToggleExpand={() => toggleExpand(card.id)}
                   onUpdate={(updates) => onUpdateCard(card.id, updates)}
                   onUpdateGrade={(grade, value) => updateGradeValue(card.id, card, grade, value)}
@@ -263,6 +273,7 @@ interface CardRowProps {
   settings: AppSettings;
   expanded: boolean;
   lookupStatus?: LookupStatus;
+  profitTier: 'green' | 'yellow' | 'red' | null;
   onToggleExpand: () => void;
   onUpdate: (updates: Partial<GradingCard>) => void;
   onUpdateGrade: (grade: GradeNumber, value: number) => void;
@@ -270,12 +281,14 @@ interface CardRowProps {
   onLookup: () => void;
 }
 
-function CardRow({ card, gradeResults, settings, expanded, lookupStatus, onToggleExpand, onUpdate, onUpdateGrade, onDelete, onLookup }: CardRowProps) {
+function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitTier, onToggleExpand, onUpdate, onUpdateGrade, onDelete, onLookup }: CardRowProps) {
   const effectiveCompany = card.noGrading ? null : (card.company ?? settings.defaultCompany);
+
+  const tierClass = profitTier ? `row-profit-${profitTier}` : '';
 
   return (
     <>
-      <tr style={card.noGrading ? { opacity: 0.5 } : undefined}>
+      <tr className={tierClass} style={card.noGrading ? { opacity: 0.5 } : undefined}>
         {/* Expand */}
         <td>
           {!card.noGrading && (
