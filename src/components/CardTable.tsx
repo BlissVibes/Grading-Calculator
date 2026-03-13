@@ -34,6 +34,25 @@ function fmtMoney(n: number): string {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 });
 }
 
+/** Build an eBay sold-listings search URL for a card. */
+function buildEbayUrl(card: GradingCard): string {
+  // Always include language for 151 set — EN and JP share the same set name
+  const force151Language = /\b151\b/.test(card.set);
+  const languagePart = (force151Language && card.language) ? card.language : null;
+
+  const query = [
+    card.cardGame,
+    languagePart,
+    card.set,
+    card.cardName,
+    card.cardNumber?.replace(/\/\d+$/, ''),  // strip denominator (116/091 → 116)
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&LH_Complete=1&LH_Sold=1`;
+}
+
 // ───── Company Info Popover ─────
 
 function CompanyInfoPopover({ fees }: { fees: CompanyFeeStructure }) {
@@ -661,6 +680,17 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               <CompanyInfoPopover fees={COMPANY_FEES[effectiveCompany]} />
             )}
           </div>
+          {card.cardName.trim() && (
+            <a
+              href={buildEbayUrl(card)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link-btn link-btn--ebay"
+              onClick={(e) => e.stopPropagation()}
+            >
+              eBay
+            </a>
+          )}
           {effectiveCompany && !card.noGrading && (
             <select
               className="company-cell-select"
