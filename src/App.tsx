@@ -97,6 +97,7 @@ export default function App() {
       serviceLevel: null,
       noGrading: false,
       scoring: false,
+      pokemonCenter: false,
       notes: '',
       source: 'manual',
     };

@@ -87,6 +87,7 @@ export interface GradingCard {
   serviceLevel: string | null;         // per-card override (null = use global)
   noGrading: boolean;                  // exclude from grading calculations entirely
   scoring: boolean;                    // TAG scoring add-on
+  pokemonCenter: boolean;              // Pokemon Center stamped variant (higher value)
   notes: string;
   source: 'manual' | 'import';
 }

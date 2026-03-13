@@ -63,6 +63,19 @@ async function searchPriceCharting(query: string): Promise<SearchResult[]> {
   const resp = await throttledFetch(url);
 
   if (!resp.ok) return [];
+
+  // PriceCharting sometimes redirects directly to a card page for exact matches.
+  // Detect this by checking if the final URL is a /game/ page (not search-products).
+  const finalUrl = resp.url;
+  if (finalUrl && /\/game\//.test(finalUrl)) {
+    const html = await resp.text();
+    // Extract the card title from the <h1> on the card page
+    const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    const title = h1Match ? h1Match[1].trim() : query;
+    const path = finalUrl.replace(/https?:\/\/www\.pricecharting\.com/, '');
+    return [{ url: path, title }];
+  }
+
   const html = await resp.text();
 
   const results: SearchResult[] = [];
@@ -78,6 +91,46 @@ async function searchPriceCharting(query: string): Promise<SearchResult[]> {
   }
 
   return results;
+}
+
+// ───── Fallback: PriceCharting AJAX Autocomplete ─────
+// The search bar on pricecharting.com uses an AJAX endpoint that's much more
+// forgiving than the search-products page — "slowpoke 116" returns results instantly.
+
+async function searchPriceChartingAutocomplete(query: string): Promise<SearchResult[]> {
+  const url = `https://www.pricecharting.com/search-products?q=${encodeURIComponent(query)}&type=suggestions`;
+  const resp = await throttledFetch(url);
+
+  if (!resp.ok) return [];
+  const text = await resp.text();
+
+  try {
+    // The suggestions endpoint may return JSON like [{title, url}, ...]
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) {
+      return data
+        .filter((item: { url?: string; title?: string }) => item.url && item.title)
+        .map((item: { url: string; title: string; 'console-name'?: string }) => ({
+          url: item.url.startsWith('http')
+            ? item.url.replace(/https?:\/\/www\.pricecharting\.com/, '')
+            : item.url,
+          title: item.title + (item['console-name'] ? ` [${item['console-name']}]` : ''),
+        }));
+    }
+  } catch {
+    // Not JSON — try parsing as HTML suggestions
+    const results: SearchResult[] = [];
+    const re = /<a\s+href="([^"]*\/game\/[^"]+)"[^>]*>([^<]+)<\/a>/gi;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const decodedUrl = m[1].replace(/&amp;/g, '&');
+      const path = decodedUrl.replace(/https?:\/\/www\.pricecharting\.com/, '');
+      results.push({ url: path, title: m[2].trim() });
+    }
+    return results;
+  }
+
+  return [];
 }
 
 // ───── Fallback: Search via Google ─────
@@ -206,7 +259,20 @@ function cardNumbersMatch(a: string, b: string): boolean {
   return false;
 }
 
-function scoreResult(query: string, resultTitle: string): number {
+const LANGUAGE_KEYWORDS = ['japanese', 'korean', 'chinese', 'german', 'french', 'italian', 'spanish', 'portuguese'];
+
+/** Check if a string (URL slug or title) indicates a non-English card */
+function detectResultLanguage(s: string): string | null {
+  const lower = s.toLowerCase();
+  for (const lang of LANGUAGE_KEYWORDS) {
+    if (lower.includes(lang)) return lang;
+  }
+  // Japanese promo suffixes: "S-P", "/S-P"
+  if (/\bs[\s-]?p\b/i.test(lower)) return 'japanese';
+  return null;
+}
+
+function scoreResult(query: string, resultTitle: string, resultUrl?: string): number {
   const qNorm = normalizeForMatch(query);
   const tNorm = normalizeForMatch(resultTitle);
 
@@ -278,6 +344,30 @@ function scoreResult(query: string, resultTitle: string): number {
     score -= 15;
   }
 
+  // ── Language mismatch penalty ──
+  // If the query doesn't contain any language keyword (implying English),
+  // but the result title or URL indicates a non-English card, penalize heavily.
+  const queryHasLang = LANGUAGE_KEYWORDS.some((lk) => qNorm.includes(lk));
+  const resultLang = detectResultLanguage(tNorm) || (resultUrl ? detectResultLanguage(resultUrl) : null);
+  if (!queryHasLang && resultLang) {
+    score -= 120; // wrong language — almost certainly wrong card
+  } else if (queryHasLang && !resultLang) {
+    // Query wants a specific language but result looks English — mild penalty
+    score -= 30;
+  }
+
+  // ── Pokemon Center stamp mismatch ──
+  // PriceCharting titles include "Pokemon Center" for stamped variants.
+  // If the query asks for "pokemon center" but the result doesn't have it (or vice versa),
+  // apply a penalty to avoid matching the wrong variant.
+  const queryWantsPC = qNorm.includes('pokemon center');
+  const resultHasPC = tNorm.includes('pokemon center') || (resultUrl ? resultUrl.toLowerCase().includes('pokemon-center') : false);
+  if (queryWantsPC && !resultHasPC) {
+    score -= 80; // wanted PC stamp but result is non-stamped
+  } else if (!queryWantsPC && resultHasPC) {
+    score -= 80; // didn't want PC stamp but result is stamped (would overprice)
+  }
+
   return score;
 }
 
@@ -288,8 +378,8 @@ function rankResults(query: string, results: SearchResult[]): SearchResult[] {
     // Score against title AND URL slug (PriceCharting URLs contain the card identifier)
     const slugA = a.url.split('/').pop()?.replace(/-/g, ' ') ?? '';
     const slugB = b.url.split('/').pop()?.replace(/-/g, ' ') ?? '';
-    const scoreA = Math.max(scoreResult(query, a.title), scoreResult(query, slugA));
-    const scoreB = Math.max(scoreResult(query, b.title), scoreResult(query, slugB));
+    const scoreA = Math.max(scoreResult(query, a.title, a.url), scoreResult(query, slugA, a.url));
+    const scoreB = Math.max(scoreResult(query, b.title, b.url), scoreResult(query, slugB, b.url));
     return scoreB - scoreA;
   });
 }
@@ -342,6 +432,19 @@ function buildQueryVariants(query: string): string[] {
     variants.push(simplified);
   }
 
+  // Try "name + number" only (no set, no game prefix) — mimics how humans search on PriceCharting.
+  // E.g. "slowpoke 116" finds Slowpoke #116 instantly, whereas the full query with set name may fail.
+  const nameNumMatch = query.match(/^(?:pokemon|magic the gathering|yugioh)\s+(?:japanese\s+|korean\s+|chinese\s+|german\s+|french\s+)?(.+?)\s+(\d{1,4}(?:\/\d{1,4})?)\s+.+$/i);
+  if (nameNumMatch) {
+    const justNum = nameNumMatch[2].replace(/\/\d+$/, ''); // strip denominator
+    variants.push(`${nameNumMatch[1]} ${justNum}`);
+    // Also try with game prefix for disambiguation
+    const gamePrefix = query.match(/^(pokemon|magic the gathering|yugioh)\s+/i);
+    if (gamePrefix) {
+      variants.push(`${gamePrefix[1]} ${nameNumMatch[1]} ${justNum}`);
+    }
+  }
+
   // Deduplicate
   return [...new Set(variants)];
 }
@@ -353,10 +456,15 @@ async function searchCard(query: string): Promise<SearchResult[]> {
 
   for (const variant of variants) {
     try {
-      // Try PriceCharting directly first
+      // Try PriceCharting search-products page first
       let results = await searchPriceCharting(variant);
 
-      // If PriceCharting search failed, use Google as fallback
+      // If search-products failed, try autocomplete endpoint (more forgiving)
+      if (results.length === 0) {
+        results = await searchPriceChartingAutocomplete(variant);
+      }
+
+      // If both PriceCharting methods failed, use Google as fallback
       if (results.length === 0) {
         results = await searchViaGoogle(variant);
       }

@@ -216,6 +216,15 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, onToggl
               onChange={(e) => onUpdate({ cardName: e.target.value })}
               placeholder="Card name"
             />
+            {card.cardGame === 'Pokémon' && (
+              <button
+                className={`pc-stamp-btn${card.pokemonCenter ? ' pc-stamp-btn--active' : ''}`}
+                onClick={() => onUpdate({ pokemonCenter: !card.pokemonCenter })}
+                title={card.pokemonCenter ? 'Pokemon Center stamp (click to remove)' : 'Mark as Pokemon Center stamped variant'}
+              >
+                PKC
+              </button>
+            )}
             {lookupStatus?.status === 'done' && lookupStatus.result?.url && (
               <a
                 href={lookupStatus.result.url}

@@ -107,6 +107,7 @@ function makeCard(overrides: Partial<GradingCard>): GradingCard {
     serviceLevel: null,
     noGrading: false,
     scoring: false,
+    pokemonCenter: false,
     notes: '',
     source: 'import',
     ...overrides,
