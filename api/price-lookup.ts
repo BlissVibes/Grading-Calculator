@@ -391,6 +391,21 @@ function buildQueryVariants(query: string): string[] {
   const variants: string[] = [query];
   const lower = query.toLowerCase();
 
+  // ── Early high-confidence variant: game + language + name + number (no set) ──
+  // E.g. "pokemon japanese Mew 005/038 Ruler of the Black Flame Deck Build Box"
+  //   → "pokemon japanese Mew 005"
+  // Set names containing "Box", "Deck", etc. pollute results; stripping them often
+  // gives a cleaner hit. Non-greedy name capture stops at the first number.
+  const nameNumEarly = query.match(
+    /^((?:pokemon|magic the gathering|yugioh)\s+(?:japanese\s+|korean\s+|chinese\s+|german\s+|french\s+)?)(.+?)\s+(\d{1,4}(?:\/\d{1,4})?)\s+\S/i
+  );
+  if (nameNumEarly) {
+    const prefix = nameNumEarly[1]; // e.g. "pokemon japanese "
+    const name   = nameNumEarly[2]; // e.g. "Mew"
+    const num    = nameNumEarly[3].replace(/\/\d+$/, ''); // e.g. "005"
+    variants.push(`${prefix}${name} ${num}`.trim());
+  }
+
   // ── Card number formats: "008/025", "#131", "131/200" ──
   // PriceCharting often chokes on "008/025" — try without the /setSize part
   const withoutSlashPart = query.replace(/\b(\d{1,4})\/\d{1,4}\b/g, '$1');
@@ -470,8 +485,13 @@ async function searchCard(query: string): Promise<SearchResult[]> {
       }
 
       if (results.length > 0) {
-        // Rank results by relevance to the ORIGINAL query
-        return rankResults(query, results);
+        // Hard-filter sealed products — this tool prices individual graded cards,
+        // never boxes, packs, decks, tins, or other sealed product listings.
+        const singleCards = results.filter((r) => !looksLikeSealed(r.title));
+        if (singleCards.length > 0) {
+          return rankResults(query, singleCards);
+        }
+        // Every result for this variant was a sealed product — try next variant
       }
     } catch (err) {
       // If rate-limited, stop trying more variants — they'll all fail
