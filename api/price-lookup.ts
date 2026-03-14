@@ -203,11 +203,18 @@ function tokenize(s: string): string[] {
 }
 
 // Keywords that indicate a sealed product or compilation — not an individual card page
-const SEALED_KEYWORDS = ['pack', 'booster', 'box', 'collection', 'tin', 'bundle', 'deck', 'set box', 'promo pack'];
+const SEALED_KEYWORDS = ['pack', 'booster', 'box', 'collection', 'tin', 'bundle', 'deck', 'set box', 'promo pack', 'etb', 'elite trainer'];
 
-function looksLikeSealed(title: string): boolean {
+/** Check if a result looks like a sealed product by inspecting both title AND URL. */
+function looksLikeSealed(title: string, url?: string): boolean {
   const t = title.toLowerCase();
   if (SEALED_KEYWORDS.some((kw) => t.includes(kw))) return true;
+  // Also check the URL slug — PriceCharting URLs like "/game/pokemon-promo/mew-v-box"
+  // contain "box" even when the H1 title might not.
+  if (url) {
+    const slug = url.toLowerCase().split('/').pop()?.replace(/-/g, ' ') ?? '';
+    if (SEALED_KEYWORDS.some((kw) => slug.includes(kw))) return true;
+  }
   // "Vol7", "Vol. 3" etc. — compilation volumes
   if (/\bvol\.?\s*\d+\b/.test(t)) return true;
   return false;
@@ -336,10 +343,10 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
     }
 
     // Sealed product penalty on top of number mismatch
-    if (looksLikeSealed(resultTitle)) {
+    if (looksLikeSealed(resultTitle, resultUrl)) {
       score -= 50;
     }
-  } else if (looksLikeSealed(resultTitle)) {
+  } else if (looksLikeSealed(resultTitle, resultUrl)) {
     // Even without a card number, slightly penalise sealed products
     score -= 15;
   }
@@ -390,6 +397,27 @@ function rankResults(query: string, results: SearchResult[]): SearchResult[] {
 function buildQueryVariants(query: string): string[] {
   const variants: string[] = [query];
   const lower = query.toLowerCase();
+
+  // ── Early high-confidence variant: game + language + name + number (no set) ──
+  // E.g. "pokemon japanese Mew (JP) 005/038 Ruler of the Black Flame Deck Build Box"
+  //   → "pokemon japanese Mew 005/038"  (full number)
+  //   → "pokemon japanese Mew 005"      (stripped denominator)
+  // Set names containing "Box", "Deck", etc. pollute results; stripping them often
+  // gives a cleaner hit. Non-greedy name capture stops at the first number.
+  const nameNumEarly = query.match(
+    /^((?:pokemon|magic the gathering|yugioh)\s+(?:japanese\s+|korean\s+|chinese\s+|german\s+|french\s+)?)(.+?)\s+(\d{1,4}(?:\/\d{1,4})?)\s+\S/i
+  );
+  if (nameNumEarly) {
+    const prefix = nameNumEarly[1]; // e.g. "pokemon japanese "
+    const name   = nameNumEarly[2]; // e.g. "Mew (JP)"
+    const fullNum = nameNumEarly[3]; // e.g. "005/038"
+    const shortNum = fullNum.replace(/\/\d+$/, ''); // e.g. "005"
+    // Try with full number first (005/038), then stripped (005)
+    variants.push(`${prefix}${name} ${fullNum}`.trim());
+    if (shortNum !== fullNum) {
+      variants.push(`${prefix}${name} ${shortNum}`.trim());
+    }
+  }
 
   // ── Card number formats: "008/025", "#131", "131/200" ──
   // PriceCharting often chokes on "008/025" — try without the /setSize part
@@ -470,8 +498,13 @@ async function searchCard(query: string): Promise<SearchResult[]> {
       }
 
       if (results.length > 0) {
-        // Rank results by relevance to the ORIGINAL query
-        return rankResults(query, results);
+        // Hard-filter sealed products — this tool prices individual graded cards,
+        // never boxes, packs, decks, tins, or other sealed product listings.
+        const singleCards = results.filter((r) => !looksLikeSealed(r.title, r.url));
+        if (singleCards.length > 0) {
+          return rankResults(query, singleCards);
+        }
+        // Every result for this variant was a sealed product — try next variant
       }
     } catch (err) {
       // If rate-limited, stop trying more variants — they'll all fail
