@@ -333,7 +333,7 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
       } else if (hasExactMatch && !hasCardNameMatch) {
         score += 15;  // right number but wrong name — only a mild bonus
       } else {
-        score -= 80;  // WRONG card number (e.g. #271 vs #002)
+        score -= 300; // WRONG card number — essentially disqualifying
       }
     }
     // No number in result title at all — mild penalty
