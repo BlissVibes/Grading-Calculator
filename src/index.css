@@ -807,5 +807,60 @@ tr.card-row--draft > td {
 
 @media (max-width: 480px) {
   .inline-comparison__grid { grid-template-columns: 1fr; }
-  .summary-bar { grid-template-columns: 1fr; }
+  .summary-bar { flex-direction: column; }
 }
+
+/* ===== Settings changelog link ===== */
+.settings-footer {
+  margin-top: 14px; padding-top: 10px;
+  border-top: 1px solid var(--border); text-align: center;
+}
+.settings-changelog-link {
+  font-size: 0.78rem; color: var(--text-muted);
+  text-decoration: none; cursor: pointer;
+}
+.settings-changelog-link:hover { color: var(--accent); text-decoration: underline; }
+
+/* ===== Changelog page ===== */
+.changelog {
+  max-width: 760px; margin: 0 auto; padding: 12px 4px 60px;
+}
+.changelog__header { margin-bottom: 28px; }
+.changelog__back {
+  display: inline-block; margin-bottom: 18px;
+  font-size: 0.85rem; color: var(--accent); text-decoration: none;
+}
+.changelog__back:hover { text-decoration: underline; }
+.changelog__title {
+  font-size: 1.9rem; font-weight: 800; margin: 0 0 4px;
+  background: linear-gradient(135deg, #6c63ff 0%, #a78bfa 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.changelog__subtitle { color: var(--text-muted); font-size: 0.9rem; margin: 0; }
+
+.changelog-release {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px;
+}
+.changelog-release__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.changelog-release__date { font-weight: 700; font-size: 1.02rem; }
+.changelog-release__version {
+  font-size: 0.72rem; font-weight: 700; color: var(--accent);
+  background: var(--surface2); border: 1px solid var(--border);
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+}
+.changelog-release__items { list-style: none; margin: 0; padding: 0; }
+.changelog-item {
+  display: flex; gap: 10px; padding: 5px 0;
+  font-size: 0.88rem; line-height: 1.45; color: var(--text);
+}
+.changelog-item__time {
+  flex-shrink: 0; width: 42px; color: var(--text-muted);
+  font-variant-numeric: tabular-nums; font-size: 0.78rem; padding-top: 1px;
+}
+.changelog-item__text { flex: 1; }
+.changelog__footer { margin-top: 24px; text-align: center; }

@@ -6,9 +6,10 @@ import { COMPANY_FEES } from '../gradingData';
 interface Props {
   settings: AppSettings;
   onUpdate: (settings: AppSettings) => void;
+  onOpenChangelog: () => void;
 }
 
-export default function SettingsPanel({ settings, onUpdate }: Props) {
+export default function SettingsPanel({ settings, onUpdate, onOpenChangelog }: Props) {
   const [open, setOpen] = useState(false);
   const [feeEditCompany, setFeeEditCompany] = useState<GradingCompany | null>(null);
 
@@ -286,6 +287,17 @@ export default function SettingsPanel({ settings, onUpdate }: Props) {
               ))}
             </div>
           )}
+
+          {/* Changelog link — very bottom of the panel */}
+          <div className="settings-footer">
+            <a
+              href="/changelog"
+              className="settings-changelog-link"
+              onClick={(e) => { e.preventDefault(); setOpen(false); onOpenChangelog(); }}
+            >
+              View changelog
+            </a>
+          </div>
         </div>
       )}
     </div>

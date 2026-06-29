@@ -12,6 +12,7 @@ import CardTable from './components/CardTable';
 import SummaryBar from './components/SummaryBar';
 import CompanyComparison from './components/CompanyComparison';
 import SettingsPanel from './components/SettingsPanel';
+import Changelog from './components/Changelog';
 
 const STORAGE_CARDS = 'gc_cards';
 const STORAGE_SETTINGS = 'gc_settings';
@@ -54,6 +55,19 @@ export default function App() {
   const [lookupInProgress, setLookupInProgress] = useState(false);
   const [draftCard, setDraftCard] = useState<GradingCard | null>(null);
   const [draftLookupStatus, setDraftLookupStatus] = useState<LookupStatus | undefined>(undefined);
+
+  // Lightweight client-side routing (SPA fallback handles /changelog on refresh)
+  const [route, setRoute] = useState<string>(() => window.location.pathname);
+  useEffect(() => {
+    const onPop = () => setRoute(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const navigate = useCallback((to: string) => {
+    window.history.pushState({}, '', to);
+    setRoute(to);
+    window.scrollTo(0, 0);
+  }, []);
 
   // Persist
   useEffect(() => { localStorage.setItem(STORAGE_CARDS, JSON.stringify(cards)); }, [cards]);
@@ -280,9 +294,13 @@ export default function App() {
     setLookupInProgress(false);
   }, [cards]);
 
+  if (route === '/changelog') {
+    return <Changelog onBack={() => navigate('/')} />;
+  }
+
   return (
     <div className="app">
-      <SettingsPanel settings={settings} onUpdate={setSettings} />
+      <SettingsPanel settings={settings} onUpdate={setSettings} onOpenChangelog={() => navigate('/changelog')} />
 
       <header className="app-header">
         <img src="/logo.svg" alt="Grading Calculator Logo" className="app-logo" />
