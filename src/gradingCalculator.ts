@@ -110,6 +110,10 @@ export function calculateCard(
   const declaredValue = card.rawPrice || card.pricePaid || 0;
   const baseFee = getEffectiveGradingFee(card, company, serviceLevelId, settings);
   const scoringFee = getScoringFee(company, card.scoring);
+  // Upcharge owed now, based on the card's present (raw) value — i.e. the
+  // upcharge that applies even if the card doesn't grade up. Potential
+  // (top-grade) upcharge lives per-grade in the results below.
+  const currentUpcharge = upchargeFor(company, declaredValue, declaredValue, selectedTier);
 
   for (const grade of settings.visibleGrades) {
     const expectedPrice = card.gradeValues[grade] ?? 0;
@@ -135,6 +139,7 @@ export function calculateCard(
     company,
     serviceLevel: serviceLevelId,
     grades,
+    currentUpcharge,
   };
 }
 

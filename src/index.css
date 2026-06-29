@@ -262,14 +262,31 @@ body { min-height: 100vh; }
 
 /* ===== Summary Stats ===== */
 .summary-bar {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  display: flex; flex-wrap: wrap; gap: 12px;
 }
 .summary-stat {
+  flex: 1 1 150px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 14px 18px;
   display: flex; flex-direction: column; gap: 3px; text-align: center;
+  justify-content: center;
 }
+/* Narrow boxes for short single-number stats, freeing room for the cost box */
+.summary-stat--compact { flex: 0 1 104px; }
+/* Wider box that holds the grading-cost breakdown */
+.summary-stat--cost { flex: 1.5 1 240px; }
+.summary-cost__rows {
+  display: flex; flex-direction: column; gap: 2px;
+  width: 100%; margin-top: 6px;
+}
+.summary-cost__row {
+  display: flex; justify-content: space-between; gap: 12px;
+  font-size: 0.72rem;
+}
+.summary-cost__row-label { color: var(--text-muted); }
+.summary-cost__row-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.summary-cost__row--muted .summary-cost__row-label,
+.summary-cost__row--muted .summary-cost__row-val { color: var(--neutral); }
 .summary-stat__label {
   font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;
   letter-spacing: 0.05em;
