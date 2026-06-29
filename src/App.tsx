@@ -25,6 +25,10 @@ function loadCards(): GradingCard[] {
       if (!card.language) {
         card.language = detectLanguage(card.cardName);
       }
+      // Backfill include flag for cards saved before it was added (default: counted)
+      if (card.includeInTotal === undefined) {
+        card.includeInTotal = true;
+      }
     }
     return cards;
   } catch { return []; }
@@ -81,6 +85,10 @@ export default function App() {
     setCards((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
+  const setAllIncluded = useCallback((included: boolean) => {
+    setCards((prev) => prev.map((c) => ({ ...c, includeInTotal: included })));
+  }, []);
+
   const addCard = useCallback(() => {
     const newCard: GradingCard = {
       id: crypto.randomUUID(),
@@ -93,6 +101,7 @@ export default function App() {
       rawPrice: 0,
       gradeValues: {},
       quantity: 1,
+      includeInTotal: true,
       company: settings.defaultCompany,
       serviceLevel: null,
       noGrading: false,
@@ -275,6 +284,8 @@ export default function App() {
           onUpdateCard={updateCard}
           onDeleteCard={deleteCard}
           onAddCard={addCard}
+          onSelectAll={() => setAllIncluded(true)}
+          onClearSelection={() => setAllIncluded(false)}
           onLookupCard={handleLookupCard}
           onLookupAll={handleLookupAll}
           lookupInProgress={lookupInProgress}

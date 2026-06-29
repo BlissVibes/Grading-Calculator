@@ -84,6 +84,7 @@ export interface GradingCard {
   rawPrice: number;
   gradeValues: Partial<Record<GradeNumber, number>>;  // grade → expected price
   quantity: number;
+  includeInTotal: boolean;             // count this card toward the summary totals
   company: GradingCompany | null;      // per-card override (null = use global)
   serviceLevel: string | null;         // per-card override (null = use global)
   noGrading: boolean;                  // exclude from grading calculations entirely

@@ -331,6 +331,17 @@ body { min-height: 100vh; }
 }
 .btn-export:hover { background: var(--accent); color: #fff; }
 
+/* ===== Select All / Clear Selection ===== */
+.btn-select-all,
+.btn-clear-selection {
+  padding: 7px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--neutral); background: transparent;
+  color: var(--text); font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.btn-select-all:hover { background: var(--neutral); color: #fff; }
+.btn-clear-selection:hover { border-color: var(--loss); color: var(--loss); }
+
 /* ===== Modal ===== */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 1000;
@@ -458,6 +469,7 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
   width: 80px; text-align: right; font-variant-numeric: tabular-nums;
 }
 .cell-input--narrow { width: 65px; }
+.cell-input--qty { width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
 .cell-input--name { min-width: 140px; }
 .cell-input--set  { min-width: 110px; }
 
@@ -506,6 +518,7 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
 .company-cell-select:focus { border-color: var(--accent); outline: none; }
 
 .scoring-check { accent-color: var(--tag); cursor: pointer; width: 15px; height: 15px; }
+.include-check { accent-color: var(--accent); cursor: pointer; width: 16px; height: 16px; }
 
 /* ── eBay link button ── */
 .link-btn {

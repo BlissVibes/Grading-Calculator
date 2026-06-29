@@ -310,10 +310,24 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
 
   // Bonus: title contains the card name substring
   // Extract card name (first significant part of query, before numbers/set)
-  const cardNamePart = qTokens.filter((t) => !/^\d+$/.test(t) && !['pokemon', 'magic', 'yugioh', 'the', 'gathering', 'japanese', 'korean', 'chinese'].includes(t));
+  const GENERIC_TOKENS = ['pokemon', 'magic', 'yugioh', 'the', 'gathering', 'japanese', 'korean', 'chinese', 'german', 'french', 'italian', 'spanish', 'portuguese'];
+  const cardNamePart = qTokens.filter((t) => !/^\d+$/.test(t) && !GENERIC_TOKENS.includes(t));
   const cardNameStr = cardNamePart.join(' ');
   if (cardNameStr && tNorm.includes(cardNameStr)) {
     score += 20; // card name appears as substring in title
+  }
+
+  // Penalty: result is missing the primary subject word of the card name.
+  // buildQuery puts the card name first (after the game/language prefix), so the
+  // first distinctive token is the card's subject (e.g. "armored" in "Armored
+  // Mewtwo"). A result that lacks it — like plain "Mewtwo" — is the wrong card.
+  const primarySubject = qTokens.find((t) => !/^\d/.test(t) && !GENERIC_TOKENS.includes(t));
+  if (primarySubject) {
+    const slug = (resultUrl ?? '').toLowerCase();
+    const subjectPresent =
+      tTokens.some((tt) => tt === primarySubject || tt.includes(primarySubject) || primarySubject.includes(tt)) ||
+      slug.includes(primarySubject);
+    if (!subjectPresent) score -= 60;
   }
 
   // ── Card-number matching — important but must agree with card name ──

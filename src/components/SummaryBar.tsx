@@ -10,8 +10,13 @@ function fmt(n: number): string {
 }
 
 export default function SummaryBar({ cards, calculations }: Props) {
-  const totalCards = cards.reduce((sum, c) => sum + c.quantity, 0);
-  const totalPricePaid = cards.reduce((sum, c) => sum + c.pricePaid * c.quantity, 0);
+  // Only cards flagged to count toward totals
+  const included = cards.filter((c) => c.includeInTotal);
+  const includedIds = new Set(included.map((c) => c.id));
+  const qtyById = new Map(cards.map((c) => [c.id, c.quantity]));
+
+  const totalCards = included.reduce((sum, c) => sum + c.quantity, 0);
+  const totalPricePaid = included.reduce((sum, c) => sum + c.pricePaid * c.quantity, 0);
 
   let totalFees = 0;
   let totalBestProfit = 0;
@@ -19,11 +24,13 @@ export default function SummaryBar({ cards, calculations }: Props) {
   let gradeCount = 0;
 
   for (const calc of calculations) {
+    if (!includedIds.has(calc.cardId)) continue;
+    const qty = qtyById.get(calc.cardId) ?? 1;
     // Use the best grade result (last visible grade, typically grade 10)
     const best = calc.grades[calc.grades.length - 1];
     if (best) {
-      totalFees += best.totalCost;
-      totalBestProfit += best.profit;
+      totalFees += best.totalCost * qty;
+      totalBestProfit += best.profit * qty;
       if (best.multiplier !== 0) {
         totalMultiplier += best.multiplier;
         gradeCount++;

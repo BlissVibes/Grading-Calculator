@@ -114,9 +114,18 @@ export function detectLanguage(name: string): string {
 function buildQuery(card: GradingCard): string {
   const parts: string[] = [];
 
-  // Card name is most important — preserve parenthetical info like (Full Art), (JP)
+  // Card name is most important — preserve parenthetical info like (Full Art).
+  // Strip parenthetical LANGUAGE codes like "(JP)" though: the language is already
+  // conveyed via the language keyword below, and these parentheticals break
+  // PriceCharting's search (e.g. "Armored Mewtwo (JP)" returns no results and
+  // falls back to the wrong card).
   if (card.cardName) {
-    const name = card.cardName.replace(/\s+/g, ' ').trim();
+    const name = card.cardName
+      .replace(/\s*\(([A-Za-z]{2,3})\)\s*/g, (full, code) =>
+        KNOWN_LANG_CODES.has(code.toUpperCase()) ? ' ' : full,
+      )
+      .replace(/\s+/g, ' ')
+      .trim();
     parts.push(name);
   }
 

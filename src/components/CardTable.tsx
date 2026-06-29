@@ -15,6 +15,8 @@ interface Props {
   onUpdateCard: (id: string, updates: Partial<GradingCard>) => void;
   onDeleteCard: (id: string) => void;
   onAddCard: () => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
   onLookupCard: (card: GradingCard) => void;
   onLookupAll: () => void;
   lookupInProgress: boolean;
@@ -173,7 +175,7 @@ function CompanyInfoPopover({ fees }: { fees: CompanyFeeStructure }) {
 
 export default function CardTable({
   cards, calculations, settings, lookupStatuses,
-  onUpdateCard, onDeleteCard, onAddCard, onLookupCard, onLookupAll, lookupInProgress,
+  onUpdateCard, onDeleteCard, onAddCard, onSelectAll, onClearSelection, onLookupCard, onLookupAll, lookupInProgress,
 }: Props) {
   const [search, setSearch] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -239,6 +241,8 @@ export default function CardTable({
             break;
           case sortKey === 'set':
             av = a.set.toLowerCase(); bv = b.set.toLowerCase(); break;
+          case sortKey === 'qty':
+            av = a.quantity; bv = b.quantity; break;
           case sortKey === 'paid':
             av = a.pricePaid; bv = b.pricePaid; break;
           case sortKey === 'raw':
@@ -287,6 +291,24 @@ export default function CardTable({
         <button className="btn-add-card" onClick={onAddCard}>
           + Add Card
         </button>
+        {cards.length > 0 && (
+          <>
+            <button
+              className="btn-select-all"
+              onClick={onSelectAll}
+              title="Count every card toward the totals"
+            >
+              Select All
+            </button>
+            <button
+              className="btn-clear-selection"
+              onClick={onClearSelection}
+              title="Stop counting every card toward the totals"
+            >
+              Clear All
+            </button>
+          </>
+        )}
         {cardsWithNames.length > 0 && (
           <button
             className="btn-lookup-all"
@@ -360,6 +382,7 @@ export default function CardTable({
         <table className="card-table">
           <thead>
             <tr>
+              <th className="th-center" style={{ width: 34 }} title="Count toward totals">✓</th>
               <th style={{ width: 30 }}></th>
               <th className="th-sortable" onClick={() => handleSort('name')}>
                 Card Name <SortIcon col="name" />
@@ -371,6 +394,9 @@ export default function CardTable({
                 Set <SortIcon col="set" />
               </th>
               <th>#</th>
+              <th className="th-center th-sortable" onClick={() => handleSort('qty')}>
+                Qty <SortIcon col="qty" />
+              </th>
               <th className="th-right th-sortable" onClick={() => handleSort('paid')}>
                 Paid <SortIcon col="paid" />
               </th>
@@ -406,7 +432,6 @@ export default function CardTable({
               ))}
               <th className="th-center">Company</th>
               <th className="th-center">Scoring</th>
-              <th className="th-center">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -480,11 +505,22 @@ interface CardRowProps {
 function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitTier, onToggleExpand, onUpdate, onUpdateGrade, onDelete, onLookup }: CardRowProps) {
   const effectiveCompany = card.noGrading ? null : (card.company ?? settings.defaultCompany);
 
-  const tierClass = profitTier ? `row-profit-${profitTier}` : '';
+  const tierClass = `${profitTier ? `row-profit-${profitTier}` : ''}${card.includeInTotal ? '' : ' row-excluded'}`.trim();
 
   return (
     <>
-      <tr className={tierClass} style={card.noGrading ? { opacity: 0.5 } : undefined}>
+      <tr className={tierClass} style={!card.includeInTotal ? { opacity: 0.45 } : card.noGrading ? { opacity: 0.5 } : undefined}>
+        {/* Include in totals */}
+        <td className="td-center">
+          <input
+            type="checkbox"
+            className="include-check"
+            checked={card.includeInTotal}
+            onChange={(e) => onUpdate({ includeInTotal: e.target.checked })}
+            title={card.includeInTotal ? 'Counted toward totals (click to exclude)' : 'Not counted toward totals (click to include)'}
+          />
+        </td>
+
         {/* Expand */}
         <td>
           {!card.noGrading && (
@@ -497,6 +533,13 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
         {/* Card Name */}
         <td>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              className="row-action-btn row-action-btn--delete"
+              onClick={onDelete}
+              title="Delete card"
+            >
+              ✕
+            </button>
             <input
               className="cell-input cell-input--name"
               value={card.cardName}
@@ -602,6 +645,19 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
             value={card.cardNumber}
             onChange={(e) => onUpdate({ cardNumber: e.target.value })}
             placeholder="#"
+          />
+        </td>
+
+        {/* Quantity */}
+        <td className="td-center">
+          <input
+            className="cell-input cell-input--qty"
+            type="number"
+            step="1"
+            min="1"
+            value={card.quantity || 1}
+            onChange={(e) => onUpdate({ quantity: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+            title="Quantity of this card"
           />
         </td>
 
@@ -739,16 +795,6 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
           )}
         </td>
 
-        {/* Actions */}
-        <td className="td-center row-actions">
-          <button
-            className="row-action-btn row-action-btn--delete"
-            onClick={onDelete}
-            title="Delete card"
-          >
-            ✕
-          </button>
-        </td>
       </tr>
 
       {/* Inline comparison */}

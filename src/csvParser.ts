@@ -103,6 +103,7 @@ function makeCard(overrides: Partial<GradingCard>): GradingCard {
     rawPrice: 0,
     gradeValues: {},
     quantity: 1,
+    includeInTotal: true,
     company: null,
     serviceLevel: null,
     noGrading: false,
