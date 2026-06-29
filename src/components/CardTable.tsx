@@ -650,15 +650,44 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
         {/* Quantity */}
         <td className="td-center">
-          <input
-            className="cell-input cell-input--qty"
-            type="number"
-            step="1"
-            min="1"
-            value={card.quantity || 1}
-            onChange={(e) => onUpdate({ quantity: Math.max(1, parseInt(e.target.value, 10) || 1) })}
-            title="Quantity of this card"
-          />
+          {(() => {
+            const qty = card.quantity || 1;
+            return (
+              <div className="qty-stepper">
+                <input
+                  className="cell-input cell-input--qty"
+                  type="number"
+                  step="1"
+                  min="1"
+                  value={qty}
+                  onChange={(e) => onUpdate({ quantity: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                  title="Quantity of this card"
+                />
+                <div className="qty-stepper__btns">
+                  <button
+                    type="button"
+                    className="qty-btn"
+                    onClick={() => onUpdate({ quantity: qty + 1 })}
+                    title="Increase quantity"
+                    aria-label="Increase quantity"
+                  >
+                    ▲
+                  </button>
+                  {/* No down arrow at 1 — remove a card with the delete button instead */}
+                  <button
+                    type="button"
+                    className={`qty-btn${qty <= 1 ? ' qty-btn--hidden' : ''}`}
+                    onClick={() => onUpdate({ quantity: Math.max(1, qty - 1) })}
+                    title="Decrease quantity"
+                    aria-label="Decrease quantity"
+                    tabIndex={qty <= 1 ? -1 : 0}
+                  >
+                    ▼
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </td>
 
         {/* Price Paid */}
