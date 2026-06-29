@@ -799,10 +799,10 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               )}
             </div>
           )}
-          {/* PSA tier-bump upcharge estimate + Express recommendation */}
+          {/* PSA tier-bump upcharge: charged, avoided, or overpaying — per card */}
           {(() => {
             const est = estimatePsaUpcharge(card, settings);
-            if (!est || (est.upcharge <= 0 && !est.recommend)) return null;
+            if (!est || (est.upcharge <= 0 && est.avoidedUpcharge <= 0 && est.overpay <= 0 && !est.recommend)) return null;
             return (
               <div className="psa-upcharge">
                 {est.upcharge > 0 && (
@@ -819,6 +819,22 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
                     title={`Projected top-grade value (~${fmt(est.topGradeValue)}) will be upcharged into ${est.recommendedTierName} territory anyway. Submitting at ${est.recommendedTierName} costs about the same but is much faster.`}
                   >
                     ▲ Consider {est.recommendedTierName}
+                  </span>
+                )}
+                {est.avoidedUpcharge > 0 && (
+                  <span
+                    className="psa-upcharge__avoided"
+                    title={`${est.selectedTierName} already covers this card's top-grade value (~${fmt(est.topGradeValue)}), so you avoid the ~${fmt(est.avoidedUpcharge)} upcharge a Value submission would trigger. Same total cost, faster turnaround, and no surprise bill — that's the value of this tier.`}
+                  >
+                    ✓ avoids {fmt(est.avoidedUpcharge)} upcharge
+                  </span>
+                )}
+                {est.overpay > 0 && (
+                  <span
+                    className="psa-upcharge__over"
+                    title={`This card's top-grade value (~${fmt(est.topGradeValue)}) only needs ${est.requiredTierName}. ${est.selectedTierName} is about ${fmt(est.overpay)} more than necessary.`}
+                  >
+                    {est.requiredTierName} covers it (−{fmt(est.overpay)})
                   </span>
                 )}
               </div>

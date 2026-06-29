@@ -154,14 +154,19 @@ export function calculateAll(
 export interface PsaUpchargeEstimate {
   topGradeValue: number;     // highest expected value across visible grades
   selectedTierName: string;  // tier the card is currently submitted under
-  requiredTierName: string;  // tier PSA would re-bill it to at that value
-  upcharge: number;          // extra $ charged if the card hits its top grade
-  recommend: boolean;        // true → worth submitting at Express+ upfront
+  requiredTierName: string;  // cheapest tier whose cap covers the top-grade value
+  upcharge: number;          // extra $ charged at the selected tier (0 if covered)
+  avoidedUpcharge: number;   // upcharge spared by sitting at a covering tier (vs the cheapest tier)
+  overpay: number;           // $ paid above the required tier (selected tier higher than needed)
+  recommend: boolean;        // true → worth bumping up to the required tier
   recommendedTierName: string;
 }
 
-// Estimate the PSA upcharge a card would incur if it grades to its top visible
-// grade, plus whether the projected value makes Express (or higher) worthwhile.
+// Estimate the PSA upcharge picture for a card at its top visible grade:
+//  • upcharge          — extra you'd pay if you under-tiered the card
+//  • avoidedUpcharge   — the upcharge you've *dodged* by submitting at a tier
+//                        that already covers the value (shows the tier's worth)
+//  • overpay           — you picked a tier pricier than the value needs
 export function estimatePsaUpcharge(
   card: GradingCard,
   settings: AppSettings,
@@ -176,13 +181,21 @@ export function estimatePsaUpcharge(
   const topGradeValue = Math.max(0, ...settings.visibleGrades.map((g) => card.gradeValues[g] ?? 0));
   if (topGradeValue <= 0) return null;
 
-  const upcharge = psaUpcharge(topGradeValue, selectedTier);
   const required = psaRequiredTier(topGradeValue);
+  const upcharge = psaUpcharge(topGradeValue, selectedTier);
 
-  // Recommend Express+ when the projected value lands in Express territory or
-  // beyond AND that tier costs more than the selected one (a bump would occur).
-  // At that point the unavoidable upcharge ~ the cost of Express anyway, so the
-  // faster turnaround is effectively free.
+  // Baseline = cheapest standard tier (Value). The upcharge it would incur is
+  // the "potential" upcharge; if the selected tier dodges it, that's the value
+  // of having picked the higher tier (same total cost, faster, no surprise bill).
+  const valueTier = getSelectedTier(company, 'value', settings);
+  const baselineUpcharge = psaUpcharge(topGradeValue, valueTier);
+
+  const overpay = Math.max(0, selectedTier.baseFee - required.baseFee);
+  const avoidedUpcharge = upcharge === 0 && overpay === 0 ? baselineUpcharge : 0;
+
+  // Recommend bumping up when the projected value would be upcharged into
+  // Express territory or beyond anyway — the upcharge ~ the cost of Express, so
+  // the faster turnaround is effectively free.
   const EXPRESS_FEE = 149;
   const recommend = required.baseFee >= EXPRESS_FEE && required.baseFee > selectedTier.baseFee;
 
@@ -191,6 +204,8 @@ export function estimatePsaUpcharge(
     selectedTierName: selectedTier.name,
     requiredTierName: required.name,
     upcharge,
+    avoidedUpcharge,
+    overpay,
     recommend,
     recommendedTierName: required.name,
   };

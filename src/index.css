@@ -531,12 +531,16 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
   margin-top: 3px;
 }
 .psa-upcharge__fee,
-.psa-upcharge__rec {
+.psa-upcharge__rec,
+.psa-upcharge__avoided,
+.psa-upcharge__over {
   font-size: 0.66rem; font-weight: 600; line-height: 1.2;
   padding: 1px 5px; border-radius: 4px; cursor: help; white-space: nowrap;
 }
 .psa-upcharge__fee { color: var(--loss); background: var(--loss-bg); }
 .psa-upcharge__rec { color: var(--accent); background: var(--surface2); border: 1px solid var(--accent); }
+.psa-upcharge__avoided { color: var(--gain); background: var(--gain-bg); }
+.psa-upcharge__over { color: var(--text-muted); background: var(--surface2); }
 
 /* ── eBay link button ── */
 .link-btn {
