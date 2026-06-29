@@ -406,7 +406,6 @@ export default function CardTable({
               ))}
               <th className="th-center">Company</th>
               <th className="th-center">Scoring</th>
-              <th className="th-center">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -497,6 +496,13 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
         {/* Card Name */}
         <td>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              className="row-action-btn row-action-btn--delete"
+              onClick={onDelete}
+              title="Delete card"
+            >
+              ✕
+            </button>
             <input
               className="cell-input cell-input--name"
               value={card.cardName}
@@ -739,16 +745,6 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
           )}
         </td>
 
-        {/* Actions */}
-        <td className="td-center row-actions">
-          <button
-            className="row-action-btn row-action-btn--delete"
-            onClick={onDelete}
-            title="Delete card"
-          >
-            ✕
-          </button>
-        </td>
       </tr>
 
       {/* Inline comparison */}
