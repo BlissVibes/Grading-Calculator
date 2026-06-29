@@ -18,12 +18,15 @@ export default function SummaryBar({ cards, calculations }: Props) {
   const totalCards = included.reduce((sum, c) => sum + c.quantity, 0);
   const totalPricePaid = included.reduce((sum, c) => sum + c.pricePaid * c.quantity, 0);
 
-  // Submission fees = what you pay upfront at your selected tiers (base grading
-  // fee + add-ons). Upcharges = the conditional extra PSA bills only if a card
-  // grades high enough to exceed its tier's value cap. Kept separate so it's
-  // clear that submitting at a higher tier trades upfront fee for $0 upcharge.
+  // Submission = upfront fees at the selected tiers (base + add-ons).
+  // Current upcharge = owed now based on each card's present (raw) value.
+  // Potential upcharge = the extra if every card grades to its top grade.
+  // The headline grading cost is submission + current upcharge: what you'd
+  // actually pay now, excluding the speculative top-grade upcharges that a
+  // higher-tier submission would negate.
   let totalSubmission = 0;
-  let totalUpcharges = 0;
+  let totalCurrentUpcharge = 0;
+  let totalPotentialUpcharge = 0;
   let totalBestProfit = 0;
   let totalMultiplier = 0;
   let gradeCount = 0;
@@ -35,7 +38,8 @@ export default function SummaryBar({ cards, calculations }: Props) {
     const best = calc.grades[calc.grades.length - 1];
     if (best) {
       totalSubmission += (best.totalCost - best.upcharge) * qty;
-      totalUpcharges += best.upcharge * qty;
+      totalCurrentUpcharge += calc.currentUpcharge * qty;
+      totalPotentialUpcharge += best.upcharge * qty;
       totalBestProfit += best.profit * qty;
       if (best.multiplier !== 0) {
         totalMultiplier += best.multiplier;
@@ -44,12 +48,13 @@ export default function SummaryBar({ cards, calculations }: Props) {
     }
   }
 
+  const currentCost = totalSubmission + totalCurrentUpcharge;
   const avgMultiplier = gradeCount > 0 ? totalMultiplier / gradeCount : 0;
   const profitClass = totalBestProfit > 0 ? 'summary-stat--gain' : totalBestProfit < 0 ? 'summary-stat--loss' : '';
 
   return (
     <div className="summary-bar">
-      <div className="summary-stat">
+      <div className="summary-stat summary-stat--compact">
         <span className="summary-stat__label">Total Cards</span>
         <span className="summary-stat__value">{totalCards}</span>
       </div>
@@ -57,22 +62,29 @@ export default function SummaryBar({ cards, calculations }: Props) {
         <span className="summary-stat__label">Total Invested</span>
         <span className="summary-stat__value">{fmt(totalPricePaid)}</span>
       </div>
-      <div className="summary-stat">
-        <span className="summary-stat__label">Submission Fees</span>
-        <span className="summary-stat__value">{fmt(totalSubmission)}</span>
-        <span className="summary-stat__note">at selected tiers</span>
-      </div>
-      <div className="summary-stat">
-        <span className="summary-stat__label">Est. Upcharges</span>
-        <span className="summary-stat__value">{fmt(totalUpcharges)}</span>
-        <span className="summary-stat__note">if top grade · $0 if tier covers value</span>
+      <div className="summary-stat summary-stat--cost">
+        <span className="summary-stat__label">Grading Cost</span>
+        <span className="summary-stat__value">{fmt(currentCost)}</span>
+        <div className="summary-cost__rows">
+          <div className="summary-cost__row">
+            <span className="summary-cost__row-label">Submission</span>
+            <span className="summary-cost__row-val">{fmt(totalSubmission)}</span>
+          </div>
+          <div className="summary-cost__row">
+            <span className="summary-cost__row-label">Upcharge now</span>
+            <span className="summary-cost__row-val">{fmt(totalCurrentUpcharge)}</span>
+          </div>
+          <div className="summary-cost__row summary-cost__row--muted">
+            <span className="summary-cost__row-label">Upcharge if top grade</span>
+            <span className="summary-cost__row-val">{fmt(totalPotentialUpcharge)}</span>
+          </div>
+        </div>
       </div>
       <div className={`summary-stat ${profitClass}`}>
         <span className="summary-stat__label">Best Grade Profit</span>
         <span className="summary-stat__value">{fmt(totalBestProfit)}</span>
-        <span className="summary-stat__note">after grading fees</span>
       </div>
-      <div className={`summary-stat ${avgMultiplier > 0 ? 'summary-stat--gain' : avgMultiplier < 0 ? 'summary-stat--loss' : ''}`}>
+      <div className={`summary-stat summary-stat--compact ${avgMultiplier > 0 ? 'summary-stat--gain' : avgMultiplier < 0 ? 'summary-stat--loss' : ''}`}>
         <span className="summary-stat__label">Avg Multiplier</span>
         <span className="summary-stat__value">{avgMultiplier.toFixed(2)}x</span>
       </div>

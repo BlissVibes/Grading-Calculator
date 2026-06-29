@@ -262,14 +262,31 @@ body { min-height: 100vh; }
 
 /* ===== Summary Stats ===== */
 .summary-bar {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  display: flex; flex-wrap: wrap; gap: 12px;
 }
 .summary-stat {
+  flex: 1 1 150px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 14px 18px;
   display: flex; flex-direction: column; gap: 3px; text-align: center;
+  justify-content: center;
 }
+/* Narrow boxes for short single-number stats, freeing room for the cost box */
+.summary-stat--compact { flex: 0 1 104px; }
+/* Wider box that holds the grading-cost breakdown */
+.summary-stat--cost { flex: 1.5 1 240px; }
+.summary-cost__rows {
+  display: flex; flex-direction: column; gap: 2px;
+  width: 100%; margin-top: 6px;
+}
+.summary-cost__row {
+  display: flex; justify-content: space-between; gap: 12px;
+  font-size: 0.72rem;
+}
+.summary-cost__row-label { color: var(--text-muted); }
+.summary-cost__row-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.summary-cost__row--muted .summary-cost__row-label,
+.summary-cost__row--muted .summary-cost__row-val { color: var(--neutral); }
 .summary-stat__label {
   font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -403,6 +420,11 @@ body { min-height: 100vh; }
 .pc-stamp-btn--active {
   background: rgba(180, 40, 40, 0.25); color: #e66; border-color: #e66;
 }
+/* Faded affordance for Pokémon that aren't known PC-stamped cards */
+.pc-stamp-btn--ghost {
+  opacity: 0.28; border-style: dashed;
+}
+.pc-stamp-btn--ghost:hover { opacity: 1; }
 
 .lookup-matched {
   font-size: 0.7rem; color: var(--text-muted); margin-top: 1px;
@@ -473,7 +495,27 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
   width: 80px; text-align: right; font-variant-numeric: tabular-nums;
 }
 .cell-input--narrow { width: 65px; }
-.cell-input--qty { width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
+.cell-input--qty { width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+/* Hide the browser's native number spinner — replaced by custom buttons below */
+.cell-input--qty::-webkit-inner-spin-button,
+.cell-input--qty::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.cell-input--qty { -moz-appearance: textfield; appearance: textfield; }
+
+/* Custom quantity stepper — rounded light-purple buttons with dark-purple arrows */
+.qty-stepper { display: inline-flex; align-items: center; gap: 3px; }
+.qty-stepper__btns { display: flex; flex-direction: column; gap: 2px; }
+.qty-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 13px; padding: 0;
+  border: none; border-radius: 4px;
+  background: #e7e2ff; color: #5b21b6;
+  font-size: 0.5rem; line-height: 1; cursor: pointer;
+  transition: background 0.12s;
+}
+.qty-btn:hover { background: #d3c9ff; }
+.qty-btn:active { background: #c2b6ff; }
+.qty-btn--hidden { visibility: hidden; }
+
 .cell-input--custom-fee { width: 64px; text-align: right; font-variant-numeric: tabular-nums; padding: 2px 4px; font-size: 0.78rem; }
 .cell-input--name { min-width: 140px; }
 .cell-input--set  { min-width: 110px; }
@@ -505,6 +547,42 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
 .multiplier--negative { background: var(--loss-bg); color: var(--loss); }
 .multiplier--neutral { background: var(--neutral-bg); color: var(--neutral); }
 
+/* 10x+ — shiny gold plaque with a moving sheen */
+.multiplier--gold {
+  color: #3a2a00; font-weight: 800; letter-spacing: 0.01em;
+  border: 1px solid #9a7b1a; border-radius: 5px;
+  background: linear-gradient(115deg, #b8860b 0%, #ffd75e 22%, #fff7cf 42%, #ffd75e 60%, #b8860b 100%);
+  background-size: 230% 100%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.65);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.45);
+  animation: gold-shine 3.2s linear infinite;
+}
+@keyframes gold-shine {
+  0%   { background-position: 0% 0; }
+  100% { background-position: -230% 0; }
+}
+
+/* 20x+ — cosmos-themed glowing button with a starfield and pulsing aura */
+.multiplier--cosmos {
+  color: #fff; font-weight: 800; letter-spacing: 0.02em;
+  border: 1px solid #b49bff; border-radius: 6px;
+  background:
+    radial-gradient(1px 1px at 18% 28%, #fff, transparent),
+    radial-gradient(1px 1px at 72% 62%, #cfe6ff, transparent),
+    radial-gradient(1px 1px at 46% 82%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 85% 22%, #ffe9a8, transparent),
+    linear-gradient(135deg, #3a1a7a 0%, #160a3a 55%, #5026b0 100%);
+  text-shadow: 0 0 6px rgba(190,160,255,0.9);
+  animation: cosmos-glow 2.6s ease-in-out infinite;
+}
+@keyframes cosmos-glow {
+  0%, 100% { box-shadow: 0 0 6px rgba(150,100,255,0.7), 0 0 14px rgba(100,60,255,0.4); }
+  50%      { box-shadow: 0 0 12px rgba(180,130,255,0.95), 0 0 26px rgba(130,80,255,0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .multiplier--gold, .multiplier--cosmos { animation: none; }
+}
+
 /* Row actions */
 .row-actions { white-space: nowrap; }
 .row-action-btn {
@@ -513,6 +591,21 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
 }
 .row-action-btn:hover { color: var(--text); background: var(--surface2); }
 .row-action-btn--delete:hover { color: var(--loss); background: var(--loss-bg); }
+.row-action-btn--confirm { color: var(--gain); }
+.row-action-btn--confirm:hover { color: #fff; background: var(--gain); }
+.row-action-btn--confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+.row-action-btn--confirm:disabled:hover { color: var(--gain); background: none; }
+
+/* Draft (compose-before-adding) row */
+.draft-banner-row td {
+  background: rgba(108, 99, 255, 0.12);
+  color: var(--accent); font-size: 0.75rem; font-weight: 600;
+  padding: 6px 10px; border-top: 2px solid var(--accent);
+}
+tr.card-row--draft > td {
+  background: rgba(108, 99, 255, 0.06);
+  border-bottom: 2px solid var(--accent);
+}
 
 .company-cell-select {
   background: transparent; border: 1px solid transparent;

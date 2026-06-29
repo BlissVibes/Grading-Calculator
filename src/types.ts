@@ -114,6 +114,7 @@ export interface CardCalculation {
   company: GradingCompany;
   serviceLevel: string;
   grades: GradeResult[];
+  currentUpcharge: number;   // upcharge owed now, based on the card's present (raw) value
 }
 
 export interface CompanyComparisonResult {
