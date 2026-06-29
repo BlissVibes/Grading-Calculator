@@ -18,15 +18,18 @@ export default function CompanyComparison({ cards, settings }: Props) {
     settings.visibleGrades[settings.visibleGrades.length - 1] ?? 10
   );
 
-  if (cards.length === 0) return null;
+  const included = cards.filter((c) => c.includeInTotal);
+  if (included.length === 0) return null;
 
-  const comparisons = compareBatchCompanies(cards, selectedGrade, settings);
+  const comparisons = compareBatchCompanies(included, selectedGrade, settings);
   const bestProfit = Math.max(...comparisons.map((c) => c.totalProfit));
   const lowestCost = Math.min(...comparisons.map((c) => c.totalCost));
 
   return (
     <div className="comparison-section">
-      <div className="comparison-section__title">Company Comparison — All Cards</div>
+      <div className="comparison-section__title">
+        Company Comparison — {included.length === cards.length ? 'All Cards' : `${included.length} Counted Card${included.length === 1 ? '' : 's'}`}
+      </div>
 
       <div className="comparison-grade-tabs">
         {settings.visibleGrades.map((g) => (
