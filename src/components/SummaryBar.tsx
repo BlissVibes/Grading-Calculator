@@ -58,6 +58,7 @@ export default function SummaryBar({ cards, calculations }: Props) {
       <div className={`summary-stat ${profitClass}`}>
         <span className="summary-stat__label">Best Grade Profit</span>
         <span className="summary-stat__value">{fmt(totalBestProfit)}</span>
+        <span className="summary-stat__note">after grading fees</span>
       </div>
       <div className={`summary-stat ${avgMultiplier > 0 ? 'summary-stat--gain' : avgMultiplier < 0 ? 'summary-stat--loss' : ''}`}>
         <span className="summary-stat__label">Avg Multiplier</span>
