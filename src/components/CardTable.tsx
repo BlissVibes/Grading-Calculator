@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSettings, CompanyFeeStructure } from '../types';
 import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES } from '../types';
 import { COMPANY_FEES } from '../gradingData';
-import { compareCompanies, estimatePsaUpcharge } from '../gradingCalculator';
+import { compareCompanies, estimatePsaUpcharge, calculateCard } from '../gradingCalculator';
+import { isPkcEligible } from '../pokemonCenterCards';
 import type { LookupStatus } from '../priceLookup';
 import { exportCSV, downloadCSV, EXPORT_SORT_OPTIONS } from '../csvExporter';
 import type { ExportSortKey } from '../csvExporter';
@@ -20,6 +21,12 @@ interface Props {
   onLookupCard: (card: GradingCard) => void;
   onLookupAll: () => void;
   lookupInProgress: boolean;
+  draftCard: GradingCard | null;
+  onUpdateDraft: (updates: Partial<GradingCard>) => void;
+  onConfirmDraft: () => void;
+  onCancelDraft: () => void;
+  onLookupDraft: () => void;
+  draftLookupStatus?: LookupStatus;
 }
 
 function fmt(n: number): string {
@@ -176,6 +183,7 @@ function CompanyInfoPopover({ fees }: { fees: CompanyFeeStructure }) {
 export default function CardTable({
   cards, calculations, settings, lookupStatuses,
   onUpdateCard, onDeleteCard, onAddCard, onSelectAll, onClearSelection, onLookupCard, onLookupAll, lookupInProgress,
+  draftCard, onUpdateDraft, onConfirmDraft, onCancelDraft, onLookupDraft, draftLookupStatus,
 }: Props) {
   const [search, setSearch] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -278,6 +286,12 @@ export default function CardTable({
 
   const cardsWithNames = cards.filter((c) => c.cardName.trim());
 
+  // Live calculation for the draft card so its profit/multiplier columns preview
+  const draftCalc = draftCard ? calculateCard(draftCard, settings) : null;
+  const draftGradeResults = draftCalc
+    ? new Map(draftCalc.grades.map((g) => [g.grade, g]))
+    : new Map();
+
   return (
     <div>
       <div className="table-controls">
@@ -288,7 +302,7 @@ export default function CardTable({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <button className="btn-add-card" onClick={onAddCard}>
+        <button className="btn-add-card" onClick={onAddCard} disabled={!!draftCard} title={draftCard ? 'Finish the new card above first' : 'Add a new card'}>
           + Add Card
         </button>
         {cards.length > 0 && (
@@ -435,7 +449,31 @@ export default function CardTable({
             </tr>
           </thead>
           <tbody>
-            {filteredCards.length === 0 && (
+            {draftCard && (
+              <>
+                <tr className="draft-banner-row">
+                  <td colSpan={100}>
+                    New card — fill in the details, search prices with 🔍, then press ✓ to add it (✕ discards).
+                  </td>
+                </tr>
+                <CardRow
+                  isDraft
+                  card={draftCard}
+                  gradeResults={draftGradeResults}
+                  settings={settings}
+                  expanded={false}
+                  lookupStatus={draftLookupStatus}
+                  profitTier={null}
+                  onToggleExpand={() => {}}
+                  onUpdate={onUpdateDraft}
+                  onUpdateGrade={(grade, value) => onUpdateDraft({ gradeValues: { ...draftCard.gradeValues, [grade]: value } })}
+                  onDelete={onCancelDraft}
+                  onLookup={onLookupDraft}
+                  onConfirm={onConfirmDraft}
+                />
+              </>
+            )}
+            {!draftCard && filteredCards.length === 0 && (
               <tr>
                 <td className="empty-row" colSpan={100}>
                   No cards yet. Import a CSV or add cards manually.
@@ -500,30 +538,34 @@ interface CardRowProps {
   onUpdateGrade: (grade: GradeNumber, value: number) => void;
   onDelete: () => void;
   onLookup: () => void;
+  isDraft?: boolean;
+  onConfirm?: () => void;
 }
 
-function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitTier, onToggleExpand, onUpdate, onUpdateGrade, onDelete, onLookup }: CardRowProps) {
+function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitTier, onToggleExpand, onUpdate, onUpdateGrade, onDelete, onLookup, isDraft, onConfirm }: CardRowProps) {
   const effectiveCompany = card.noGrading ? null : (card.company ?? settings.defaultCompany);
 
-  const tierClass = `${profitTier ? `row-profit-${profitTier}` : ''}${card.includeInTotal ? '' : ' row-excluded'}`.trim();
+  const tierClass = `${isDraft ? 'card-row--draft ' : ''}${profitTier ? `row-profit-${profitTier}` : ''}${card.includeInTotal ? '' : ' row-excluded'}`.trim();
 
   return (
     <>
-      <tr className={tierClass} style={!card.includeInTotal ? { opacity: 0.45 } : card.noGrading ? { opacity: 0.5 } : undefined}>
+      <tr className={tierClass} style={isDraft ? undefined : !card.includeInTotal ? { opacity: 0.45 } : card.noGrading ? { opacity: 0.5 } : undefined}>
         {/* Include in totals */}
         <td className="td-center">
-          <input
-            type="checkbox"
-            className="include-check"
-            checked={card.includeInTotal}
-            onChange={(e) => onUpdate({ includeInTotal: e.target.checked })}
-            title={card.includeInTotal ? 'Counted toward totals (click to exclude)' : 'Not counted toward totals (click to include)'}
-          />
+          {!isDraft && (
+            <input
+              type="checkbox"
+              className="include-check"
+              checked={card.includeInTotal}
+              onChange={(e) => onUpdate({ includeInTotal: e.target.checked })}
+              title={card.includeInTotal ? 'Counted toward totals (click to exclude)' : 'Not counted toward totals (click to include)'}
+            />
+          )}
         </td>
 
         {/* Expand */}
         <td>
-          {!card.noGrading && (
+          {!card.noGrading && !isDraft && (
             <button className="expand-btn" onClick={onToggleExpand} title="Compare companies">
               {expanded ? '▼' : '▶'}
             </button>
@@ -533,10 +575,20 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
         {/* Card Name */}
         <td>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {isDraft ? (
+              <button
+                className="row-action-btn row-action-btn--confirm"
+                onClick={onConfirm}
+                disabled={!card.cardName.trim()}
+                title="Add this card to the table"
+              >
+                ✓
+              </button>
+            ) : null}
             <button
               className="row-action-btn row-action-btn--delete"
               onClick={onDelete}
-              title="Delete card"
+              title={isDraft ? 'Discard this card' : 'Delete card'}
             >
               ✕
             </button>
@@ -546,15 +598,33 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               onChange={(e) => onUpdate({ cardName: e.target.value })}
               placeholder="Card name"
             />
-            {card.cardGame === 'Pokémon' && (
-              <button
-                className={`pc-stamp-btn${card.pokemonCenter ? ' pc-stamp-btn--active' : ''}`}
-                onClick={() => onUpdate({ pokemonCenter: !card.pokemonCenter })}
-                title={card.pokemonCenter ? 'Pokemon Center stamp (click to remove)' : 'Mark as Pokemon Center stamped variant'}
-              >
-                PKC
-              </button>
-            )}
+            {card.cardGame === 'Pokémon' && (() => {
+              // Show the PKC button by default only for cards that actually have a
+              // Pokémon Center stamped variant (or one already marked as stamped).
+              // Other Pokémon cards get a faded "ghost" affordance the user can
+              // click to switch this card to its Pokémon Center version.
+              const showFull = isPkcEligible(card) || card.pokemonCenter;
+              if (showFull) {
+                return (
+                  <button
+                    className={`pc-stamp-btn${card.pokemonCenter ? ' pc-stamp-btn--active' : ''}`}
+                    onClick={() => onUpdate({ pokemonCenter: !card.pokemonCenter })}
+                    title={card.pokemonCenter ? 'Pokémon Center stamp (click to remove)' : 'Mark as Pokémon Center stamped variant'}
+                  >
+                    PKC
+                  </button>
+                );
+              }
+              return (
+                <button
+                  className="pc-stamp-btn pc-stamp-btn--ghost"
+                  onClick={() => onUpdate({ pokemonCenter: true })}
+                  title="Not a known Pokémon Center card — click if you have the stamped variant"
+                >
+                  PKC
+                </button>
+              );
+            })()}
             {/* Lookup price button — always visible next to card name */}
             <button
               className="row-action-btn lookup-btn-inline"
@@ -749,7 +819,11 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
           if (card.noGrading) return <td key={`mult-${g}`} className="td-center"><span className="multiplier multiplier--neutral">—</span></td>;
           const result = gradeResults.get(g);
           const mult = result?.multiplier ?? 0;
-          const cls = mult > 0 ? 'multiplier--positive' : mult < 0 ? 'multiplier--negative' : 'multiplier--neutral';
+          const cls = mult > 20 ? 'multiplier--cosmos'
+            : mult > 10 ? 'multiplier--gold'
+            : mult > 0 ? 'multiplier--positive'
+            : mult < 0 ? 'multiplier--negative'
+            : 'multiplier--neutral';
           return (
             <td key={`mult-${g}`} className="td-center">
               <span className={`multiplier ${cls}`}>{fmtMult(mult)}</span>

@@ -5,6 +5,7 @@ import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
 import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage } from './priceLookup';
 import type { LookupStatus } from './priceLookup';
+import { isStampedMatch } from './pokemonCenterCards';
 import FileDropZone from './components/FileDropZone';
 import CompanySelector from './components/CompanySelector';
 import CardTable from './components/CardTable';
@@ -51,6 +52,8 @@ export default function App() {
   const [errors, setErrors] = useState<string[]>([]);
   const [lookupStatuses, setLookupStatuses] = useState<Map<string, LookupStatus>>(new Map());
   const [lookupInProgress, setLookupInProgress] = useState(false);
+  const [draftCard, setDraftCard] = useState<GradingCard | null>(null);
+  const [draftLookupStatus, setDraftLookupStatus] = useState<LookupStatus | undefined>(undefined);
 
   // Persist
   useEffect(() => { localStorage.setItem(STORAGE_CARDS, JSON.stringify(cards)); }, [cards]);
@@ -115,8 +118,55 @@ export default function App() {
       notes: '',
       source: 'manual',
     };
-    setCards((prev) => [...prev, newCard]);
+    // Stage the card in a draft area above the table — it isn't added until the
+    // user fills it in, optionally searches prices, and confirms.
+    setDraftCard(newCard);
+    setDraftLookupStatus(undefined);
   }, [settings.defaultCompany, settings.defaultLanguage]);
+
+  // ───── Draft card (compose before adding) ─────
+
+  const updateDraft = useCallback((updates: Partial<GradingCard>) => {
+    setDraftCard((d) => (d ? { ...d, ...updates } : d));
+  }, []);
+
+  const confirmDraft = useCallback(() => {
+    setDraftCard((d) => {
+      if (d && d.cardName.trim()) setCards((prev) => [...prev, d]);
+      return null;
+    });
+    setDraftLookupStatus(undefined);
+  }, []);
+
+  const cancelDraft = useCallback(() => {
+    setDraftCard(null);
+    setDraftLookupStatus(undefined);
+  }, []);
+
+  const lookupDraft = useCallback(async () => {
+    const card = draftCard;
+    if (!card || !card.cardName.trim()) return;
+    setDraftLookupStatus({ cardId: card.id, status: 'loading' });
+    try {
+      const result = await lookupCard(card);
+      if (result.raw === 0 && result.grade9 === 0 && result.psa10 === 0) {
+        setDraftLookupStatus({ cardId: card.id, status: 'not-found', result });
+      } else {
+        const updates = applyPricesToCard(card, result);
+        const stamped = isStampedMatch(result.matchedTitle, result.url);
+        setDraftCard((d) => (d ? {
+          ...d, ...updates,
+          priceChartingUrl: result.url || d.priceChartingUrl,
+          priceChartingTitle: result.matchedTitle || d.priceChartingTitle,
+          pokemonCenter: stamped ? true : d.pokemonCenter,
+        } : d));
+        setDraftLookupStatus({ cardId: card.id, status: 'done', result });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Lookup failed';
+      setDraftLookupStatus({ cardId: card.id, status: 'error', error: message });
+    }
+  }, [draftCard]);
 
   // Company selection
   const handleCompanyChange = useCallback((company: GradingCompany | null) => {
@@ -172,10 +222,12 @@ export default function App() {
       } else {
         // Apply prices to card and persist the matched card info for display after reload
         const updates = applyPricesToCard(card, result);
+        const stamped = isStampedMatch(result.matchedTitle, result.url);
         setCards((prev) => prev.map((c) => (c.id === card.id ? {
           ...c, ...updates,
           priceChartingUrl: result.url || c.priceChartingUrl,
           priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
+          pokemonCenter: stamped ? true : c.pokemonCenter,
         } : c)));
 
         setLookupStatuses((prev) => {
@@ -218,6 +270,7 @@ export default function App() {
               ...c, ...updates,
               priceChartingUrl: result.url || c.priceChartingUrl,
               priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
+              pokemonCenter: isStampedMatch(result.matchedTitle, result.url) ? true : c.pokemonCenter,
             };
           })
         );
@@ -294,6 +347,12 @@ export default function App() {
           onLookupCard={handleLookupCard}
           onLookupAll={handleLookupAll}
           lookupInProgress={lookupInProgress}
+          draftCard={draftCard}
+          onUpdateDraft={updateDraft}
+          onConfirmDraft={confirmDraft}
+          onCancelDraft={cancelDraft}
+          onLookupDraft={lookupDraft}
+          draftLookupStatus={draftLookupStatus}
         />
 
         {/* Company Comparison */}
