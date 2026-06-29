@@ -29,6 +29,10 @@ function loadCards(): GradingCard[] {
       if (card.includeInTotal === undefined) {
         card.includeInTotal = true;
       }
+      // Backfill custom grading fee (null = use tier / global custom)
+      if (card.customGradingFee === undefined) {
+        card.customGradingFee = null;
+      }
     }
     return cards;
   } catch { return []; }
@@ -104,6 +108,7 @@ export default function App() {
       includeInTotal: true,
       company: settings.defaultCompany,
       serviceLevel: null,
+      customGradingFee: null,
       noGrading: false,
       scoring: false,
       pokemonCenter: false,

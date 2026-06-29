@@ -87,6 +87,7 @@ export interface GradingCard {
   includeInTotal: boolean;             // count this card toward the summary totals
   company: GradingCompany | null;      // per-card override (null = use global)
   serviceLevel: string | null;         // per-card override (null = use global)
+  customGradingFee: number | null;     // per-card flat grading price override (null = use tier / global custom)
   noGrading: boolean;                  // exclude from grading calculations entirely
   scoring: boolean;                    // TAG scoring add-on
   pokemonCenter: boolean;              // Pokemon Center stamped variant (higher value)
@@ -142,6 +143,7 @@ export interface AppSettings {
   feeOverrides: Record<GradingCompany, Partial<CompanyFeeStructure>>;
   defaultLanguage: string;             // e.g. 'EN', 'JP' — applied to new cards
   profitThresholds: ProfitThresholds;
+  globalCustomGradingFee: number | null;  // flat grading price applied to all cards (null = use tiers)
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -165,4 +167,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   defaultLanguage: 'EN',
   profitThresholds: { green: 50, yellow: 25, highlightGrade: 10 },
+  globalCustomGradingFee: null,
 };

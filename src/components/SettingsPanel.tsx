@@ -170,6 +170,29 @@ export default function SettingsPanel({ settings, onUpdate }: Props) {
             </div>
           ))}
 
+          {/* Global Custom Grading Price */}
+          <div className="settings-section-title">Custom Grading Price</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>
+            Flat grading price applied to every card, overriding the tier price.
+            Leave blank to use service-level tiers. Individual cards can still
+            override this with their own price or tier.
+          </div>
+          <div className="settings-item">
+            <span className="settings-item__label">All cards ($)</span>
+            <input
+              className="settings-fee-input"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="Tiers"
+              value={settings.globalCustomGradingFee ?? ''}
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                onUpdate({ ...settings, globalCustomGradingFee: v === '' ? null : Math.max(0, parseFloat(v) || 0) });
+              }}
+            />
+          </div>
+
           {/* Profit Row Highlights */}
           <div className="settings-section-title">Row Profit Highlights</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>
