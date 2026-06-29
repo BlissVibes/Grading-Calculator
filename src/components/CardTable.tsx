@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSettings, CompanyFeeStructure } from '../types';
 import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES } from '../types';
 import { COMPANY_FEES } from '../gradingData';
-import { compareCompanies } from '../gradingCalculator';
+import { compareCompanies, estimatePsaUpcharge } from '../gradingCalculator';
 import type { LookupStatus } from '../priceLookup';
 import { exportCSV, downloadCSV, EXPORT_SORT_OPTIONS } from '../csvExporter';
 import type { ExportSortKey } from '../csvExporter';
@@ -756,14 +756,35 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
             <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center', marginTop: 2 }}>
               <select
                 className="company-cell-select"
-                value={card.serviceLevel ?? ''}
-                onChange={(e) => onUpdate({ serviceLevel: e.target.value || null })}
+                value={card.customGradingFee != null ? '__custom' : (card.serviceLevel ?? '')}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '__custom') {
+                    const seed = [...gradeResults.values()][0]?.gradingFee ?? 0;
+                    onUpdate({ customGradingFee: seed });
+                  } else {
+                    onUpdate({ serviceLevel: v || null, customGradingFee: null });
+                  }
+                }}
               >
                 <option value="">Default</option>
                 {COMPANY_FEES[effectiveCompany].serviceLevels.map((sl) => (
                   <option key={sl.id} value={sl.id}>{sl.name}</option>
                 ))}
+                <option value="__custom">Custom $…</option>
               </select>
+              {card.customGradingFee != null && (
+                <input
+                  className="cell-input cell-input--custom-fee"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={card.customGradingFee || ''}
+                  onChange={(e) => onUpdate({ customGradingFee: Math.max(0, parseFloat(e.target.value) || 0) })}
+                  title="Custom grading price for this card"
+                  placeholder="0.00"
+                />
+              )}
               {card.cardName.trim() && (
                 <a
                   href={buildEbayUrl(card, effectiveCompany)}
@@ -778,6 +799,47 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               )}
             </div>
           )}
+          {/* PSA tier-bump upcharge: charged, avoided, or overpaying — per card */}
+          {(() => {
+            const est = estimatePsaUpcharge(card, settings);
+            if (!est || (est.upcharge <= 0 && est.avoidedUpcharge <= 0 && est.overpay <= 0 && !est.recommend)) return null;
+            return (
+              <div className="psa-upcharge">
+                {est.upcharge > 0 && (
+                  <span
+                    className="psa-upcharge__fee"
+                    title={`At its top grade (~${fmt(est.topGradeValue)}) this card exceeds the ${est.selectedTierName} value cap, so PSA re-bills it to ${est.requiredTierName} — about ${fmt(est.upcharge)} extra.`}
+                  >
+                    +{fmt(est.upcharge)} upcharge
+                  </span>
+                )}
+                {est.recommend && (
+                  <span
+                    className="psa-upcharge__rec"
+                    title={`Projected top-grade value (~${fmt(est.topGradeValue)}) will be upcharged into ${est.recommendedTierName} territory anyway. Submitting at ${est.recommendedTierName} costs about the same but is much faster.`}
+                  >
+                    ▲ Consider {est.recommendedTierName}
+                  </span>
+                )}
+                {est.avoidedUpcharge > 0 && (
+                  <span
+                    className="psa-upcharge__avoided"
+                    title={`${est.selectedTierName} already covers this card's top-grade value (~${fmt(est.topGradeValue)}), so you avoid the ~${fmt(est.avoidedUpcharge)} upcharge a Value submission would trigger. Same total cost, faster turnaround, and no surprise bill — that's the value of this tier.`}
+                  >
+                    ✓ avoids {fmt(est.avoidedUpcharge)} upcharge
+                  </span>
+                )}
+                {est.overpay > 0 && (
+                  <span
+                    className="psa-upcharge__over"
+                    title={`This card's top-grade value (~${fmt(est.topGradeValue)}) only needs ${est.requiredTierName}. ${est.selectedTierName} is about ${fmt(est.overpay)} more than necessary.`}
+                  >
+                    {est.requiredTierName} covers it (−{fmt(est.overpay)})
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </td>
 
         {/* Scoring (TAG) */}

@@ -106,6 +106,7 @@ function makeCard(overrides: Partial<GradingCard>): GradingCard {
     includeInTotal: true,
     company: null,
     serviceLevel: null,
+    customGradingFee: null,
     noGrading: false,
     scoring: false,
     pokemonCenter: false,

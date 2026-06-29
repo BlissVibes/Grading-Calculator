@@ -1,66 +1,94 @@
 import type { CompanyFeeStructure } from './types';
 
 // ───── PSA Fee Structure ─────
-// Source: PSA pricing page (2025)
+// Source: PSA official pricing, effective February 2026.
+// NOTE: PSA does NOT charge a flat additive "upcharge". Instead, the service
+// level is gated by the card's value: if a card's post-grade value exceeds the
+// value cap of the tier it was submitted under, PSA re-tiers it and you pay the
+// DIFFERENCE in price between tiers. That tier-bump upcharge is computed in
+// gradingCalculator (estimatePsaUpcharge / per-grade upcharge), so the
+// valueUpcharges array below is intentionally zeroed for PSA.
 
 export const PSA_FEES: CompanyFeeStructure = {
   company: 'PSA',
   serviceLevels: [
     {
-      id: 'value',
-      name: 'Value',
-      baseFee: 22,
-      turnaround: '65 business days',
+      id: 'value-bulk',
+      name: 'Value Bulk',
+      baseFee: 24.99,
+      turnaround: '95 business days',
       minCards: 20,
-      maxDeclaredValue: 499,
+      maxDeclaredValue: 500,
     },
     {
-      id: 'economy',
-      name: 'Economy',
-      baseFee: 40,
+      id: 'value',
+      name: 'Value',
+      baseFee: 32.99,
+      turnaround: '75 business days',
+      maxDeclaredValue: 500,
+    },
+    {
+      id: 'value-plus',
+      name: 'Value Plus',
+      baseFee: 49.99,
       turnaround: '45 business days',
-      maxDeclaredValue: 499,
+      maxDeclaredValue: 500,
+    },
+    {
+      id: 'value-max',
+      name: 'Value Max',
+      baseFee: 64.99,
+      turnaround: '30 business days',
+      maxDeclaredValue: 1000,
     },
     {
       id: 'regular',
       name: 'Regular',
-      baseFee: 75,
+      baseFee: 79.99,
       turnaround: '20 business days',
-      maxDeclaredValue: 999,
+      maxDeclaredValue: 1500,
     },
     {
       id: 'express',
       name: 'Express',
-      baseFee: 150,
-      turnaround: '10 business days',
-      maxDeclaredValue: 2499,
+      baseFee: 149,
+      turnaround: '15 business days',
+      maxDeclaredValue: 2500,
     },
     {
       id: 'super-express',
       name: 'Super Express',
-      baseFee: 300,
-      turnaround: '5 business days',
-      maxDeclaredValue: 4999,
+      baseFee: 299,
+      turnaround: '7 business days',
+      maxDeclaredValue: 5000,
     },
     {
       id: 'walk-through',
       name: 'Walk Through',
-      baseFee: 600,
-      turnaround: '2 business days',
-      maxDeclaredValue: 9999,
+      baseFee: 599,
+      turnaround: '7 business days',
+      maxDeclaredValue: 10000,
     },
   ],
+  // PSA upcharges are tier-bumps, not flat fees — see note above. Zeroed here.
   valueUpcharges: [
-    { minValue: 0, maxValue: 499, fee: 0 },
-    { minValue: 500, maxValue: 999, fee: 50 },
-    { minValue: 1000, maxValue: 2499, fee: 75 },
-    { minValue: 2500, maxValue: 4999, fee: 125 },
-    { minValue: 5000, maxValue: 9999, fee: 200 },
-    { minValue: 10000, maxValue: null, fee: 300 },
+    { minValue: 0, maxValue: null, fee: 0 },
   ],
   shippingEstimate: 15,
   pricingUrl: 'https://www.psacard.com/services/tradingcardgrading',
 };
+
+// Tiers PSA actually re-bills a card to when its value exceeds the submitted
+// tier's cap. Excludes the club-only "Value Bulk" discount — a re-tier always
+// lands on the cheapest STANDARD tier whose cap covers the value. Ordered by cap.
+export const PSA_RETIER_LADDER: { id: string; name: string; baseFee: number; maxValue: number }[] = [
+  { id: 'value', name: 'Value', baseFee: 32.99, maxValue: 500 },
+  { id: 'value-max', name: 'Value Max', baseFee: 64.99, maxValue: 1000 },
+  { id: 'regular', name: 'Regular', baseFee: 79.99, maxValue: 1500 },
+  { id: 'express', name: 'Express', baseFee: 149, maxValue: 2500 },
+  { id: 'super-express', name: 'Super Express', baseFee: 299, maxValue: 5000 },
+  { id: 'walk-through', name: 'Walk Through', baseFee: 599, maxValue: 10000 },
+];
 
 // ───── TAG Fee Structure ─────
 // Technical Authentication & Grading
