@@ -646,6 +646,12 @@ tr.card-row--draft > td {
 .company-cell-select:hover { border-color: var(--border); }
 .company-cell-select:focus { border-color: var(--accent); outline: none; }
 
+/* Premium "10" grade variant selector */
+.ten-variant-select { max-width: 170px; font-size: 0.72rem; }
+.ten-variant-select--active {
+  border-color: var(--neutral); color: var(--neutral); font-weight: 700;
+}
+
 .scoring-check { accent-color: var(--tag); cursor: pointer; width: 15px; height: 15px; }
 .include-check { accent-color: var(--accent); cursor: pointer; width: 16px; height: 16px; }
 
