@@ -13,6 +13,7 @@ interface Props {
   onCreate: (name: string, defaultCompany: GradingCompany | null) => void;
   onUpdate: (id: string, patch: Partial<Submission>) => void;
   onDelete: (id: string) => void;
+  onCopy: (id: string, newName: string) => void;   // duplicate a submission + its cards
 }
 
 const ALL = 'all';
@@ -39,7 +40,7 @@ function CompanySelect({ value, onChange }: { value: GradingCompany | null; onCh
 }
 
 export default function SubmissionsPanel({
-  submissions, activeId, cards, calculations, settings, onSelect, onCreate, onUpdate, onDelete,
+  submissions, activeId, cards, calculations, settings, onSelect, onCreate, onUpdate, onDelete, onCopy,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
@@ -127,6 +128,17 @@ export default function SubmissionsPanel({
                   />
                   <CompanySelect value={draftCompany} onChange={setDraftCompany} />
                   <button className="submission-edit__btn submission-edit__btn--save" onClick={() => commitEdit(sub.id)} title="Save changes">Save</button>
+                  <button
+                    className="submission-edit__btn submission-edit__btn--copy"
+                    onClick={() => {
+                      const name = draftName.trim() && draftName.trim() !== sub.name ? draftName.trim() : `${sub.name} (copy)`;
+                      onCopy(sub.id, name);
+                      setEditingId(null);
+                    }}
+                    title="Create a new submission with a copy of these cards"
+                  >
+                    Copy to new
+                  </button>
                   <button className="submission-edit__btn" onClick={() => setEditingId(null)} title="Cancel">Cancel</button>
                   {submissions.length > 1 && (
                     <button

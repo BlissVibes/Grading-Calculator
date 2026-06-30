@@ -8,13 +8,24 @@ import type {
   AppSettings,
 } from './types';
 import { COMPANY_FEES, PSA_RETIER_LADDER } from './gradingData';
+import { TEN_VARIANT_COMPANY } from './types';
 import type { ServiceLevel } from './types';
 
 // Grade value used in calculations. For grade 10, honor a selected premium
-// variant (Black Label, CGC Pristine, TAG 10, …); otherwise the stored value.
-export function effectiveGradeValue(card: GradingCard, grade: GradeNumber): number {
+// variant (Black Label, CGC Pristine, TAG Pristine, …) — but only when the
+// variant's grader matches the company the card is being valued under, since a
+// premium "10+" only exists for that grader. Otherwise the plain grade-10 value.
+export function effectiveGradeValue(
+  card: GradingCard,
+  grade: GradeNumber,
+  company?: GradingCompany,
+): number {
   if (grade === 10 && card.tenVariant) {
-    return card.tenVariants?.[card.tenVariant] ?? card.gradeValues[10] ?? 0;
+    const variantCompany = TEN_VARIANT_COMPANY[card.tenVariant];
+    if (variantCompany && variantCompany === company) {
+      return card.tenVariants?.[card.tenVariant] ?? card.gradeValues[10] ?? 0;
+    }
+    return card.gradeValues[10] ?? 0;
   }
   return card.gradeValues[grade] ?? 0;
 }
@@ -156,7 +167,7 @@ export function calculateCard(
   ])].sort((a, b) => a - b);
 
   for (const grade of gradesToCompute) {
-    const expectedPrice = effectiveGradeValue(card, grade);
+    const expectedPrice = effectiveGradeValue(card, grade, company);
     // PSA's upcharge depends on the graded value, so it varies per grade.
     const upcharge = upchargeFor(company, expectedPrice, declaredValue, selectedTier);
     const totalCost = baseFee + upcharge + scoringFee;
@@ -263,11 +274,12 @@ export function compareCompanies(
   grade: GradeNumber,
   settings: AppSettings,
 ): CompanyComparisonResult[] {
-  const expectedPrice = effectiveGradeValue(card, grade);
   const costBasis = card.pricePaid || card.rawPrice || 0;
   const declaredValue = card.rawPrice || card.pricePaid || 0;
 
   return (['PSA', 'TAG', 'Beckett', 'ARS', 'CGC', 'PSG'] as GradingCompany[]).map((company) => {
+    // Value per candidate grader: a premium "10+" only counts for its own grader.
+    const expectedPrice = effectiveGradeValue(card, grade, company);
     const serviceLevelId = settings.defaultServiceLevel[company];
     const selectedTier = getSelectedTier(company, serviceLevelId, settings);
     const baseFee = applyPromo(company, serviceLevelId, getBaseFee(company, serviceLevelId, settings), settings);
@@ -310,7 +322,7 @@ export function compareBatchCompanies(
 
     for (const card of cards) {
       if (card.noGrading) continue;
-      const expectedPrice = effectiveGradeValue(card, grade);
+      const expectedPrice = effectiveGradeValue(card, grade, company);
       if (expectedPrice === 0) continue;
 
       const costBasis = card.pricePaid || card.rawPrice || 0;

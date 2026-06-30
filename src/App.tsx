@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { GradingCard, GradingCompany, AppSettings, Submission } from './types';
-import { DEFAULT_SETTINGS } from './types';
+import type { GradingCard, GradingCompany, GradeNumber, TenVariantKey, AppSettings, Submission } from './types';
+import { DEFAULT_SETTINGS, PREMIUM_TENS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
-import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage } from './priceLookup';
+import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, fieldsFromMatch } from './priceLookup';
 import type { LookupStatus } from './priceLookup';
 import { isStampedMatch } from './pokemonCenterCards';
 import FileDropZone from './components/FileDropZone';
@@ -187,6 +187,22 @@ export default function App() {
   }, []);
 
   const addCard = useCallback(() => {
+    // Apply the default expected grade. A premium "10+" default (e.g. Black
+    // Label) also points the card at its grader, so the premium actually values.
+    const deg = settings.defaultExpectedGrade ?? 10;
+    let targetGrade: GradeNumber = 10;
+    let tenVariant: TenVariantKey | null = null;
+    let company = targetCompany;
+    if (typeof deg === 'number') {
+      targetGrade = deg;
+    } else {
+      const prem = PREMIUM_TENS.find((p) => p.key === deg);
+      if (prem) {
+        targetGrade = 10;
+        tenVariant = prem.key;
+        company = prem.company;
+      }
+    }
     const newCard: GradingCard = {
       id: crypto.randomUUID(),
       cardName: '',
@@ -197,9 +213,11 @@ export default function App() {
       pricePaid: 0,
       rawPrice: 0,
       gradeValues: {},
+      targetGrade,
+      tenVariant,
       quantity: 1,
       includeInTotal: true,
-      company: targetCompany,
+      company,
       serviceLevel: null,
       customGradingFee: null,
       noGrading: false,
@@ -213,7 +231,7 @@ export default function App() {
     // user fills it in, optionally searches prices, and confirms.
     setDraftCard(newCard);
     setDraftLookupStatus(undefined);
-  }, [targetCompany, settings.defaultLanguage, targetSubmissionId]);
+  }, [targetCompany, settings.defaultLanguage, settings.defaultExpectedGrade, targetSubmissionId]);
 
   // ───── Submissions ─────
 
@@ -240,6 +258,28 @@ export default function App() {
       setActiveSubmissionId((cur) => (cur === id ? fallback : cur));
       return remaining;
     });
+  }, []);
+
+  // Duplicate a submission and all of its cards into a brand-new submission.
+  const copySubmission = useCallback((sourceId: string, newName: string) => {
+    const newSubId = newId();
+    setSubmissions((prev) => {
+      const source = prev.find((s) => s.id === sourceId);
+      if (!source) return prev;
+      const idx = prev.findIndex((s) => s.id === sourceId);
+      const copy: Submission = { id: newSubId, name: newName.trim() || `${source.name} (copy)`, defaultCompany: source.defaultCompany };
+      // Insert the copy right after the source for an intuitive ordering.
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+    setCards((cs) => {
+      const clones = cs
+        .filter((c) => c.submissionId === sourceId)
+        .map((c) => ({ ...c, id: crypto.randomUUID(), submissionId: newSubId }));
+      return [...cs, ...clones];
+    });
+    setActiveSubmissionId(newSubId);
   }, []);
 
   // ───── Draft card (compose before adding) ─────
@@ -272,13 +312,18 @@ export default function App() {
       } else {
         const updates = applyPricesToCard(card, result);
         const stamped = isStampedMatch(result.matchedTitle, result.url);
+        // Fill empty Set / Card # fields from the match so the user can confirm
+        // the right card was found.
+        const filled = fieldsFromMatch(card, result);
         setDraftCard((d) => (d ? {
           ...d, ...updates,
+          set: filled.set ?? d.set,
+          cardNumber: filled.number ?? d.cardNumber,
           priceChartingUrl: result.url || d.priceChartingUrl,
           priceChartingTitle: result.matchedTitle || d.priceChartingTitle,
           pokemonCenter: stamped ? true : d.pokemonCenter,
         } : d));
-        setDraftLookupStatus({ cardId: card.id, status: 'done', result });
+        setDraftLookupStatus({ cardId: card.id, status: 'done', result, filled });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Lookup failed';
@@ -341,8 +386,13 @@ export default function App() {
         // Apply prices to card and persist the matched card info for display after reload
         const updates = applyPricesToCard(card, result);
         const stamped = isStampedMatch(result.matchedTitle, result.url);
+        // Fill empty Set / Card # fields from the match so the user can confirm
+        // the right card was found.
+        const filled = fieldsFromMatch(card, result);
         setCards((prev) => prev.map((c) => (c.id === card.id ? {
           ...c, ...updates,
+          set: filled.set ?? c.set,
+          cardNumber: filled.number ?? c.cardNumber,
           priceChartingUrl: result.url || c.priceChartingUrl,
           priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
           pokemonCenter: stamped ? true : c.pokemonCenter,
@@ -350,7 +400,7 @@ export default function App() {
 
         setLookupStatuses((prev) => {
           const next = new Map(prev);
-          next.set(card.id, { cardId: card.id, status: 'done', result });
+          next.set(card.id, { cardId: card.id, status: 'done', result, filled });
           return next;
         });
       }
@@ -371,27 +421,37 @@ export default function App() {
     setLookupInProgress(true);
 
     await lookupBatch(cardsToLookup, (status) => {
-      setLookupStatuses((prev) => {
-        const next = new Map(prev);
-        next.set(status.cardId, status);
-        return next;
-      });
-
-      // If we got results, apply them
+      // If we got results, apply them and record which empty fields were filled.
       if (status.status === 'done' && status.result) {
         const result = status.result;
+        const card = cardsToLookup.find((c) => c.id === status.cardId);
+        const filled = card ? fieldsFromMatch(card, result) : {};
         setCards((prev) =>
           prev.map((c) => {
             if (c.id !== status.cardId) return c;
             const updates = applyPricesToCard(c, result);
+            const f = fieldsFromMatch(c, result);
             return {
               ...c, ...updates,
+              set: f.set ?? c.set,
+              cardNumber: f.number ?? c.cardNumber,
               priceChartingUrl: result.url || c.priceChartingUrl,
               priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
               pokemonCenter: isStampedMatch(result.matchedTitle, result.url) ? true : c.pokemonCenter,
             };
           })
         );
+        setLookupStatuses((prev) => {
+          const next = new Map(prev);
+          next.set(status.cardId, { ...status, filled });
+          return next;
+        });
+      } else {
+        setLookupStatuses((prev) => {
+          const next = new Map(prev);
+          next.set(status.cardId, status);
+          return next;
+        });
       }
     });
 
@@ -438,6 +498,7 @@ export default function App() {
             onCreate={createSubmission}
             onUpdate={updateSubmission}
             onDelete={deleteSubmission}
+            onCopy={copySubmission}
           />
         </div>
 

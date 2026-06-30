@@ -16,6 +16,58 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.1.0',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Version 1.4.1 — rolls up the recent work: premium expected grades (per-company Black Label / TAG Pristine / CGC Pristine) with a "Default Expected Grade" setting and per-card premium buttons; TAG 10 Pristine added (CGC 10 / SGC 10 removed); lookup auto-fills an empty Set and Card # from the match with a confirmation; theme-aware checkboxes; slower/smoother gold & silver plaques with an end-of-sweep sparkle and a new silver tier; and a "Copy to new" submission action.' },
+    ],
+  },
+  {
+    version: '1.4.0.10',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Added a "Default Expected Grade" setting (under Default Company) — pick any grade 1–10 or a premium 10+ (BGS Black Label, TAG 10 Pristine, CGC Pristine). New cards start at that grade; a premium default also points the card at that grader so it values correctly (handy for non-Pokémon sets like Dragon Ball).' },
+      { text: 'On each card\'s expected-grade picker, a premium button now sits left of the 10 button named for the card\'s grader (Beckett → Black Label, TAG/CGC → Pristine). Premium values only count for cards graded by that company.' },
+      { text: 'Submissions: the edit panel now has a "Copy to new" button that duplicates the submission and all its cards into a fresh submission with a new name.' },
+    ],
+  },
+  {
+    version: '1.4.0.9',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Added TAG 10 Pristine to the premium "10" grade list (captured from PriceCharting like BGS Black Label and CGC Pristine), and removed the CGC 10 and SGC 10 options.' },
+    ],
+  },
+  {
+    version: '1.4.0.8',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Price lookup now also fills in an empty Card # from the match (alongside the Set), and shows a green confirmation of what was found and filled — e.g. “✓ Found Venusaur · Base Set #15 — filled in set & card # for you” — so you can tell the search matched the right card from just the name.' },
+    ],
+  },
+  {
+    version: '1.4.0.7',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'When a price lookup finds a card and the Set field was left empty, it’s now auto-filled with the matched card’s set (read from the PriceCharting result) — a quick way to confirm the right card was found.' },
+    ],
+  },
+  {
+    version: '1.4.0.6',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Made the multiplier-plaque sparkle bigger and moved it just outside the top-right corner of the tag.' },
+    ],
+  },
+  {
+    version: '1.4.0.5',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Checkboxes now match the app theme — in light mode they render as light boxes instead of dark ones (native controls were following the OS theme).' },
+      { text: 'The gold and silver multiplier plaques shine more slowly with a smoother gradient, and now give off a little sparkle each time the sheen reaches the right edge.' },
+    ],
+  },
+  {
     version: '1.4.0.4',
     date: 'June 30, 2026',
     items: [
