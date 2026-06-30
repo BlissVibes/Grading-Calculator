@@ -23,13 +23,11 @@ export default function SummaryBar({ cards, calculations, deductRawFromProfit, o
 
   // Submission = upfront fees at the selected tiers (base + add-ons).
   // Expected upcharge = the value-based upcharge owed when each card grades to
-  // its expected grade (the target grade if set, else the top grade).
-  // Current upcharge = owed now based on each card's present (raw) value, shown
-  // as muted context.
+  // its expected grade (the target grade if set, else the top grade). Upcharges
+  // are always assessed on the graded value, never the raw value.
   // The headline grading cost is submission + the expected-grade upcharge: the
   // total you'd owe if the cards hit the grade you're valuing them at.
   let totalSubmission = 0;
-  let totalCurrentUpcharge = 0;
   let totalPotentialUpcharge = 0;
   let totalBestProfit = 0;
   let totalRawCost = 0;
@@ -50,7 +48,6 @@ export default function SummaryBar({ cards, calculations, deductRawFromProfit, o
       const rawCost = card ? (card.pricePaid || card.rawPrice || 0) : 0;
       totalRawCost += rawCost * qty;
       totalSubmission += (best.totalCost - best.upcharge) * qty;
-      totalCurrentUpcharge += calc.currentUpcharge * qty;
       totalPotentialUpcharge += best.upcharge * qty;
       // best.profit already nets out the raw card cost; add it back when the
       // user chooses not to deduct it.
@@ -86,9 +83,6 @@ export default function SummaryBar({ cards, calculations, deductRawFromProfit, o
         <span className="summary-stat__label">Upcharges</span>
         <span className="summary-stat__value">{fmt(totalPotentialUpcharge)}</span>
         <span className="summary-stat__sublabel">at expected grade</span>
-        {totalCurrentUpcharge !== totalPotentialUpcharge && (
-          <span className="summary-stat__note">{fmt(totalCurrentUpcharge)} owed now at raw value</span>
-        )}
       </div>
       <div className="summary-stat summary-stat--cost">
         <span className="summary-stat__label">Total Grading Charges</span>
