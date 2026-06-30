@@ -54,11 +54,35 @@ function getEffectiveGradingFee(
   serviceLevelId: string,
   settings: AppSettings,
 ): number {
+  // An explicit per-card price is taken as-is (no promo applied on top).
   if (card.customGradingFee != null) return card.customGradingFee;
-  if (card.serviceLevel == null && settings.globalCustomGradingFee != null) {
-    return settings.globalCustomGradingFee;
+
+  const base = (card.serviceLevel == null && settings.globalCustomGradingFee != null)
+    ? settings.globalCustomGradingFee
+    : getBaseFee(company, serviceLevelId, settings);
+  return applyPromo(company, serviceLevelId, base, settings);
+}
+
+// Apply the best matching enabled promo code to a grader's fee. A code matches
+// by company and (tier or any-tier); flat codes set the price, percent codes
+// take a % off. When several match, the lowest resulting fee wins.
+function applyPromo(
+  company: GradingCompany,
+  serviceLevelId: string,
+  baseFee: number,
+  settings: AppSettings,
+): number {
+  const matches = (settings.promoCodes ?? []).filter(
+    (p) => p.enabled && p.company === company && (p.serviceLevel == null || p.serviceLevel === serviceLevelId),
+  );
+  let best = baseFee;
+  for (const p of matches) {
+    const fee = p.type === 'flat'
+      ? Math.max(0, p.value)
+      : baseFee * (1 - Math.min(100, Math.max(0, p.value)) / 100);
+    if (fee < best) best = fee;
   }
-  return getBaseFee(company, serviceLevelId, settings);
+  return best;
 }
 
 // ───── PSA tier-bump upcharge ─────
@@ -236,10 +260,10 @@ export function compareCompanies(
   const costBasis = card.pricePaid || card.rawPrice || 0;
   const declaredValue = card.rawPrice || card.pricePaid || 0;
 
-  return (['PSA', 'TAG', 'Beckett', 'ARS', 'CGC'] as GradingCompany[]).map((company) => {
+  return (['PSA', 'TAG', 'Beckett', 'ARS', 'CGC', 'PSG'] as GradingCompany[]).map((company) => {
     const serviceLevelId = settings.defaultServiceLevel[company];
     const selectedTier = getSelectedTier(company, serviceLevelId, settings);
-    const baseFee = getBaseFee(company, serviceLevelId, settings);
+    const baseFee = applyPromo(company, serviceLevelId, getBaseFee(company, serviceLevelId, settings), settings);
     const upcharge = upchargeFor(company, expectedPrice, declaredValue, selectedTier);
     const scoringFee = company === 'TAG' && card.scoring ? getScoringFee(company, true) : 0;
     const totalCost = baseFee + upcharge + scoringFee;
@@ -265,7 +289,7 @@ export function compareBatchCompanies(
   grade: GradeNumber,
   settings: AppSettings,
 ): CompanyComparisonResult[] {
-  return (['PSA', 'TAG', 'Beckett', 'ARS', 'CGC'] as GradingCompany[]).map((company) => {
+  return (['PSA', 'TAG', 'Beckett', 'ARS', 'CGC', 'PSG'] as GradingCompany[]).map((company) => {
     const fees = COMPANY_FEES[company];
     const serviceLevelId = settings.defaultServiceLevel[company];
     const selectedTier = getSelectedTier(company, serviceLevelId, settings);
@@ -284,7 +308,7 @@ export function compareBatchCompanies(
 
       const costBasis = card.pricePaid || card.rawPrice || 0;
       const declaredValue = card.rawPrice || card.pricePaid || 0;
-      const baseFee = getBaseFee(company, serviceLevelId, settings);
+      const baseFee = applyPromo(company, serviceLevelId, getBaseFee(company, serviceLevelId, settings), settings);
       const upcharge = upchargeFor(company, expectedPrice, declaredValue, selectedTier);
       const scoringFee = company === 'TAG' && card.scoring ? getScoringFee(company, true) : 0;
       const cost = baseFee + upcharge + scoringFee;

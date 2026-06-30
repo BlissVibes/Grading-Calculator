@@ -1,8 +1,8 @@
 // ───── Grading Companies ─────
 
-export type GradingCompany = 'PSA' | 'TAG' | 'Beckett' | 'ARS' | 'CGC';
+export type GradingCompany = 'PSA' | 'TAG' | 'Beckett' | 'ARS' | 'CGC' | 'PSG';
 
-export const GRADING_COMPANIES: GradingCompany[] = ['PSA', 'TAG', 'Beckett', 'ARS', 'CGC'];
+export const GRADING_COMPANIES: GradingCompany[] = ['PSA', 'TAG', 'Beckett', 'ARS', 'CGC', 'PSG'];
 
 export const COMPANY_LABELS: Record<GradingCompany, string> = {
   PSA: 'PSA',
@@ -10,6 +10,7 @@ export const COMPANY_LABELS: Record<GradingCompany, string> = {
   Beckett: 'Beckett (BGS)',
   ARS: 'ARS',
   CGC: 'CGC',
+  PSG: 'Premier (PSG)',
 };
 
 // ───── Card Games ─────
@@ -86,10 +87,21 @@ export const TEN_VARIANTS: { key: TenVariantKey; label: string }[] = [
 export const ALL_GRADES: GradeNumber[] = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 export const DEFAULT_GRADES: GradeNumber[] = [9, 10];
 
+// ───── Grading Submissions ─────
+// A submission is a named batch of cards you'll send to a grader together.
+// The name is just a label; each card keeps its own company/tier.
+
+export interface Submission {
+  id: string;
+  name: string;
+  defaultCompany: GradingCompany | null;   // grading company new cards in this batch default to
+}
+
 // ───── Card Entry ─────
 
 export interface GradingCard {
   id: string;
+  submissionId?: string;   // which submission/batch this card belongs to
   cardName: string;
   cardGame: string;
   cardNumber: string;
@@ -146,6 +158,18 @@ export interface CompanyComparisonResult {
 
 // ───── Settings ─────
 
+// A promo / affiliate code that discounts a grader's per-card fee. It can take a
+// percent off, or set a flat per-card price, optionally scoped to one tier.
+export interface PromoCode {
+  id: string;
+  code: string;                  // label, e.g. "EXPRESS20"
+  company: GradingCompany;
+  serviceLevel: string | null;   // tier id it applies to, or null = any tier
+  type: 'percent' | 'flat';
+  value: number;                 // percent off (0–100) or flat per-card price
+  enabled: boolean;              // only applied when on
+}
+
 export interface ProfitThresholds {
   green: number;        // profit >= green → green row
   yellow: number;       // profit >= yellow (and < green) → yellow row; below yellow → red row
@@ -162,19 +186,21 @@ export interface AppSettings {
   defaultLanguage: string;             // e.g. 'EN', 'JP' — applied to new cards
   profitThresholds: ProfitThresholds;
   globalCustomGradingFee: number | null;  // flat grading price applied to all cards (null = use tiers)
+  promoCodes: PromoCode[];                 // grader promo / affiliate code discounts
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   darkMode: true,
   visibleGrades: [9, 10],
   showHalfGrades: false,
-  defaultCompany: null,
+  defaultCompany: 'PSA',
   defaultServiceLevel: {
     PSA: 'value',
     TAG: 'standard',
     Beckett: 'economy',
     ARS: 'standard',
     CGC: 'standard',
+    PSG: 'standard',
   },
   feeOverrides: {
     PSA: {},
@@ -182,8 +208,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
     Beckett: {},
     ARS: {},
     CGC: {},
+    PSG: {},
   },
   defaultLanguage: 'EN',
   profitThresholds: { green: 50, yellow: 25, highlightGrade: 10 },
   globalCustomGradingFee: null,
+  // Known PSG affiliate codes, seeded disabled — enable/edit in Settings.
+  promoCodes: [
+    { id: 'psg-psasux', code: 'PSASUX', company: 'PSG', serviceLevel: 'standard', type: 'flat', value: 17, enabled: false },
+    { id: 'psg-express20', code: 'EXPRESS20', company: 'PSG', serviceLevel: 'express', type: 'flat', value: 20, enabled: false },
+  ],
 };

@@ -306,6 +306,45 @@ export const CGC_FEES: CompanyFeeStructure = {
   pricingUrl: 'https://www.cgccards.com/submit/grading-tiers/',
 };
 
+// ───── PSG (Premier Card Grading) Fee Structure ─────
+// Source: premiercardgrading.com/pages/pricing-services (2026). Flat per-card
+// pricing with no value-based upcharges — only insurance caps differ by tier.
+// (Authentication, $12.95, is excluded: it certifies altered/signed cards
+// rather than assigning a numeric grade.)
+
+export const PSG_FEES: CompanyFeeStructure = {
+  company: 'PSG',
+  serviceLevels: [
+    {
+      id: 'bulk',
+      name: 'Bulk 50+',
+      baseFee: 14.95,
+      turnaround: '8–12 weeks',
+      minCards: 50,
+      maxDeclaredValue: 250,
+    },
+    {
+      id: 'standard',
+      name: 'Standard',
+      baseFee: 19.95,
+      turnaround: '4–6 weeks',
+      maxDeclaredValue: 250,
+    },
+    {
+      id: 'express',
+      name: 'Express',
+      baseFee: 49.95,
+      turnaround: '7–10 business days',
+      maxDeclaredValue: 10000,
+    },
+  ],
+  // PSG has no value-based upcharges — flat fee regardless of card value.
+  valueUpcharges: [
+    { minValue: 0, maxValue: null, fee: 0 },
+  ],
+  pricingUrl: 'https://premiercardgrading.com/pages/pricing-services',
+};
+
 // ───── All companies map ─────
 
 import type { GradingCompany } from './types';
@@ -316,4 +355,5 @@ export const COMPANY_FEES: Record<GradingCompany, CompanyFeeStructure> = {
   Beckett: BECKETT_FEES,
   ARS: ARS_FEES,
   CGC: CGC_FEES,
+  PSG: PSG_FEES,
 };

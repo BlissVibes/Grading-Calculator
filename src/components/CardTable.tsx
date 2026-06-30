@@ -492,7 +492,7 @@ export default function CardTable({
                 </th>
               ))}
               <th className="th-center">Company</th>
-              <th className="th-center">Scoring</th>
+              <th className="th-center">Upcharge</th>
             </tr>
           </thead>
           <tbody>
@@ -888,7 +888,9 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
                 if (e.target.value === '__none') {
                   onUpdate({ noGrading: true, company: null, serviceLevel: null });
                 } else {
-                  onUpdate({ noGrading: false, company: (e.target.value || null) as GradingCompany | null });
+                  // Changing the company resets the tier to that company's default
+                  // so the service level and calculation use the new company.
+                  onUpdate({ noGrading: false, company: (e.target.value || null) as GradingCompany | null, serviceLevel: null });
                 }
               }}
             >
@@ -972,10 +974,15 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               </div>
             );
           })()}
-          {/* PSA tier-bump upcharge: charged, avoided, or overpaying — per card */}
+        </td>
+
+        {/* Tier / upcharge guidance — what it costs if the card needs a higher tier */}
+        <td className="td-center">
           {(() => {
             const est = estimatePsaUpcharge(card, settings);
-            if (!est || (est.upcharge <= 0 && est.avoidedUpcharge <= 0 && est.overpay <= 0 && !est.recommend)) return null;
+            if (!est || (est.upcharge <= 0 && est.avoidedUpcharge <= 0 && est.overpay <= 0 && !est.recommend)) {
+              return <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>—</span>;
+            }
             return (
               <div className="psa-upcharge">
                 {est.upcharge > 0 && (
@@ -1013,21 +1020,6 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               </div>
             );
           })()}
-        </td>
-
-        {/* Scoring (TAG) */}
-        <td className="td-center">
-          {(effectiveCompany === 'TAG') ? (
-            <input
-              type="checkbox"
-              className="scoring-check"
-              checked={card.scoring}
-              onChange={(e) => onUpdate({ scoring: e.target.checked })}
-              title="Add scoring/subgrades (+$5)"
-            />
-          ) : (
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>—</span>
-          )}
         </td>
 
       </tr>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { GradingCard, GradingCompany, AppSettings } from './types';
+import type { GradingCard, GradingCompany, AppSettings, Submission } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
@@ -13,9 +13,22 @@ import SummaryBar from './components/SummaryBar';
 import CompanyComparison from './components/CompanyComparison';
 import SettingsPanel from './components/SettingsPanel';
 import Changelog from './components/Changelog';
+import SubmissionsPanel from './components/SubmissionsPanel';
 
 const STORAGE_CARDS = 'gc_cards';
 const STORAGE_SETTINGS = 'gc_settings';
+const STORAGE_SUBMISSIONS = 'gc_submissions';
+const STORAGE_ACTIVE_SUB = 'gc_active_submission';
+const ALL = 'all';
+
+function newId(): string { return crypto.randomUUID(); }
+
+function loadSubmissions(): Submission[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_SUBMISSIONS);
+    return raw ? (JSON.parse(raw) as Submission[]) : [];
+  } catch { return []; }
+}
 
 function loadCards(): GradingCard[] {
   try {
@@ -43,7 +56,19 @@ function loadCards(): GradingCard[] {
 function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_SETTINGS);
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+    const s: AppSettings = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+    // One-time: default the grading company to PSA for users who never set one
+    if (!localStorage.getItem('gc_company_migrated')) {
+      if (s.defaultCompany == null) s.defaultCompany = 'PSA';
+      localStorage.setItem('gc_company_migrated', '1');
+    }
+    // One-time: EXPRESS20 is a flat $20 for Express (was seeded as 20% off)
+    if (!localStorage.getItem('gc_promo_express20_v2')) {
+      const pc = s.promoCodes?.find((p) => p.id === 'psg-express20');
+      if (pc && pc.type === 'percent' && pc.value === 20) { pc.type = 'flat'; pc.value = 20; }
+      localStorage.setItem('gc_promo_express20_v2', '1');
+    }
+    return s;
   } catch { return DEFAULT_SETTINGS; }
 }
 
@@ -55,6 +80,46 @@ export default function App() {
   const [lookupInProgress, setLookupInProgress] = useState(false);
   const [draftCard, setDraftCard] = useState<GradingCard | null>(null);
   const [draftLookupStatus, setDraftLookupStatus] = useState<LookupStatus | undefined>(undefined);
+  const [submissions, setSubmissions] = useState<Submission[]>(loadSubmissions);
+  const [activeSubmissionId, setActiveSubmissionId] = useState<string>(
+    () => localStorage.getItem(STORAGE_ACTIVE_SUB) || ALL,
+  );
+
+  // Persist submissions + active selection
+  useEffect(() => { localStorage.setItem(STORAGE_SUBMISSIONS, JSON.stringify(submissions)); }, [submissions]);
+  useEffect(() => { localStorage.setItem(STORAGE_ACTIVE_SUB, activeSubmissionId); }, [activeSubmissionId]);
+
+  // Migration: ensure at least one submission exists, each has a default company,
+  // and every card belongs to a submission.
+  useEffect(() => {
+    setSubmissions((subs) => {
+      let next = subs;
+      if (next.length === 0) {
+        next = [{ id: newId(), name: 'Submission #1', defaultCompany: settings.defaultCompany ?? 'PSA' }];
+      } else if (next.some((s) => s.defaultCompany === undefined)) {
+        next = next.map((s) => (s.defaultCompany === undefined ? { ...s, defaultCompany: settings.defaultCompany ?? 'PSA' } : s));
+      }
+      const firstId = next[0].id;
+      const known = new Set(next.map((s) => s.id));
+      setCards((prev) => {
+        let changed = false;
+        const mapped = prev.map((c) => {
+          if (!c.submissionId || !known.has(c.submissionId)) { changed = true; return { ...c, submissionId: firstId }; }
+          return c;
+        });
+        return changed ? mapped : prev;
+      });
+      return next === subs ? subs : next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The submission new/imported cards land in (active one, or the first if "All")
+  const targetSubmissionId = activeSubmissionId !== ALL
+    ? activeSubmissionId
+    : (submissions[0]?.id ?? '');
+  // New cards default to that submission's grading company (falling back to global)
+  const targetCompany = submissions.find((s) => s.id === targetSubmissionId)?.defaultCompany ?? settings.defaultCompany;
 
   // Lightweight client-side routing (SPA fallback handles /changelog on refresh)
   const [route, setRoute] = useState<string>(() => window.location.pathname);
@@ -81,6 +146,16 @@ export default function App() {
   // Calculate
   const calculations = useMemo(() => calculateAll(cards, settings), [cards, settings]);
 
+  // Cards/calcs scoped to the active submission (or all)
+  const viewCards = useMemo(
+    () => (activeSubmissionId === ALL ? cards : cards.filter((c) => c.submissionId === activeSubmissionId)),
+    [cards, activeSubmissionId],
+  );
+  const viewCalcs = useMemo(() => {
+    const ids = new Set(viewCards.map((c) => c.id));
+    return calculations.filter((c) => ids.has(c.cardId));
+  }, [calculations, viewCards]);
+
   // Import handler
   const handleImport = useCallback((content: string, filename: string) => {
     const { cards: imported, error } = parseImport(content, filename);
@@ -91,11 +166,12 @@ export default function App() {
     // Apply default company and detect language for imported cards
     const withDefaults = imported.map((c) => ({
       ...c,
-      company: settings.defaultCompany,
+      company: targetCompany,
       language: c.language || detectLanguage(c.cardName) || settings.defaultLanguage,
+      submissionId: targetSubmissionId,
     }));
     setCards((prev) => [...prev, ...withDefaults]);
-  }, [settings.defaultCompany, settings.defaultLanguage]);
+  }, [targetCompany, settings.defaultLanguage, targetSubmissionId]);
 
   // Card CRUD
   const updateCard = useCallback((id: string, updates: Partial<GradingCard>) => {
@@ -123,7 +199,7 @@ export default function App() {
       gradeValues: {},
       quantity: 1,
       includeInTotal: true,
-      company: settings.defaultCompany,
+      company: targetCompany,
       serviceLevel: null,
       customGradingFee: null,
       noGrading: false,
@@ -131,12 +207,40 @@ export default function App() {
       pokemonCenter: false,
       notes: '',
       source: 'manual',
+      submissionId: targetSubmissionId,
     };
     // Stage the card in a draft area above the table — it isn't added until the
     // user fills it in, optionally searches prices, and confirms.
     setDraftCard(newCard);
     setDraftLookupStatus(undefined);
-  }, [settings.defaultCompany, settings.defaultLanguage]);
+  }, [targetCompany, settings.defaultLanguage, targetSubmissionId]);
+
+  // ───── Submissions ─────
+
+  const createSubmission = useCallback((name: string, defaultCompany: GradingCompany | null) => {
+    const id = newId();
+    setSubmissions((prev) => [
+      ...prev,
+      { id, name: name.trim() || `Submission #${prev.length + 1}`, defaultCompany },
+    ]);
+    setActiveSubmissionId(id);
+  }, []);
+
+  const updateSubmission = useCallback((id: string, patch: Partial<Submission>) => {
+    setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  }, []);
+
+  const deleteSubmission = useCallback((id: string) => {
+    setSubmissions((prev) => {
+      if (prev.length <= 1) return prev;   // keep at least one
+      const remaining = prev.filter((s) => s.id !== id);
+      const fallback = remaining[0].id;
+      // Move the deleted submission's cards to the first remaining submission
+      setCards((cs) => cs.map((c) => (c.submissionId === id ? { ...c, submissionId: fallback } : c)));
+      setActiveSubmissionId((cur) => (cur === id ? fallback : cur));
+      return remaining;
+    });
+  }, []);
 
   // ───── Draft card (compose before adding) ─────
 
@@ -261,7 +365,7 @@ export default function App() {
   }, []);
 
   const handleLookupAll = useCallback(async () => {
-    const cardsToLookup = cards.filter((c) => c.cardName.trim());
+    const cardsToLookup = viewCards.filter((c) => c.cardName.trim());
     if (cardsToLookup.length === 0) return;
 
     setLookupInProgress(true);
@@ -292,7 +396,7 @@ export default function App() {
     });
 
     setLookupInProgress(false);
-  }, [cards]);
+  }, [viewCards]);
 
   if (route === '/changelog') {
     return <Changelog onBack={() => navigate('/')} />;
@@ -313,12 +417,29 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {/* File Import */}
-        <FileDropZone
-          onImport={handleImport}
-          onClearAll={() => { setCards([]); setLookupStatuses(new Map()); }}
-          hasCards={cards.length > 0}
-        />
+        {/* File Import + Grading Submissions */}
+        <div className="import-row">
+          <FileDropZone
+            onImport={handleImport}
+            onClearAll={() => {
+              const ids = new Set(viewCards.map((c) => c.id));
+              setCards((prev) => prev.filter((c) => !ids.has(c.id)));
+              setLookupStatuses(new Map());
+            }}
+            hasCards={viewCards.length > 0}
+          />
+          <SubmissionsPanel
+            submissions={submissions}
+            activeId={activeSubmissionId}
+            cards={cards}
+            calculations={calculations}
+            settings={settings}
+            onSelect={setActiveSubmissionId}
+            onCreate={createSubmission}
+            onUpdate={updateSubmission}
+            onDelete={deleteSubmission}
+          />
+        </div>
 
         {/* Errors */}
         {errors.length > 0 && (
@@ -347,14 +468,14 @@ export default function App() {
         />
 
         {/* Summary */}
-        {cards.length > 0 && (
-          <SummaryBar cards={cards} calculations={calculations} />
+        {viewCards.length > 0 && (
+          <SummaryBar cards={viewCards} calculations={viewCalcs} />
         )}
 
         {/* Card Table */}
         <CardTable
-          cards={cards}
-          calculations={calculations}
+          cards={viewCards}
+          calculations={viewCalcs}
           settings={settings}
           lookupStatuses={lookupStatuses}
           onUpdateCard={updateCard}
@@ -375,8 +496,8 @@ export default function App() {
         />
 
         {/* Company Comparison */}
-        {cards.length > 0 && (
-          <CompanyComparison cards={cards} settings={settings} />
+        {viewCards.length > 0 && (
+          <CompanyComparison cards={viewCards} settings={settings} />
         )}
       </main>
     </div>

@@ -21,6 +21,7 @@
   --beckett: #e76f51;
   --ars: #457b9d;
   --cgc: #6a4c93;
+  --psg: #eab308;
   --radius: 10px;
   --radius-sm: 6px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -242,6 +243,7 @@ body { min-height: 100vh; }
 .company-btn--beckett.company-btn--active { background: var(--beckett); border-color: var(--beckett); }
 .company-btn--ars.company-btn--active { background: var(--ars); border-color: var(--ars); }
 .company-btn--cgc.company-btn--active { background: var(--cgc); border-color: var(--cgc); }
+.company-btn--psg.company-btn--active { background: var(--psg); border-color: var(--psg); color: #1a1d27; }
 
 .company-bar__actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
@@ -787,6 +789,7 @@ tr.card-row--draft > td {
 .comparison-card--beckett { border-top: 3px solid var(--beckett); }
 .comparison-card--ars { border-top: 3px solid var(--ars); }
 .comparison-card--cgc { border-top: 3px solid var(--cgc); }
+.comparison-card--psg { border-top: 3px solid var(--psg); }
 
 .comparison-card__company {
   font-size: 1rem; font-weight: 700; margin-bottom: 10px;
@@ -910,3 +913,104 @@ tr.card-row--draft > td {
 }
 .changelog-item__text { flex: 1; }
 .changelog__footer { margin-top: 24px; text-align: center; }
+
+/* ===== Grading Submissions ===== */
+.import-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: stretch; }
+.import-row > .drop-zone { flex: 1 1 380px; }
+.submissions-panel {
+  flex: 1 1 360px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.submissions-panel__title { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+.submissions-list { display: flex; flex-direction: column; gap: 8px; }
+
+.submission-btn { position: relative; }
+.submission-btn__main {
+  width: 100%; box-sizing: border-box; text-align: left; cursor: pointer;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 12px 16px; border: none; border-radius: var(--radius-sm);
+  background: var(--accent); color: #fff; transition: background 0.12s;
+}
+.submission-btn__main:hover { background: var(--accent-hover); }
+.submission-btn--active .submission-btn__main { box-shadow: inset 0 0 0 2px #fff; }
+.submission-btn__name { font-size: 1.05rem; font-weight: 700; }
+.submission-btn__meta { font-size: 0.74rem; opacity: 0.92; }
+.submission-btn__meta .gain { color: #c9ffe1; font-weight: 700; }
+.submission-btn__meta .loss { color: #ffd2d2; font-weight: 700; }
+.submission-btn__edit {
+  position: absolute; top: 8px; right: 8px; width: 26px; height: 26px;
+  border: none; border-radius: 6px; background: rgba(255,255,255,0.16); color: #fff;
+  cursor: pointer; font-size: 0.85rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center; transition: background 0.12s;
+}
+.submission-btn__edit:hover { background: rgba(255,255,255,0.34); }
+
+/* Inline rename / delete editor */
+.submission-edit {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1px solid var(--accent);
+}
+.submission-edit__input {
+  flex: 1 1 140px; min-width: 0; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px; padding: 6px 9px; font-size: 0.9rem;
+}
+.submission-edit__input:focus { border-color: var(--accent); outline: none; }
+.submission-edit__company {
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 5px; padding: 6px 8px; font-size: 0.85rem; cursor: pointer;
+}
+.submission-edit__company:focus { border-color: var(--accent); outline: none; }
+.submission-edit__btn {
+  padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+  background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+}
+.submission-edit__btn:hover { border-color: var(--accent); color: var(--text); }
+.submission-edit__btn--save { background: var(--accent); border-color: var(--accent); color: #fff; }
+.submission-edit__btn--save:hover { background: var(--accent-hover); color: #fff; }
+.submission-edit__btn--delete { border-color: var(--loss); color: var(--loss); }
+.submission-edit__btn--delete:hover { background: var(--loss); color: #fff; }
+
+.submission-btn--all, .submission-btn--new {
+  width: 100%; box-sizing: border-box; text-align: left; cursor: pointer;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 12px 16px; border-radius: var(--radius-sm);
+}
+.submission-btn--all { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+.submission-btn--all.submission-btn--active { box-shadow: inset 0 0 0 2px var(--accent); border-color: var(--accent); }
+.submission-btn--all .gain { color: var(--gain); font-weight: 700; }
+.submission-btn--all .loss { color: var(--loss); font-weight: 700; }
+.submission-btn--new {
+  background: transparent; border: 1px dashed var(--border);
+  color: var(--text-muted); font-weight: 600; align-items: center;
+}
+.submission-btn--new:hover { border-color: var(--accent); color: var(--accent); }
+
+.submission-minimums { margin-top: 4px; border-top: 1px solid var(--border); padding-top: 10px; }
+.submission-minimums__title {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); margin-bottom: 6px;
+}
+.submission-min { font-size: 0.8rem; color: var(--neutral); padding: 2px 0; }
+.submission-min--ok { color: var(--gain); }
+
+/* ===== Grader promo code rows (Settings) ===== */
+.promo-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.promo-row .settings-select { font-size: 0.78rem; padding: 3px 5px; }
+.promo-row__code { width: 86px; text-align: left; text-transform: uppercase; }
+.promo-row__del {
+  margin-left: auto; border: none; background: none; color: var(--text-muted);
+  cursor: pointer; font-size: 0.9rem; padding: 2px 5px; border-radius: 4px;
+}
+.promo-row__del:hover { color: var(--loss); background: var(--loss-bg); }
+.settings-add-promo {
+  margin-top: 8px; padding: 6px 12px; border-radius: var(--radius-sm);
+  border: 1px dashed var(--border); background: transparent;
+  color: var(--text-muted); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.settings-add-promo:hover { border-color: var(--accent); color: var(--accent); }
