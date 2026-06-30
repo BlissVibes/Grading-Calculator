@@ -75,8 +75,9 @@ export default function SummaryBar({ cards, calculations }: Props) {
       <div className="summary-stat">
         <span className="summary-stat__label">Upcharges</span>
         <span className="summary-stat__value">{fmt(totalPotentialUpcharge)}</span>
+        <span className="summary-stat__sublabel">at expected grade</span>
         {totalCurrentUpcharge !== totalPotentialUpcharge && (
-          <span className="summary-stat__note">{fmt(totalCurrentUpcharge)} at current value</span>
+          <span className="summary-stat__note">{fmt(totalCurrentUpcharge)} owed now at raw value</span>
         )}
       </div>
       <div className="summary-stat summary-stat--cost">

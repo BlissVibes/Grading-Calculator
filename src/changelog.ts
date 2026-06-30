@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.11',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Clarified the Upcharges box: the headline now reads "at expected grade", and the secondary line is labelled "owed now at raw value" so it\'s clear it\'s the upcharge based on the card\'s current ungraded value (often $0) versus the projected upcharge once it grades up.' },
+    ],
+  },
+  {
     version: '0.1.3.6.10',
     date: 'June 30, 2026',
     items: [

@@ -308,6 +308,10 @@ body { min-height: 100vh; }
   letter-spacing: 0.05em;
 }
 .summary-stat__value { font-size: 1.3rem; font-weight: 700; }
+.summary-stat__sublabel {
+  font-size: 0.62rem; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.04em; margin-top: -1px;
+}
 .summary-stat__note {
   font-size: 0.65rem; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.04em;
