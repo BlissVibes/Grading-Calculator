@@ -3,7 +3,7 @@ import type { GradingCard, GradingCompany, AppSettings, Submission } from './typ
 import { DEFAULT_SETTINGS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
-import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, setNameFromUrl } from './priceLookup';
+import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, fieldsFromMatch } from './priceLookup';
 import type { LookupStatus } from './priceLookup';
 import { isStampedMatch } from './pokemonCenterCards';
 import FileDropZone from './components/FileDropZone';
@@ -272,16 +272,18 @@ export default function App() {
       } else {
         const updates = applyPricesToCard(card, result);
         const stamped = isStampedMatch(result.matchedTitle, result.url);
+        // Fill empty Set / Card # fields from the match so the user can confirm
+        // the right card was found.
+        const filled = fieldsFromMatch(card, result);
         setDraftCard((d) => (d ? {
           ...d, ...updates,
-          // Fill an empty Set field with the matched card's set so the user can
-          // confirm the right card was found.
-          set: d.set.trim() ? d.set : (setNameFromUrl(result.url) || d.set),
+          set: filled.set ?? d.set,
+          cardNumber: filled.number ?? d.cardNumber,
           priceChartingUrl: result.url || d.priceChartingUrl,
           priceChartingTitle: result.matchedTitle || d.priceChartingTitle,
           pokemonCenter: stamped ? true : d.pokemonCenter,
         } : d));
-        setDraftLookupStatus({ cardId: card.id, status: 'done', result });
+        setDraftLookupStatus({ cardId: card.id, status: 'done', result, filled });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Lookup failed';
@@ -344,11 +346,13 @@ export default function App() {
         // Apply prices to card and persist the matched card info for display after reload
         const updates = applyPricesToCard(card, result);
         const stamped = isStampedMatch(result.matchedTitle, result.url);
+        // Fill empty Set / Card # fields from the match so the user can confirm
+        // the right card was found.
+        const filled = fieldsFromMatch(card, result);
         setCards((prev) => prev.map((c) => (c.id === card.id ? {
           ...c, ...updates,
-          // Fill an empty Set field with the matched card's set so the user can
-          // confirm the right card was found.
-          set: c.set.trim() ? c.set : (setNameFromUrl(result.url) || c.set),
+          set: filled.set ?? c.set,
+          cardNumber: filled.number ?? c.cardNumber,
           priceChartingUrl: result.url || c.priceChartingUrl,
           priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
           pokemonCenter: stamped ? true : c.pokemonCenter,
@@ -356,7 +360,7 @@ export default function App() {
 
         setLookupStatuses((prev) => {
           const next = new Map(prev);
-          next.set(card.id, { cardId: card.id, status: 'done', result });
+          next.set(card.id, { cardId: card.id, status: 'done', result, filled });
           return next;
         });
       }
@@ -377,30 +381,37 @@ export default function App() {
     setLookupInProgress(true);
 
     await lookupBatch(cardsToLookup, (status) => {
-      setLookupStatuses((prev) => {
-        const next = new Map(prev);
-        next.set(status.cardId, status);
-        return next;
-      });
-
-      // If we got results, apply them
+      // If we got results, apply them and record which empty fields were filled.
       if (status.status === 'done' && status.result) {
         const result = status.result;
+        const card = cardsToLookup.find((c) => c.id === status.cardId);
+        const filled = card ? fieldsFromMatch(card, result) : {};
         setCards((prev) =>
           prev.map((c) => {
             if (c.id !== status.cardId) return c;
             const updates = applyPricesToCard(c, result);
+            const f = fieldsFromMatch(c, result);
             return {
               ...c, ...updates,
-              // Fill an empty Set field with the matched card's set so the user
-              // can confirm the right card was found.
-              set: c.set.trim() ? c.set : (setNameFromUrl(result.url) || c.set),
+              set: f.set ?? c.set,
+              cardNumber: f.number ?? c.cardNumber,
               priceChartingUrl: result.url || c.priceChartingUrl,
               priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
               pokemonCenter: isStampedMatch(result.matchedTitle, result.url) ? true : c.pokemonCenter,
             };
           })
         );
+        setLookupStatuses((prev) => {
+          const next = new Map(prev);
+          next.set(status.cardId, { ...status, filled });
+          return next;
+        });
+      } else {
+        setLookupStatuses((prev) => {
+          const next = new Map(prev);
+          next.set(status.cardId, status);
+          return next;
+        });
       }
     });
 

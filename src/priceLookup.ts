@@ -32,6 +32,7 @@ export interface LookupStatus {
   status: 'pending' | 'loading' | 'done' | 'error' | 'not-found';
   result?: PriceLookupResult;
   error?: string;
+  filled?: { set?: string; number?: string };  // fields auto-populated from the match
 }
 
 // ───── API Base URL ─────
@@ -286,6 +287,46 @@ export function setNameFromUrl(url?: string): string {
   } catch {
     return '';
   }
+}
+
+/**
+ * Derive the card number from a PriceCharting match. Prefers the "#NUMBER"
+ * token in the matched title (handles promos like "184/SM-P"); falls back to a
+ * trailing number on the URL product slug (e.g. "charizard-4" → "4").
+ */
+export function cardNumberFromMatch(title?: string, url?: string): string {
+  if (title) {
+    const m = title.match(/#\s*([A-Za-z0-9][A-Za-z0-9/\-]*)/);
+    if (m) return m[1];
+  }
+  if (url) {
+    const path = url.replace(/^https?:\/\/[^/]+/, '').split('?')[0];
+    const segs = path.split('/').filter(Boolean);
+    const last = segs[segs.length - 1] || '';
+    const m = last.match(/-(\d+[a-z0-9]*)$/i);
+    if (m) return m[1];
+  }
+  return '';
+}
+
+/**
+ * Which empty fields a match can fill in. Only returns a field when the card
+ * left it blank, so a lookup never overwrites what the user typed.
+ */
+export function fieldsFromMatch(
+  card: GradingCard,
+  result: PriceLookupResult,
+): { set?: string; number?: string } {
+  const out: { set?: string; number?: string } = {};
+  if (!card.set || !card.set.trim()) {
+    const s = setNameFromUrl(result.url);
+    if (s) out.set = s;
+  }
+  if (!card.cardNumber || !card.cardNumber.trim()) {
+    const n = cardNumberFromMatch(result.matchedTitle, result.url);
+    if (n) out.number = n;
+  }
+  return out;
 }
 
 // ───── Batch Lookup with Rate Limiting ─────

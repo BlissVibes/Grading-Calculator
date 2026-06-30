@@ -705,6 +705,19 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               </div>
             );
           })()}
+          {/* Confirmation that the search filled in Set / Card # from the match */}
+          {lookupStatus?.status === 'done' && lookupStatus.filled
+            && (lookupStatus.filled.set || lookupStatus.filled.number) && (
+            <div className="lookup-filled">
+              ✓ Found {card.cardName}
+              {lookupStatus.filled.set ? ` · ${lookupStatus.filled.set}` : ''}
+              {lookupStatus.filled.number ? ` #${lookupStatus.filled.number}` : ''}
+              {' '}— filled in {[
+                lookupStatus.filled.set ? 'set' : null,
+                lookupStatus.filled.number ? 'card #' : null,
+              ].filter(Boolean).join(' & ')} for you
+            </div>
+          )}
           {lookupStatus?.status === 'error' && (
             <div className="lookup-error">{lookupStatus.error}</div>
           )}

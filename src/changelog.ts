@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.0.8',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Price lookup now also fills in an empty Card # from the match (alongside the Set), and shows a green confirmation of what was found and filled — e.g. “✓ Found Venusaur · Base Set #15 — filled in set & card # for you” — so you can tell the search matched the right card from just the name.' },
+    ],
+  },
+  {
     version: '1.4.0.7',
     date: 'June 30, 2026',
     items: [

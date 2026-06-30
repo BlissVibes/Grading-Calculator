@@ -492,6 +492,11 @@ body { min-height: 100vh; }
   font-size: 0.7rem; color: var(--loss); margin-top: 1px;
 }
 
+.lookup-filled {
+  font-size: 0.7rem; color: var(--gain); margin-top: 1px;
+  max-width: 240px; line-height: 1.3;
+}
+
 /* ===== Card Table ===== */
 .table-wrapper {
   overflow-x: auto; border: 1px solid var(--border);
