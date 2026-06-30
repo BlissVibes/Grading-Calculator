@@ -845,6 +845,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
           const mult = result?.multiplier ?? 0;
           const cls = mult > 20 ? 'multiplier--cosmos'
             : mult > 10 ? 'multiplier--gold'
+            : mult > 5 ? 'multiplier--silver'
             : mult > 0 ? 'multiplier--positive'
             : mult < 0 ? 'multiplier--negative'
             : 'multiplier--neutral';
