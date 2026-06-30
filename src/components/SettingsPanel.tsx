@@ -103,15 +103,15 @@ export default function SettingsPanel({ settings, onUpdate, onOpenChangelog }: P
             ))}
           </div>
 
-          {/* Half Grades Toggle */}
+          {/* Half Grades Toggle — hidden: it didn't produce the intended result.
+              Kept here (commented) in case we revisit it. Half-grade columns can
+              still be toggled individually in the grade list above.
           <div className="settings-item" onClick={() => {
             if (!settings.showHalfGrades) {
-              // Add half grades
               const halfGrades: GradeNumber[] = [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5];
               const combined = [...new Set([...settings.visibleGrades, ...halfGrades])].sort((a, b) => a - b);
               onUpdate({ ...settings, showHalfGrades: true, visibleGrades: combined });
             } else {
-              // Remove half grades
               const whole = settings.visibleGrades.filter((g) => g % 1 === 0);
               onUpdate({ ...settings, showHalfGrades: false, visibleGrades: whole.length > 0 ? whole : [9, 10] });
             }
@@ -121,6 +121,7 @@ export default function SettingsPanel({ settings, onUpdate, onOpenChangelog }: P
               <div className="settings-toggle__thumb" />
             </div>
           </div>
+          */}
 
           {/* Default Language */}
           <div className="settings-section-title">Default Language</div>
