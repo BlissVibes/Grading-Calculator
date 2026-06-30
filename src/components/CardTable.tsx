@@ -651,33 +651,18 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               onChange={(e) => onUpdate({ cardName: e.target.value })}
               placeholder="Card name"
             />
-            {card.cardGame === 'Pokémon' && (() => {
-              // Show the PKC button by default only for cards that actually have a
-              // Pokémon Center stamped variant (or one already marked as stamped).
-              // Other Pokémon cards get a faded "ghost" affordance the user can
-              // click to switch this card to its Pokémon Center version.
-              const showFull = isPkcEligible(card) || card.pokemonCenter;
-              if (showFull) {
-                return (
-                  <button
-                    className={`pc-stamp-btn${card.pokemonCenter ? ' pc-stamp-btn--active' : ''}`}
-                    onClick={() => onUpdate({ pokemonCenter: !card.pokemonCenter })}
-                    title={card.pokemonCenter ? 'Pokémon Center stamp (click to remove)' : 'Mark as Pokémon Center stamped variant'}
-                  >
-                    PKC
-                  </button>
-                );
-              }
-              return (
-                <button
-                  className="pc-stamp-btn pc-stamp-btn--ghost"
-                  onClick={() => onUpdate({ pokemonCenter: true })}
-                  title="Not a known Pokémon Center card — click if you have the stamped variant"
-                >
-                  PKC
-                </button>
-              );
-            })()}
+            {card.cardGame === 'Pokémon' && (isPkcEligible(card) || card.pokemonCenter) && (
+              // Show the PKC button ONLY for cards that actually have a Pokémon
+              // Center stamped variant (in the known list), or one already
+              // marked/detected as stamped. Other Pokémon cards get no button.
+              <button
+                className={`pc-stamp-btn${card.pokemonCenter ? ' pc-stamp-btn--active' : ''}`}
+                onClick={() => onUpdate({ pokemonCenter: !card.pokemonCenter })}
+                title={card.pokemonCenter ? 'Pokémon Center stamp (click to remove)' : 'Mark as Pokémon Center stamped variant'}
+              >
+                PKC
+              </button>
+            )}
             {/* Lookup price button — always visible next to card name */}
             <button
               className="row-action-btn lookup-btn-inline"

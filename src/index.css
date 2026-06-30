@@ -467,11 +467,6 @@ body { min-height: 100vh; }
 .pc-stamp-btn--active {
   background: rgba(180, 40, 40, 0.25); color: #e66; border-color: #e66;
 }
-/* Faded affordance for Pokémon that aren't known PC-stamped cards */
-.pc-stamp-btn--ghost {
-  opacity: 0.28; border-style: dashed;
-}
-.pc-stamp-btn--ghost:hover { opacity: 1; }
 
 .lookup-matched {
   font-size: 0.7rem; color: var(--text-muted); margin-top: 1px;

@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.10',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'The PKC (Pokémon Center) stamp button now appears only on cards that actually have a known stamped variant (or one already marked/detected as stamped). The faded "ghost" button that showed on every other Pokémon card is gone.' },
+    ],
+  },
+  {
     version: '0.1.3.6.9',
     date: 'June 30, 2026',
     items: [
