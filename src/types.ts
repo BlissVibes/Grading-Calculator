@@ -216,6 +216,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   // Known PSG affiliate codes, seeded disabled — enable/edit in Settings.
   promoCodes: [
     { id: 'psg-psasux', code: 'PSASUX', company: 'PSG', serviceLevel: 'standard', type: 'flat', value: 17, enabled: false },
-    { id: 'psg-express20', code: 'EXPRESS20', company: 'PSG', serviceLevel: 'express', type: 'percent', value: 20, enabled: false },
+    { id: 'psg-express20', code: 'EXPRESS20', company: 'PSG', serviceLevel: 'express', type: 'flat', value: 20, enabled: false },
   ],
 };

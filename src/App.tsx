@@ -62,6 +62,12 @@ function loadSettings(): AppSettings {
       if (s.defaultCompany == null) s.defaultCompany = 'PSA';
       localStorage.setItem('gc_company_migrated', '1');
     }
+    // One-time: EXPRESS20 is a flat $20 for Express (was seeded as 20% off)
+    if (!localStorage.getItem('gc_promo_express20_v2')) {
+      const pc = s.promoCodes?.find((p) => p.id === 'psg-express20');
+      if (pc && pc.type === 'percent' && pc.value === 20) { pc.type = 'flat'; pc.value = 20; }
+      localStorage.setItem('gc_promo_express20_v2', '1');
+    }
     return s;
   } catch { return DEFAULT_SETTINGS; }
 }
