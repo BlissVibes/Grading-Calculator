@@ -21,6 +21,7 @@
   --beckett: #e76f51;
   --ars: #457b9d;
   --cgc: #6a4c93;
+  --psg: #eab308;
   --radius: 10px;
   --radius-sm: 6px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -242,6 +243,7 @@ body { min-height: 100vh; }
 .company-btn--beckett.company-btn--active { background: var(--beckett); border-color: var(--beckett); }
 .company-btn--ars.company-btn--active { background: var(--ars); border-color: var(--ars); }
 .company-btn--cgc.company-btn--active { background: var(--cgc); border-color: var(--cgc); }
+.company-btn--psg.company-btn--active { background: var(--psg); border-color: var(--psg); color: #1a1d27; }
 
 .company-bar__actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
@@ -787,6 +789,7 @@ tr.card-row--draft > td {
 .comparison-card--beckett { border-top: 3px solid var(--beckett); }
 .comparison-card--ars { border-top: 3px solid var(--ars); }
 .comparison-card--cgc { border-top: 3px solid var(--cgc); }
+.comparison-card--psg { border-top: 3px solid var(--psg); }
 
 .comparison-card__company {
   font-size: 1rem; font-weight: 700; margin-bottom: 10px;
@@ -992,3 +995,22 @@ tr.card-row--draft > td {
 }
 .submission-min { font-size: 0.8rem; color: var(--neutral); padding: 2px 0; }
 .submission-min--ok { color: var(--gain); }
+
+/* ===== Grader promo code rows (Settings) ===== */
+.promo-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.promo-row .settings-select { font-size: 0.78rem; padding: 3px 5px; }
+.promo-row__code { width: 86px; text-align: left; text-transform: uppercase; }
+.promo-row__del {
+  margin-left: auto; border: none; background: none; color: var(--text-muted);
+  cursor: pointer; font-size: 0.9rem; padding: 2px 5px; border-radius: 4px;
+}
+.promo-row__del:hover { color: var(--loss); background: var(--loss-bg); }
+.settings-add-promo {
+  margin-top: 8px; padding: 6px 12px; border-radius: var(--radius-sm);
+  border: 1px dashed var(--border); background: transparent;
+  color: var(--text-muted); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.settings-add-promo:hover { border-color: var(--accent); color: var(--accent); }

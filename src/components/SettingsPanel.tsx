@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AppSettings, GradeNumber, GradingCompany } from '../types';
+import type { AppSettings, GradeNumber, GradingCompany, PromoCode } from '../types';
 import { ALL_GRADES, GRADING_COMPANIES, COMPANY_LABELS } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 
@@ -12,6 +12,18 @@ interface Props {
 export default function SettingsPanel({ settings, onUpdate, onOpenChangelog }: Props) {
   const [open, setOpen] = useState(false);
   const [feeEditCompany, setFeeEditCompany] = useState<GradingCompany | null>(null);
+
+  const promoCodes = settings.promoCodes ?? [];
+  const addPromoCode = () => {
+    const code: PromoCode = { id: crypto.randomUUID(), code: '', company: 'PSG', serviceLevel: null, type: 'percent', value: 0, enabled: true };
+    onUpdate({ ...settings, promoCodes: [...promoCodes, code] });
+  };
+  const updatePromoCode = (id: string, patch: Partial<PromoCode>) => {
+    onUpdate({ ...settings, promoCodes: promoCodes.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
+  };
+  const removePromoCode = (id: string) => {
+    onUpdate({ ...settings, promoCodes: promoCodes.filter((p) => p.id !== id) });
+  };
 
   const toggleGrade = (grade: GradeNumber) => {
     const current = settings.visibleGrades;
@@ -247,6 +259,70 @@ export default function SettingsPanel({ settings, onUpdate, onOpenChangelog }: P
               ))}
             </div>
           </div>
+
+          {/* Grader Promo Codes */}
+          <div className="settings-section-title">Grader Promo Codes</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>
+            Affiliate/promo codes that discount a grader's per-card fee. Each can be a % off
+            or a flat price, scoped to one tier or any. Toggle a code on to apply it.
+          </div>
+          {promoCodes.map((pc) => {
+            const tiers = COMPANY_FEES[pc.company].serviceLevels;
+            return (
+              <div className="promo-row" key={pc.id}>
+                <input
+                  type="checkbox"
+                  className="include-check"
+                  checked={pc.enabled}
+                  onChange={(e) => updatePromoCode(pc.id, { enabled: e.target.checked })}
+                  title="Apply this code"
+                />
+                <input
+                  className="settings-fee-input promo-row__code"
+                  placeholder="CODE"
+                  value={pc.code}
+                  onChange={(e) => updatePromoCode(pc.id, { code: e.target.value })}
+                />
+                <select
+                  className="settings-select"
+                  value={pc.company}
+                  onChange={(e) => updatePromoCode(pc.id, { company: e.target.value as GradingCompany, serviceLevel: null })}
+                >
+                  {GRADING_COMPANIES.map((c) => (
+                    <option key={c} value={c}>{COMPANY_LABELS[c]}</option>
+                  ))}
+                </select>
+                <select
+                  className="settings-select"
+                  value={pc.serviceLevel ?? ''}
+                  onChange={(e) => updatePromoCode(pc.id, { serviceLevel: e.target.value || null })}
+                >
+                  <option value="">Any tier</option>
+                  {tiers.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <select
+                  className="settings-select"
+                  value={pc.type}
+                  onChange={(e) => updatePromoCode(pc.id, { type: e.target.value as 'percent' | 'flat' })}
+                >
+                  <option value="percent">% off</option>
+                  <option value="flat">flat $</option>
+                </select>
+                <input
+                  className="settings-fee-input"
+                  style={{ width: 58 }}
+                  type="number"
+                  min="0"
+                  value={pc.value || ''}
+                  onChange={(e) => updatePromoCode(pc.id, { value: Math.max(0, parseFloat(e.target.value) || 0) })}
+                />
+                <button className="promo-row__del" onClick={() => removePromoCode(pc.id)} title="Remove code">✕</button>
+              </div>
+            );
+          })}
+          <button className="settings-add-promo" onClick={addPromoCode}>+ Add promo code</button>
 
           {/* Fee Editor */}
           <div className="settings-section-title">Edit Fees</div>

@@ -23,13 +23,6 @@ export default function CompanySelector({
     <div className="company-bar">
       <span className="company-bar__label">Grading Company:</span>
 
-      <button
-        className={`company-btn ${selectedCompany === null ? 'company-btn--active' : ''}`}
-        onClick={() => onCompanyChange(null)}
-      >
-        None
-      </button>
-
       {GRADING_COMPANIES.map((c) => (
         <button
           key={c}
