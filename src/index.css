@@ -569,13 +569,18 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
   display: flex; align-items: center; justify-content: center;
   width: 15px; height: 10px; padding: 0;
   border: none; border-radius: 3px;
-  background: #e7e2ff; color: #5b21b6;
+  /* Dark mode (default): dark-purple button with a near-white arrow */
+  background: #5b21b6; color: #f3efff;
   font-size: 0.45rem; line-height: 1; cursor: pointer;
   transition: background 0.12s;
 }
-.qty-btn:hover { background: #d3c9ff; }
-.qty-btn:active { background: #c2b6ff; }
+.qty-btn:hover { background: #6d28d9; }
+.qty-btn:active { background: #7c3aed; }
 .qty-btn--hidden { visibility: hidden; }
+/* Light mode: light-purple button with a dark-purple arrow */
+:root[data-theme="light"] .qty-btn { background: #e7e2ff; color: #5b21b6; }
+:root[data-theme="light"] .qty-btn:hover { background: #d3c9ff; }
+:root[data-theme="light"] .qty-btn:active { background: #c2b6ff; }
 
 .cell-input--custom-fee { width: 64px; text-align: right; font-variant-numeric: tabular-nums; padding: 2px 4px; font-size: 0.78rem; }
 .cell-input--name { min-width: 140px; }
