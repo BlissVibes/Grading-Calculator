@@ -542,10 +542,25 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
 }
 .cell-input--narrow { width: 65px; }
 .cell-input--qty { width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
-/* Hide the browser's native number spinner — replaced by custom buttons below */
-.cell-input--qty::-webkit-inner-spin-button,
-.cell-input--qty::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.cell-input--qty { -moz-appearance: textfield; appearance: textfield; }
+/* Hide the browser's native number spinner everywhere — every numeric field
+   uses our own custom arrow buttons instead, so the inconsistent native arrows
+   never show on any column. */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Dollar number field with custom arrows that appear only while focused and
+   snap to the nearest whole dollar. Arrows overlay the right edge so the cell
+   width doesn't change. */
+.num-stepper { position: relative; display: inline-flex; }
+.num-stepper__btns {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 2px;
+  opacity: 0; pointer-events: none; transition: opacity 0.1s;
+}
+.num-stepper:focus-within .num-stepper__btns { opacity: 1; pointer-events: auto; }
+.num-stepper:focus-within .cell-input { padding-right: 19px; }
+.num-stepper__btn { width: 15px; height: 10px; font-size: 0.45rem; border-radius: 3px; }
 
 /* Custom quantity stepper — rounded light-purple buttons with dark-purple arrows */
 .qty-stepper { display: inline-flex; align-items: center; gap: 3px; }

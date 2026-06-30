@@ -4,6 +4,7 @@ import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES, TEN_VARIANTS } from '../
 import { COMPANY_FEES } from '../gradingData';
 import { compareCompanies, estimatePsaUpcharge, calculateCard } from '../gradingCalculator';
 import { isPkcEligible } from '../pokemonCenterCards';
+import NumberStepper from './NumberStepper';
 import type { LookupStatus } from '../priceLookup';
 import { exportCSV, downloadCSV, EXPORT_SORT_OPTIONS } from '../csvExporter';
 import type { ExportSortKey } from '../csvExporter';
@@ -800,41 +801,26 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
         {/* Price Paid */}
         <td className="td-right">
-          <input
-            className="cell-input cell-input--number"
-            type="number"
-            step="0.01"
-            min="0"
-            value={card.pricePaid || ''}
-            onChange={(e) => onUpdate({ pricePaid: parseFloat(e.target.value) || 0 })}
-            placeholder="0.00"
+          <NumberStepper
+            value={card.pricePaid}
+            onChange={(v) => onUpdate({ pricePaid: v })}
           />
         </td>
 
         {/* Raw Price */}
         <td className="td-right">
-          <input
-            className="cell-input cell-input--number"
-            type="number"
-            step="0.01"
-            min="0"
-            value={card.rawPrice || ''}
-            onChange={(e) => onUpdate({ rawPrice: parseFloat(e.target.value) || 0 })}
-            placeholder="0.00"
+          <NumberStepper
+            value={card.rawPrice}
+            onChange={(v) => onUpdate({ rawPrice: v })}
           />
         </td>
 
         {/* Grade Price columns */}
         {settings.visibleGrades.map((g) => (
           <td key={`price-${g}`} className={`td-center${aboveTarget(g) ? ' col-above-target' : ''}`}>
-            <input
-              className="cell-input cell-input--number"
-              type="number"
-              step="0.01"
-              min="0"
-              value={card.gradeValues[g] || ''}
-              onChange={(e) => onUpdateGrade(g, parseFloat(e.target.value) || 0)}
-              placeholder="0.00"
+            <NumberStepper
+              value={card.gradeValues[g] ?? 0}
+              onChange={(v) => onUpdateGrade(g, v)}
             />
           </td>
         ))}
@@ -917,15 +903,11 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
                 <option value="__custom">Custom $…</option>
               </select>
               {card.customGradingFee != null && (
-                <input
-                  className="cell-input cell-input--custom-fee"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={card.customGradingFee || ''}
-                  onChange={(e) => onUpdate({ customGradingFee: Math.max(0, parseFloat(e.target.value) || 0) })}
+                <NumberStepper
+                  value={card.customGradingFee}
+                  onChange={(v) => onUpdate({ customGradingFee: v })}
+                  inputClassName="cell-input cell-input--custom-fee"
                   title="Custom grading price for this card"
-                  placeholder="0.00"
                 />
               )}
               {card.cardName.trim() && (
@@ -1070,14 +1052,9 @@ function InlineComparison({ card, settings, onUpdate }: { card: GradingCard; set
             {/* Expected price at the selected grade — editable here even when that
                 grade isn't a visible column in the table. */}
             <span className="comparison-grade-label" style={{ marginLeft: 8 }}>Grade {selectedGrade} price $</span>
-            <input
-              className="cell-input cell-input--number"
-              type="number"
-              step="0.01"
-              min="0"
-              value={card.gradeValues[selectedGrade] || ''}
-              onChange={(e) => onUpdate({ gradeValues: { ...card.gradeValues, [selectedGrade]: parseFloat(e.target.value) || 0 } })}
-              placeholder="0.00"
+            <NumberStepper
+              value={card.gradeValues[selectedGrade] ?? 0}
+              onChange={(v) => onUpdate({ gradeValues: { ...card.gradeValues, [selectedGrade]: v } })}
               title={`Expected sale price at grade ${selectedGrade}`}
             />
           </div>

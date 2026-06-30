@@ -16,6 +16,15 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.12',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Every dollar field (price paid, raw price, each grade-price column, the expected price, and custom grading prices) now uses the same up/down arrow buttons as the quantity stepper instead of the browser\'s native spinner.' },
+      { text: 'On those dollar fields the arrows stay hidden until you click into the box, and clicking them jumps the value to the nearest whole dollar. The quantity column keeps its always-visible stepper.' },
+      { text: 'The browser\'s default number-spinner arrows are now hidden on every numeric field across the site.' },
+    ],
+  },
+  {
     version: '0.1.3.6.11',
     date: 'June 30, 2026',
     items: [

@@ -1,6 +1,7 @@
 import type { GradingCompany } from '../types';
 import { GRADING_COMPANIES, COMPANY_LABELS } from '../types';
 import { COMPANY_FEES } from '../gradingData';
+import NumberStepper from './NumberStepper';
 
 interface Props {
   selectedCompany: GradingCompany | null;
@@ -64,17 +65,11 @@ export default function CompanySelector({
         </button>
         {customActive && (
           <>
-            <input
-              className="cell-input cell-input--number company-bar__custom-input"
-              type="number"
-              min={0}
-              step="0.01"
+            <NumberStepper
+              value={globalCustomFee ?? 0}
+              onChange={(v) => onGlobalCustomFeeChange(v)}
+              inputClassName="cell-input cell-input--number company-bar__custom-input"
               autoFocus
-              placeholder="0.00"
-              value={globalCustomFee || ''}
-              onChange={(e) =>
-                onGlobalCustomFeeChange(e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0))
-              }
             />
             <span className="company-bar__custom-unit">/card</span>
           </>
