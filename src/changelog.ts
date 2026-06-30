@@ -22,6 +22,8 @@ export const CHANGELOG: ChangelogRelease[] = [
       { text: 'Grading Submissions (beta): group cards into named batches you ship to graders. One submission is active at a time and drives the table; an "All Submissions" view shows the combined total. Per-submission profit and card counts show on each batch, and tier minimums (e.g. PSA Value Bulk’s 20) are flagged as qualifying or short.' },
       { text: 'Each submission has its own default grading company (chosen when you create it); cards added to that batch default to it. The app now defaults to PSA on a fresh start.' },
       { text: 'Added Premier Card Grading (PSG) as a grading company — Bulk 50+ ($14.95), Standard ($19.95), Express ($49.95), no value upcharges. Removed the "None" company option.' },
+      { text: 'Replaced the Scoring column with an Upcharge column that shows each card’s tier/upcharge guidance (extra cost if it needs a higher tier, "consider Express/Walk Through", avoided upcharge, or overpaying).' },
+      { text: 'Changing a card’s company now resets its service level to that company’s default, so the tier and calculation follow the new company.' },
       { text: 'Added grader promo codes in Settings: each code is a % off or a flat price, scoped to a grader and (optionally) a tier. Toggle one on and it applies to that grader\'s fees in the calculations and comparison. Seeded the known PSG codes (PSASUX → flat $17 Standard, EXPRESS20 → flat $20 Express), off by default.' },
     ],
   },
