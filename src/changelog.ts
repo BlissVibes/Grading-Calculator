@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.1.1',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Removed the "owed now at raw value" line from the Upcharges box — upcharges are always assessed on the graded value, so the raw-value figure was misleading.' },
+    ],
+  },
+  {
     version: '1.4.1.0',
     date: 'June 30, 2026',
     items: [
