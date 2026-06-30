@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.0.6',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Made the multiplier-plaque sparkle bigger and moved it just outside the top-right corner of the tag.' },
+    ],
+  },
+  {
     version: '1.4.0.5',
     date: 'June 30, 2026',
     items: [

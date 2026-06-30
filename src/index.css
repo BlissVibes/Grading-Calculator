@@ -632,11 +632,12 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
   /* ease-in-out + a held rest at the end makes the sweep glide rather than loop hard */
   animation: metal-shine 6.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
-/* The sparkle that twinkles once per sweep, timed to the sheen leaving the right */
+/* The sparkle that twinkles once per sweep, timed to the sheen leaving the
+   right — sits just outside the top-right corner of the tag. */
 .multiplier--silver::after, .multiplier--gold::after {
-  content: ''; position: absolute; top: 50%; right: -2px;
-  width: 7px; height: 7px; pointer-events: none; opacity: 0;
-  transform: translateY(-50%) scale(0);
+  content: ''; position: absolute; top: -7px; right: -7px;
+  width: 14px; height: 14px; pointer-events: none; opacity: 0;
+  transform: scale(0);
   clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
   animation: metal-spark 6.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
@@ -646,10 +647,10 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
   100% { background-position: -50% 50%; }
 }
 @keyframes metal-spark {
-  0%, 52%  { opacity: 0; transform: translateY(-50%) scale(0) rotate(0deg); }
-  60%      { opacity: 1; transform: translateY(-50%) scale(1.2) rotate(25deg); }
-  70%      { opacity: 0; transform: translateY(-50%) scale(0.35) rotate(45deg); }
-  100%     { opacity: 0; transform: translateY(-50%) scale(0) rotate(45deg); }
+  0%, 52%  { opacity: 0; transform: scale(0) rotate(0deg); }
+  60%      { opacity: 1; transform: scale(1.25) rotate(25deg); }
+  70%      { opacity: 0; transform: scale(0.4) rotate(45deg); }
+  100%     { opacity: 0; transform: scale(0) rotate(45deg); }
 }
 
 /* 5x+ — brushed silver plaque */
