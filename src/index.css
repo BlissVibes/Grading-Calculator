@@ -312,6 +312,13 @@ body { min-height: 100vh; }
   font-size: 0.62rem; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.04em; margin-top: -1px;
 }
+.summary-stat--rawcost { flex: 0 1 168px; }
+.summary-stat__check {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  margin-top: 4px; font-size: 0.66rem; color: var(--text-muted); cursor: pointer;
+  user-select: none;
+}
+.summary-stat__check input { cursor: pointer; accent-color: var(--accent); margin: 0; }
 .summary-stat__note {
   font-size: 0.65rem; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.04em;

@@ -473,7 +473,12 @@ export default function App() {
 
         {/* Summary */}
         {viewCards.length > 0 && (
-          <SummaryBar cards={viewCards} calculations={viewCalcs} />
+          <SummaryBar
+            cards={viewCards}
+            calculations={viewCalcs}
+            deductRawFromProfit={settings.deductRawFromProfit !== false}
+            onToggleDeductRaw={(next) => setSettings((prev) => ({ ...prev, deductRawFromProfit: next }))}
+          />
         )}
 
         {/* Card Table */}
