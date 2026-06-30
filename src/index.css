@@ -955,6 +955,11 @@ tr.card-row--draft > td {
   border: 1px solid var(--border); border-radius: 5px; padding: 6px 9px; font-size: 0.9rem;
 }
 .submission-edit__input:focus { border-color: var(--accent); outline: none; }
+.submission-edit__company {
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 5px; padding: 6px 8px; font-size: 0.85rem; cursor: pointer;
+}
+.submission-edit__company:focus { border-color: var(--accent); outline: none; }
 .submission-edit__btn {
   padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
   background: transparent; border: 1px solid var(--border); color: var(--text-muted);

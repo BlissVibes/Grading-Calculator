@@ -20,6 +20,7 @@ export const CHANGELOG: ChangelogRelease[] = [
     date: 'June 30, 2026',
     items: [
       { text: 'Grading Submissions (beta): group cards into named batches you ship to graders. One submission is active at a time and drives the table; an "All Submissions" view shows the combined total. Per-submission profit and card counts show on each batch, and tier minimums (e.g. PSA Value Bulk’s 20) are flagged as qualifying or short.' },
+      { text: 'Each submission has its own default grading company (chosen when you create it); cards added to that batch default to it. The app now defaults to PSA on a fresh start.' },
     ],
   },
   {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { GradingCard, CardCalculation, AppSettings, Submission, GradingCompany } from '../types';
-import { COMPANY_LABELS } from '../types';
+import { COMPANY_LABELS, GRADING_COMPANIES } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 
 interface Props {
@@ -10,8 +10,8 @@ interface Props {
   calculations: CardCalculation[];
   settings: AppSettings;
   onSelect: (id: string) => void;
-  onCreate: () => void;
-  onRename: (id: string, name: string) => void;
+  onCreate: (name: string, defaultCompany: GradingCompany | null) => void;
+  onUpdate: (id: string, patch: Partial<Submission>) => void;
   onDelete: (id: string) => void;
 }
 
@@ -21,17 +21,48 @@ function fmt(n: number): string {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 });
 }
 
+// Small reusable grading-company dropdown
+function CompanySelect({ value, onChange }: { value: GradingCompany | null; onChange: (c: GradingCompany | null) => void }) {
+  return (
+    <select
+      className="submission-edit__company"
+      value={value ?? ''}
+      onChange={(e) => onChange((e.target.value || null) as GradingCompany | null)}
+      title="Default grading company for cards added to this submission"
+    >
+      <option value="">No default</option>
+      {GRADING_COMPANIES.map((c) => (
+        <option key={c} value={c}>{COMPANY_LABELS[c]}</option>
+      ))}
+    </select>
+  );
+}
+
 export default function SubmissionsPanel({
-  submissions, activeId, cards, calculations, settings, onSelect, onCreate, onRename, onDelete,
+  submissions, activeId, cards, calculations, settings, onSelect, onCreate, onUpdate, onDelete,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
+  const [draftCompany, setDraftCompany] = useState<GradingCompany | null>('PSA');
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newCompany, setNewCompany] = useState<GradingCompany | null>('PSA');
 
-  const startEdit = (sub: Submission) => { setEditingId(sub.id); setDraftName(sub.name); };
+  const startEdit = (sub: Submission) => { setEditingId(sub.id); setDraftName(sub.name); setDraftCompany(sub.defaultCompany); };
   const commitEdit = (id: string) => {
     const name = draftName.trim();
-    if (name) onRename(id, name);
+    onUpdate(id, { ...(name ? { name } : {}), defaultCompany: draftCompany });
     setEditingId(null);
+  };
+
+  const startCreate = () => {
+    setCreating(true);
+    setNewName(`Submission #${submissions.length + 1}`);
+    setNewCompany(settings.defaultCompany ?? 'PSA');
+  };
+  const commitCreate = () => {
+    onCreate(newName, newCompany);
+    setCreating(false);
   };
 
   const calcById = new Map(calculations.map((c) => [c.cardId, c]));
@@ -94,7 +125,8 @@ export default function SubmissionsPanel({
                       if (e.key === 'Escape') setEditingId(null);
                     }}
                   />
-                  <button className="submission-edit__btn submission-edit__btn--save" onClick={() => commitEdit(sub.id)} title="Save name">Save</button>
+                  <CompanySelect value={draftCompany} onChange={setDraftCompany} />
+                  <button className="submission-edit__btn submission-edit__btn--save" onClick={() => commitEdit(sub.id)} title="Save changes">Save</button>
                   <button className="submission-edit__btn" onClick={() => setEditingId(null)} title="Cancel">Cancel</button>
                   {submissions.length > 1 && (
                     <button
@@ -116,7 +148,7 @@ export default function SubmissionsPanel({
                   <button className="submission-btn__main" onClick={() => onSelect(sub.id)} title="View this submission">
                     <span className="submission-btn__name">{sub.name}</span>
                     <span className="submission-btn__meta">
-                      {count} card{count !== 1 ? 's' : ''} · <span className={profit >= 0 ? 'gain' : 'loss'}>{fmt(profit)}</span>
+                      {sub.defaultCompany ? `${COMPANY_LABELS[sub.defaultCompany]} · ` : ''}{count} card{count !== 1 ? 's' : ''} · <span className={profit >= 0 ? 'gain' : 'loss'}>{fmt(profit)}</span>
                     </span>
                   </button>
                   <button
@@ -143,9 +175,28 @@ export default function SubmissionsPanel({
           </span>
         </button>
 
-        <button className="submission-btn submission-btn--new" onClick={onCreate}>
-          + New Submission
-        </button>
+        {creating ? (
+          <div className="submission-edit submission-edit--new">
+            <input
+              className="submission-edit__input"
+              value={newName}
+              autoFocus
+              placeholder="Submission name"
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitCreate();
+                if (e.key === 'Escape') setCreating(false);
+              }}
+            />
+            <CompanySelect value={newCompany} onChange={setNewCompany} />
+            <button className="submission-edit__btn submission-edit__btn--save" onClick={commitCreate} title="Create submission">Create</button>
+            <button className="submission-edit__btn" onClick={() => setCreating(false)} title="Cancel">Cancel</button>
+          </div>
+        ) : (
+          <button className="submission-btn submission-btn--new" onClick={startCreate}>
+            + New Submission
+          </button>
+        )}
       </div>
 
       {minStatuses.length > 0 && (

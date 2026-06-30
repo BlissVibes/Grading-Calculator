@@ -56,7 +56,13 @@ function loadCards(): GradingCard[] {
 function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_SETTINGS);
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+    const s: AppSettings = raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+    // One-time: default the grading company to PSA for users who never set one
+    if (!localStorage.getItem('gc_company_migrated')) {
+      if (s.defaultCompany == null) s.defaultCompany = 'PSA';
+      localStorage.setItem('gc_company_migrated', '1');
+    }
+    return s;
   } catch { return DEFAULT_SETTINGS; }
 }
 
@@ -77,12 +83,15 @@ export default function App() {
   useEffect(() => { localStorage.setItem(STORAGE_SUBMISSIONS, JSON.stringify(submissions)); }, [submissions]);
   useEffect(() => { localStorage.setItem(STORAGE_ACTIVE_SUB, activeSubmissionId); }, [activeSubmissionId]);
 
-  // Migration: ensure at least one submission exists and every card belongs to one
+  // Migration: ensure at least one submission exists, each has a default company,
+  // and every card belongs to a submission.
   useEffect(() => {
     setSubmissions((subs) => {
       let next = subs;
       if (next.length === 0) {
-        next = [{ id: newId(), name: 'Submission #1' }];
+        next = [{ id: newId(), name: 'Submission #1', defaultCompany: settings.defaultCompany ?? 'PSA' }];
+      } else if (next.some((s) => s.defaultCompany === undefined)) {
+        next = next.map((s) => (s.defaultCompany === undefined ? { ...s, defaultCompany: settings.defaultCompany ?? 'PSA' } : s));
       }
       const firstId = next[0].id;
       const known = new Set(next.map((s) => s.id));
@@ -103,6 +112,8 @@ export default function App() {
   const targetSubmissionId = activeSubmissionId !== ALL
     ? activeSubmissionId
     : (submissions[0]?.id ?? '');
+  // New cards default to that submission's grading company (falling back to global)
+  const targetCompany = submissions.find((s) => s.id === targetSubmissionId)?.defaultCompany ?? settings.defaultCompany;
 
   // Lightweight client-side routing (SPA fallback handles /changelog on refresh)
   const [route, setRoute] = useState<string>(() => window.location.pathname);
@@ -149,12 +160,12 @@ export default function App() {
     // Apply default company and detect language for imported cards
     const withDefaults = imported.map((c) => ({
       ...c,
-      company: settings.defaultCompany,
+      company: targetCompany,
       language: c.language || detectLanguage(c.cardName) || settings.defaultLanguage,
       submissionId: targetSubmissionId,
     }));
     setCards((prev) => [...prev, ...withDefaults]);
-  }, [settings.defaultCompany, settings.defaultLanguage, targetSubmissionId]);
+  }, [targetCompany, settings.defaultLanguage, targetSubmissionId]);
 
   // Card CRUD
   const updateCard = useCallback((id: string, updates: Partial<GradingCard>) => {
@@ -182,7 +193,7 @@ export default function App() {
       gradeValues: {},
       quantity: 1,
       includeInTotal: true,
-      company: settings.defaultCompany,
+      company: targetCompany,
       serviceLevel: null,
       customGradingFee: null,
       noGrading: false,
@@ -196,22 +207,21 @@ export default function App() {
     // user fills it in, optionally searches prices, and confirms.
     setDraftCard(newCard);
     setDraftLookupStatus(undefined);
-  }, [settings.defaultCompany, settings.defaultLanguage, targetSubmissionId]);
+  }, [targetCompany, settings.defaultLanguage, targetSubmissionId]);
 
   // ───── Submissions ─────
 
-  const createSubmission = useCallback(() => {
+  const createSubmission = useCallback((name: string, defaultCompany: GradingCompany | null) => {
     const id = newId();
-    setSubmissions((prev) => {
-      const name = prompt('Name this submission:', `Submission #${prev.length + 1}`);
-      if (name === null) return prev;   // cancelled
-      return [...prev, { id, name: name.trim() || `Submission #${prev.length + 1}` }];
-    });
+    setSubmissions((prev) => [
+      ...prev,
+      { id, name: name.trim() || `Submission #${prev.length + 1}`, defaultCompany },
+    ]);
     setActiveSubmissionId(id);
   }, []);
 
-  const renameSubmission = useCallback((id: string, name: string) => {
-    setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, name } : s)));
+  const updateSubmission = useCallback((id: string, patch: Partial<Submission>) => {
+    setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   }, []);
 
   const deleteSubmission = useCallback((id: string) => {
@@ -420,7 +430,7 @@ export default function App() {
             settings={settings}
             onSelect={setActiveSubmissionId}
             onCreate={createSubmission}
-            onRename={renameSubmission}
+            onUpdate={updateSubmission}
             onDelete={deleteSubmission}
           />
         </div>

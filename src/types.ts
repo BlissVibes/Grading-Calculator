@@ -93,6 +93,7 @@ export const DEFAULT_GRADES: GradeNumber[] = [9, 10];
 export interface Submission {
   id: string;
   name: string;
+  defaultCompany: GradingCompany | null;   // grading company new cards in this batch default to
 }
 
 // ───── Card Entry ─────
@@ -178,7 +179,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   darkMode: true,
   visibleGrades: [9, 10],
   showHalfGrades: false,
-  defaultCompany: null,
+  defaultCompany: 'PSA',
   defaultServiceLevel: {
     PSA: 'value',
     TAG: 'standard',
