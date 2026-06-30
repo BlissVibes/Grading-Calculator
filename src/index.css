@@ -245,6 +245,16 @@ body { min-height: 100vh; }
 .company-btn--cgc.company-btn--active { background: var(--cgc); border-color: var(--cgc); }
 .company-btn--psg.company-btn--active { background: var(--psg); border-color: var(--psg); color: #1a1d27; }
 
+/* Custom flat-price control */
+.company-bar__custom { display: inline-flex; align-items: center; gap: 6px; }
+.company-bar__custom--active {
+  padding: 3px 8px; border: 1px solid var(--accent); border-radius: var(--radius-sm);
+  background: rgba(99, 102, 241, 0.08);
+}
+.company-btn--custom.company-btn--active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.company-bar__custom-input { width: 80px; }
+.company-bar__custom-unit { font-size: 0.78rem; color: var(--text-muted); }
+
 .company-bar__actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
 .company-bar__apply-btn {
@@ -275,8 +285,12 @@ body { min-height: 100vh; }
 }
 /* Narrow boxes for short single-number stats, freeing room for the cost box */
 .summary-stat--compact { flex: 0 1 104px; }
-/* Wider box that holds the grading-cost breakdown */
-.summary-stat--cost { flex: 1.5 1 240px; }
+/* Total Invested: snug to its label, with breathing room for large numbers */
+.summary-stat--invested { flex: 0 1 150px; }
+/* Best Grade Profit: lightly squeezed, still roomy for large numbers */
+.summary-stat--profit { flex: 0 1 180px; }
+/* The headline total-grading-charges box */
+.summary-stat--cost { flex: 1 1 180px; }
 .summary-cost__rows {
   display: flex; flex-direction: column; gap: 2px;
   width: 100%; margin-top: 6px;

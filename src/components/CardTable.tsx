@@ -1082,6 +1082,19 @@ function InlineComparison({ card, settings, onUpdate }: { card: GradingCard; set
                 <option key={g} value={g}>Grade {g}</option>
               ))}
             </select>
+            {/* Expected price at the selected grade — editable here even when that
+                grade isn't a visible column in the table. */}
+            <span className="comparison-grade-label" style={{ marginLeft: 8 }}>Grade {selectedGrade} price $</span>
+            <input
+              className="cell-input cell-input--number"
+              type="number"
+              step="0.01"
+              min="0"
+              value={card.gradeValues[selectedGrade] || ''}
+              onChange={(e) => onUpdate({ gradeValues: { ...card.gradeValues, [selectedGrade]: parseFloat(e.target.value) || 0 } })}
+              placeholder="0.00"
+              title={`Expected sale price at grade ${selectedGrade}`}
+            />
           </div>
           <div className="comparison-hint">Click a company to grade with it. Green = your pick · purple = best value.</div>
 

@@ -20,11 +20,12 @@ export default function SummaryBar({ cards, calculations }: Props) {
   const totalPricePaid = included.reduce((sum, c) => sum + c.pricePaid * c.quantity, 0);
 
   // Submission = upfront fees at the selected tiers (base + add-ons).
-  // Current upcharge = owed now based on each card's present (raw) value.
-  // Potential upcharge = the extra if every card grades to its top grade.
-  // The headline grading cost is submission + current upcharge: what you'd
-  // actually pay now, excluding the speculative top-grade upcharges that a
-  // higher-tier submission would negate.
+  // Expected upcharge = the value-based upcharge owed when each card grades to
+  // its expected grade (the target grade if set, else the top grade).
+  // Current upcharge = owed now based on each card's present (raw) value, shown
+  // as muted context.
+  // The headline grading cost is submission + the expected-grade upcharge: the
+  // total you'd owe if the cards hit the grade you're valuing them at.
   let totalSubmission = 0;
   let totalCurrentUpcharge = 0;
   let totalPotentialUpcharge = 0;
@@ -51,7 +52,9 @@ export default function SummaryBar({ cards, calculations }: Props) {
     }
   }
 
-  const currentCost = totalSubmission + totalCurrentUpcharge;
+  // Headline grading cost = submission fees + the upcharge owed at the expected
+  // grade (target grade if set, else top grade).
+  const totalGradingCharges = totalSubmission + totalPotentialUpcharge;
   const avgMultiplier = gradeCount > 0 ? totalMultiplier / gradeCount : 0;
   const profitClass = totalBestProfit > 0 ? 'summary-stat--gain' : totalBestProfit < 0 ? 'summary-stat--loss' : '';
 
@@ -61,29 +64,26 @@ export default function SummaryBar({ cards, calculations }: Props) {
         <span className="summary-stat__label">Total Cards</span>
         <span className="summary-stat__value">{totalCards}</span>
       </div>
-      <div className="summary-stat">
+      <div className="summary-stat summary-stat--invested">
         <span className="summary-stat__label">Total Invested</span>
         <span className="summary-stat__value">{fmt(totalPricePaid)}</span>
       </div>
-      <div className="summary-stat summary-stat--cost">
-        <span className="summary-stat__label">Grading Cost</span>
-        <span className="summary-stat__value">{fmt(currentCost)}</span>
-        <div className="summary-cost__rows">
-          <div className="summary-cost__row">
-            <span className="summary-cost__row-label">Submission</span>
-            <span className="summary-cost__row-val">{fmt(totalSubmission)}</span>
-          </div>
-          <div className="summary-cost__row">
-            <span className="summary-cost__row-label">Upcharge now</span>
-            <span className="summary-cost__row-val">{fmt(totalCurrentUpcharge)}</span>
-          </div>
-          <div className="summary-cost__row summary-cost__row--muted">
-            <span className="summary-cost__row-label">Upcharge if top grade</span>
-            <span className="summary-cost__row-val">{fmt(totalPotentialUpcharge)}</span>
-          </div>
-        </div>
+      <div className="summary-stat">
+        <span className="summary-stat__label">Submission Fees</span>
+        <span className="summary-stat__value">{fmt(totalSubmission)}</span>
       </div>
-      <div className={`summary-stat ${profitClass}`}>
+      <div className="summary-stat">
+        <span className="summary-stat__label">Upcharges</span>
+        <span className="summary-stat__value">{fmt(totalPotentialUpcharge)}</span>
+        {totalCurrentUpcharge !== totalPotentialUpcharge && (
+          <span className="summary-stat__note">{fmt(totalCurrentUpcharge)} at current value</span>
+        )}
+      </div>
+      <div className="summary-stat summary-stat--cost">
+        <span className="summary-stat__label">Total Grading Charges</span>
+        <span className="summary-stat__value">{fmt(totalGradingCharges)}</span>
+      </div>
+      <div className={`summary-stat summary-stat--profit ${profitClass}`}>
         <span className="summary-stat__label">Best Grade Profit</span>
         <span className="summary-stat__value">{fmt(totalBestProfit)}</span>
       </div>
