@@ -180,7 +180,7 @@ export interface ProfitThresholds {
 export interface AppSettings {
   darkMode: boolean;
   visibleGrades: GradeNumber[];
-  showHalfGrades: boolean;
+  showHalfGrades?: boolean;   // (deprecated) the Settings toggle is hidden; kept for back-compat
   defaultCompany: GradingCompany | null;
   defaultServiceLevel: Record<GradingCompany, string>;
   feeOverrides: Record<GradingCompany, Partial<CompanyFeeStructure>>;
@@ -194,7 +194,6 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   darkMode: true,
   visibleGrades: [9, 10],
-  showHalfGrades: false,
   defaultCompany: 'PSA',
   defaultServiceLevel: {
     PSA: 'value',

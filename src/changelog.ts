@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.0.4',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Removed the "Include Half Grades" toggle from Settings — it didn’t produce the intended result. Half-grade columns can still be toggled individually in the grade list.' },
+    ],
+  },
+  {
     version: '1.4.0.3',
     date: 'June 30, 2026',
     items: [
