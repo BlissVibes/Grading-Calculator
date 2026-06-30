@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.15',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Moved the quantity stepper arrows flush against the number box.' },
+    ],
+  },
+  {
     version: '0.1.3.6.14',
     date: 'June 30, 2026',
     items: [

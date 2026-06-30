@@ -563,8 +563,8 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 .num-stepper__btn { width: 15px; height: 10px; font-size: 0.45rem; border-radius: 3px; }
 
 /* Custom quantity stepper — rounded light-purple buttons with dark-purple arrows */
-.qty-stepper { display: inline-flex; align-items: center; gap: 1px; }
-.qty-stepper__btns { display: flex; flex-direction: column; gap: 1px; }
+.qty-stepper { display: inline-flex; align-items: center; gap: 0; }
+.qty-stepper__btns { display: flex; flex-direction: column; gap: 1px; margin-left: -3px; }
 .qty-btn {
   display: flex; align-items: center; justify-content: center;
   width: 15px; height: 10px; padding: 0;
