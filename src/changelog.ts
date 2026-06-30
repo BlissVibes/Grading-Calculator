@@ -16,6 +16,54 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.13',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Tightened the quantity stepper: smaller up/down arrows sitting closer to the number.' },
+    ],
+  },
+  {
+    version: '0.1.3.6.12',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Every dollar field (price paid, raw price, each grade-price column, the expected price, and custom grading prices) now uses the same up/down arrow buttons as the quantity stepper instead of the browser\'s native spinner.' },
+      { text: 'On those dollar fields the arrows stay hidden until you click into the box, and clicking them jumps the value to the nearest whole dollar. The quantity column keeps its always-visible stepper.' },
+      { text: 'The browser\'s default number-spinner arrows are now hidden on every numeric field across the site.' },
+    ],
+  },
+  {
+    version: '0.1.3.6.11',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Clarified the Upcharges box: the headline now reads "at expected grade", and the secondary line is labelled "owed now at raw value" so it\'s clear it\'s the upcharge based on the card\'s current ungraded value (often $0) versus the projected upcharge once it grades up.' },
+    ],
+  },
+  {
+    version: '0.1.3.6.10',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'The PKC (Pokémon Center) stamp button now appears only on cards that actually have a known stamped variant (or one already marked/detected as stamped). The faded "ghost" button that showed on every other Pokémon card is gone.' },
+    ],
+  },
+  {
+    version: '0.1.3.6.9',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Reworked the summary header into separate bubbles: Submission Fees, Upcharges, and a Total Grading Charges total. The total now includes the value-based upcharge owed at each card\'s expected grade (so a card valued at grade 10 counts its grade-10 upcharge). Total Invested and Best Grade Profit boxes were tightened to fit their numbers.' },
+      { text: 'Added a "Custom $" button to the grading-company toolbar to set your own flat grading price for every card on a default tier (the same global override that lived in Settings).' },
+      { text: 'The per-card comparison now shows an editable "expected price" next to the grade selector, so you can value a card at a grade even when that grade isn\'t a visible column.' },
+      { text: 'Updated TAG, Beckett (BGS), and CGC fee tiers to 2026 pricing. TAG: Basic $22 (10-card min), Standard $39, Express $59, Priority $149, Walkthrough $299. BGS: Economy $20, Standard $50, Express $100, Rush $150, Premium $250. CGC: Bulk $17 (25-card min), Economy $20, Standard $55, Express $100, Walk Through $300. These graders price by tier (declared value sets the minimum tier) rather than flat value add-ons.' },
+    ],
+  },
+  {
+    version: '0.1.3.6.8',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'The per-card comparison is now interactive: click a company to grade with it (it syncs the company dropdown). Your pick is outlined green, the best value purple.' },
+      { text: 'The comparison’s grade buttons now set an "expected grade" for the card: grade columns above it grey out, and the summary totals value the card at that grade.' },
+    ],
+  },
+  {
     version: '0.1.3.6.7',
     date: 'June 30, 2026',
     items: [

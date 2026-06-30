@@ -4,6 +4,7 @@ import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES, TEN_VARIANTS } from '../
 import { COMPANY_FEES } from '../gradingData';
 import { compareCompanies, estimatePsaUpcharge, calculateCard } from '../gradingCalculator';
 import { isPkcEligible } from '../pokemonCenterCards';
+import NumberStepper from './NumberStepper';
 import type { LookupStatus } from '../priceLookup';
 import { exportCSV, downloadCSV, EXPORT_SORT_OPTIONS } from '../csvExporter';
 import type { ExportSortKey } from '../csvExporter';
@@ -592,6 +593,12 @@ interface CardRowProps {
 function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitTier, onToggleExpand, onUpdate, onUpdateGrade, onDelete, onLookup, isDraft, onConfirm }: CardRowProps) {
   const effectiveCompany = card.noGrading ? null : (card.company ?? settings.defaultCompany);
 
+  // Expected grade — columns for grades above it are greyed out (they're moot
+  // once you expect a lower grade). Default: the top visible grade.
+  const topVisible = settings.visibleGrades[settings.visibleGrades.length - 1] ?? 10;
+  const targetGrade = card.targetGrade ?? topVisible;
+  const aboveTarget = (g: GradeNumber) => g > targetGrade;
+
   const tierClass = `${isDraft ? 'card-row--draft ' : ''}${profitTier ? `row-profit-${profitTier}` : ''}${card.includeInTotal ? '' : ' row-excluded'}`.trim();
 
   return (
@@ -645,33 +652,18 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               onChange={(e) => onUpdate({ cardName: e.target.value })}
               placeholder="Card name"
             />
-            {card.cardGame === 'Pokémon' && (() => {
-              // Show the PKC button by default only for cards that actually have a
-              // Pokémon Center stamped variant (or one already marked as stamped).
-              // Other Pokémon cards get a faded "ghost" affordance the user can
-              // click to switch this card to its Pokémon Center version.
-              const showFull = isPkcEligible(card) || card.pokemonCenter;
-              if (showFull) {
-                return (
-                  <button
-                    className={`pc-stamp-btn${card.pokemonCenter ? ' pc-stamp-btn--active' : ''}`}
-                    onClick={() => onUpdate({ pokemonCenter: !card.pokemonCenter })}
-                    title={card.pokemonCenter ? 'Pokémon Center stamp (click to remove)' : 'Mark as Pokémon Center stamped variant'}
-                  >
-                    PKC
-                  </button>
-                );
-              }
-              return (
-                <button
-                  className="pc-stamp-btn pc-stamp-btn--ghost"
-                  onClick={() => onUpdate({ pokemonCenter: true })}
-                  title="Not a known Pokémon Center card — click if you have the stamped variant"
-                >
-                  PKC
-                </button>
-              );
-            })()}
+            {card.cardGame === 'Pokémon' && (isPkcEligible(card) || card.pokemonCenter) && (
+              // Show the PKC button ONLY for cards that actually have a Pokémon
+              // Center stamped variant (in the known list), or one already
+              // marked/detected as stamped. Other Pokémon cards get no button.
+              <button
+                className={`pc-stamp-btn${card.pokemonCenter ? ' pc-stamp-btn--active' : ''}`}
+                onClick={() => onUpdate({ pokemonCenter: !card.pokemonCenter })}
+                title={card.pokemonCenter ? 'Pokémon Center stamp (click to remove)' : 'Mark as Pokémon Center stamped variant'}
+              >
+                PKC
+              </button>
+            )}
             {/* Lookup price button — always visible next to card name */}
             <button
               className="row-action-btn lookup-btn-inline"
@@ -809,41 +801,26 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
         {/* Price Paid */}
         <td className="td-right">
-          <input
-            className="cell-input cell-input--number"
-            type="number"
-            step="0.01"
-            min="0"
-            value={card.pricePaid || ''}
-            onChange={(e) => onUpdate({ pricePaid: parseFloat(e.target.value) || 0 })}
-            placeholder="0.00"
+          <NumberStepper
+            value={card.pricePaid}
+            onChange={(v) => onUpdate({ pricePaid: v })}
           />
         </td>
 
         {/* Raw Price */}
         <td className="td-right">
-          <input
-            className="cell-input cell-input--number"
-            type="number"
-            step="0.01"
-            min="0"
-            value={card.rawPrice || ''}
-            onChange={(e) => onUpdate({ rawPrice: parseFloat(e.target.value) || 0 })}
-            placeholder="0.00"
+          <NumberStepper
+            value={card.rawPrice}
+            onChange={(v) => onUpdate({ rawPrice: v })}
           />
         </td>
 
         {/* Grade Price columns */}
         {settings.visibleGrades.map((g) => (
-          <td key={`price-${g}`} className="td-center">
-            <input
-              className="cell-input cell-input--number"
-              type="number"
-              step="0.01"
-              min="0"
-              value={card.gradeValues[g] || ''}
-              onChange={(e) => onUpdateGrade(g, parseFloat(e.target.value) || 0)}
-              placeholder="0.00"
+          <td key={`price-${g}`} className={`td-center${aboveTarget(g) ? ' col-above-target' : ''}`}>
+            <NumberStepper
+              value={card.gradeValues[g] ?? 0}
+              onChange={(v) => onUpdateGrade(g, v)}
             />
           </td>
         ))}
@@ -855,7 +832,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
           const profit = result?.profit ?? 0;
           const cls = profit > 0 ? 'profit-positive' : profit < 0 ? 'profit-negative' : 'profit-zero';
           return (
-            <td key={`profit-${g}`} className={`td-center ${cls}`}>
+            <td key={`profit-${g}`} className={`td-center ${cls}${aboveTarget(g) ? ' col-above-target' : ''}`}>
               {fmt(profit)}
             </td>
           );
@@ -872,7 +849,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
             : mult < 0 ? 'multiplier--negative'
             : 'multiplier--neutral';
           return (
-            <td key={`mult-${g}`} className="td-center">
+            <td key={`mult-${g}`} className={`td-center${aboveTarget(g) ? ' col-above-target' : ''}`}>
               <span className={`multiplier ${cls}`}>{fmtMult(mult)}</span>
             </td>
           );
@@ -926,15 +903,11 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
                 <option value="__custom">Custom $…</option>
               </select>
               {card.customGradingFee != null && (
-                <input
-                  className="cell-input cell-input--custom-fee"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={card.customGradingFee || ''}
-                  onChange={(e) => onUpdate({ customGradingFee: Math.max(0, parseFloat(e.target.value) || 0) })}
+                <NumberStepper
+                  value={card.customGradingFee}
+                  onChange={(v) => onUpdate({ customGradingFee: v })}
+                  inputClassName="cell-input cell-input--custom-fee"
                   title="Custom grading price for this card"
-                  placeholder="0.00"
                 />
               )}
               {card.cardName.trim() && (
@@ -1026,7 +999,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
       {/* Inline comparison */}
       {expanded && !card.noGrading && (
-        <InlineComparison card={card} settings={settings} />
+        <InlineComparison card={card} settings={settings} onUpdate={onUpdate} />
       )}
     </>
   );
@@ -1034,11 +1007,14 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
 // ───── Inline Company Comparison ─────
 
-function InlineComparison({ card, settings }: { card: GradingCard; settings: AppSettings }) {
-  const [selectedGrade, setSelectedGrade] = useState<GradeNumber>(10);
+function InlineComparison({ card, settings, onUpdate }: { card: GradingCard; settings: AppSettings; onUpdate: (updates: Partial<GradingCard>) => void }) {
+  const topVisible = settings.visibleGrades[settings.visibleGrades.length - 1] ?? 10;
+  const selectedGrade: GradeNumber = card.targetGrade ?? topVisible;
+  const setSelectedGrade = (g: GradeNumber) => onUpdate({ targetGrade: g });
 
   const comparisons = compareCompanies(card, selectedGrade, settings);
   const bestProfit = Math.max(...comparisons.map((c) => c.totalProfit));
+  const selectedCompany = card.company ?? settings.defaultCompany;
 
   const colSpan = 7 + settings.visibleGrades.length * 3 + 3;
   const lowSelected = selectedGrade <= 8;
@@ -1047,8 +1023,9 @@ function InlineComparison({ card, settings }: { card: GradingCard; settings: App
     <tr className="inline-comparison">
       <td colSpan={colSpan}>
         <div className="inline-comparison__inner">
-          {/* Grade for the comparison: quick 10 / 9, plus an "8 or lower" picker */}
-          <div className="comparison-grade-tabs" style={{ marginBottom: 10 }}>
+          {/* Expected grade — drives the table totals and greys higher columns */}
+          <div className="comparison-grade-tabs" style={{ marginBottom: 4 }}>
+            <span className="comparison-grade-label">Expected grade:</span>
             <button
               className={`comparison-grade-tab ${selectedGrade === 10 ? 'comparison-grade-tab--active' : ''}`}
               onClick={() => setSelectedGrade(10)}
@@ -1072,15 +1049,28 @@ function InlineComparison({ card, settings }: { card: GradingCard; settings: App
                 <option key={g} value={g}>Grade {g}</option>
               ))}
             </select>
+            {/* Expected price at the selected grade — editable here even when that
+                grade isn't a visible column in the table. */}
+            <span className="comparison-grade-label" style={{ marginLeft: 8 }}>Grade {selectedGrade} price $</span>
+            <NumberStepper
+              value={card.gradeValues[selectedGrade] ?? 0}
+              onChange={(v) => onUpdate({ gradeValues: { ...card.gradeValues, [selectedGrade]: v } })}
+              title={`Expected sale price at grade ${selectedGrade}`}
+            />
           </div>
+          <div className="comparison-hint">Click a company to grade with it. Green = your pick · purple = best value.</div>
 
           <div className="inline-comparison__grid">
             {comparisons.map((comp) => {
               const isBest = comp.totalProfit === bestProfit && bestProfit > 0;
+              const isSelected = comp.company === selectedCompany;
               return (
-                <div
+                <button
+                  type="button"
                   key={comp.company}
-                  className={`inline-comp-card ${isBest ? 'inline-comp-card--best' : ''}`}
+                  className={`inline-comp-card${isBest ? ' inline-comp-card--best' : ''}${isSelected ? ' inline-comp-card--selected' : ''}`}
+                  onClick={() => onUpdate({ company: comp.company, serviceLevel: null })}
+                  title={`Grade this card with ${COMPANY_LABELS[comp.company]}`}
                 >
                   <div className="inline-comp-card__company">{COMPANY_LABELS[comp.company]}</div>
                   <div className="inline-comp-card__row">
@@ -1107,8 +1097,11 @@ function InlineComparison({ card, settings }: { card: GradingCard; settings: App
                       {fmtMult(comp.averageMultiplier)}
                     </span>
                   </div>
-                  {isBest && <div style={{ textAlign: 'center', marginTop: 6, color: 'var(--gain)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>Best Value</div>}
-                </div>
+                  <div className="inline-comp-card__badges">
+                    {isSelected && <span className="inline-comp-card__badge inline-comp-card__badge--selected">✓ Your pick</span>}
+                    {isBest && <span className="inline-comp-card__badge inline-comp-card__badge--best">★ Best value</span>}
+                  </div>
+                </button>
               );
             })}
           </div>

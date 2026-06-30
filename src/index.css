@@ -245,6 +245,16 @@ body { min-height: 100vh; }
 .company-btn--cgc.company-btn--active { background: var(--cgc); border-color: var(--cgc); }
 .company-btn--psg.company-btn--active { background: var(--psg); border-color: var(--psg); color: #1a1d27; }
 
+/* Custom flat-price control */
+.company-bar__custom { display: inline-flex; align-items: center; gap: 6px; }
+.company-bar__custom--active {
+  padding: 3px 8px; border: 1px solid var(--accent); border-radius: var(--radius-sm);
+  background: rgba(99, 102, 241, 0.08);
+}
+.company-btn--custom.company-btn--active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.company-bar__custom-input { width: 80px; }
+.company-bar__custom-unit { font-size: 0.78rem; color: var(--text-muted); }
+
 .company-bar__actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
 .company-bar__apply-btn {
@@ -275,8 +285,12 @@ body { min-height: 100vh; }
 }
 /* Narrow boxes for short single-number stats, freeing room for the cost box */
 .summary-stat--compact { flex: 0 1 104px; }
-/* Wider box that holds the grading-cost breakdown */
-.summary-stat--cost { flex: 1.5 1 240px; }
+/* Total Invested: snug to its label, with breathing room for large numbers */
+.summary-stat--invested { flex: 0 1 150px; }
+/* Best Grade Profit: lightly squeezed, still roomy for large numbers */
+.summary-stat--profit { flex: 0 1 180px; }
+/* The headline total-grading-charges box */
+.summary-stat--cost { flex: 1 1 180px; }
 .summary-cost__rows {
   display: flex; flex-direction: column; gap: 2px;
   width: 100%; margin-top: 6px;
@@ -294,6 +308,10 @@ body { min-height: 100vh; }
   letter-spacing: 0.05em;
 }
 .summary-stat__value { font-size: 1.3rem; font-weight: 700; }
+.summary-stat__sublabel {
+  font-size: 0.62rem; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.04em; margin-top: -1px;
+}
 .summary-stat__note {
   font-size: 0.65rem; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.04em;
@@ -453,11 +471,6 @@ body { min-height: 100vh; }
 .pc-stamp-btn--active {
   background: rgba(180, 40, 40, 0.25); color: #e66; border-color: #e66;
 }
-/* Faded affordance for Pokémon that aren't known PC-stamped cards */
-.pc-stamp-btn--ghost {
-  opacity: 0.28; border-style: dashed;
-}
-.pc-stamp-btn--ghost:hover { opacity: 1; }
 
 .lookup-matched {
   font-size: 0.7rem; color: var(--text-muted); margin-top: 1px;
@@ -529,20 +542,35 @@ body.light .card-table tbody tr.row-profit-red { background: rgba(192,57,43,0.12
 }
 .cell-input--narrow { width: 65px; }
 .cell-input--qty { width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
-/* Hide the browser's native number spinner — replaced by custom buttons below */
-.cell-input--qty::-webkit-inner-spin-button,
-.cell-input--qty::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.cell-input--qty { -moz-appearance: textfield; appearance: textfield; }
+/* Hide the browser's native number spinner everywhere — every numeric field
+   uses our own custom arrow buttons instead, so the inconsistent native arrows
+   never show on any column. */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Dollar number field with custom arrows that appear only while focused and
+   snap to the nearest whole dollar. Arrows overlay the right edge so the cell
+   width doesn't change. */
+.num-stepper { position: relative; display: inline-flex; }
+.num-stepper__btns {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 2px;
+  opacity: 0; pointer-events: none; transition: opacity 0.1s;
+}
+.num-stepper:focus-within .num-stepper__btns { opacity: 1; pointer-events: auto; }
+.num-stepper:focus-within .cell-input { padding-right: 19px; }
+.num-stepper__btn { width: 15px; height: 10px; font-size: 0.45rem; border-radius: 3px; }
 
 /* Custom quantity stepper — rounded light-purple buttons with dark-purple arrows */
-.qty-stepper { display: inline-flex; align-items: center; gap: 3px; }
-.qty-stepper__btns { display: flex; flex-direction: column; gap: 2px; }
+.qty-stepper { display: inline-flex; align-items: center; gap: 1px; }
+.qty-stepper__btns { display: flex; flex-direction: column; gap: 1px; }
 .qty-btn {
   display: flex; align-items: center; justify-content: center;
-  width: 20px; height: 13px; padding: 0;
-  border: none; border-radius: 4px;
+  width: 15px; height: 10px; padding: 0;
+  border: none; border-radius: 3px;
   background: #e7e2ff; color: #5b21b6;
-  font-size: 0.5rem; line-height: 1; cursor: pointer;
+  font-size: 0.45rem; line-height: 1; cursor: pointer;
   transition: background 0.12s;
 }
 .qty-btn:hover { background: #d3c9ff; }
@@ -831,15 +859,35 @@ tr.card-row--draft > td {
 }
 
 .inline-comp-card {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  color: var(--text); font: inherit;
   background: var(--bg); border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: 10px 12px;
-  font-size: 0.8rem;
+  font-size: 0.8rem; transition: border-color 0.12s, box-shadow 0.12s;
 }
-.inline-comp-card--best { border-color: var(--gain); background: var(--gain-bg); }
+.inline-comp-card:hover { border-color: var(--text-muted); }
+/* Recommended (best value) → purple */
+.inline-comp-card--best { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+/* User's chosen grading company → green (wins visually if also best) */
+.inline-comp-card--selected { border-color: var(--gain); box-shadow: inset 0 0 0 2px var(--gain); background: var(--gain-bg); }
 .inline-comp-card__company { font-weight: 700; font-size: 0.82rem; margin-bottom: 6px; }
 .inline-comp-card__row { display: flex; justify-content: space-between; padding: 1px 0; }
 .inline-comp-card__label { color: var(--text-muted); }
 .inline-comp-card__value { font-weight: 600; font-variant-numeric: tabular-nums; }
+.inline-comp-card__badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; justify-content: center; }
+.inline-comp-card__badge {
+  font-size: 0.66rem; font-weight: 700; text-transform: uppercase;
+  padding: 1px 6px; border-radius: 999px;
+}
+.inline-comp-card__badge--selected { color: #fff; background: var(--gain); }
+.inline-comp-card__badge--best { color: #fff; background: var(--accent); }
+
+/* Grade columns above a card's expected grade — greyed/dimmed */
+.col-above-target { opacity: 0.32; }
+.col-above-target input { color: var(--text-muted); }
+
+.comparison-grade-label { font-size: 0.78rem; color: var(--text-muted); margin-right: 4px; align-self: center; }
+.comparison-hint { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 10px; }
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {

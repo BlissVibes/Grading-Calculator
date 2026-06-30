@@ -462,9 +462,13 @@ export default function App() {
         <CompanySelector
           selectedCompany={settings.defaultCompany}
           selectedServiceLevel={currentServiceLevel}
+          globalCustomFee={settings.globalCustomGradingFee}
           onCompanyChange={handleCompanyChange}
           onServiceLevelChange={handleServiceLevelChange}
           onApplyToAll={handleApplyToAll}
+          onGlobalCustomFeeChange={(fee) =>
+            setSettings((prev) => ({ ...prev, globalCustomGradingFee: fee }))
+          }
         />
 
         {/* Summary */}
