@@ -16,6 +16,14 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.0.5',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Checkboxes now match the app theme — in light mode they render as light boxes instead of dark ones (native controls were following the OS theme).' },
+      { text: 'The gold and silver multiplier plaques shine more slowly with a smoother gradient, and now give off a little sparkle each time the sheen reaches the right edge.' },
+    ],
+  },
+  {
     version: '1.4.0.4',
     date: 'June 30, 2026',
     items: [
