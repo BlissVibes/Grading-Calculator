@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSettings, CompanyFeeStructure, TenVariantKey } from '../types';
-import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES, TEN_VARIANTS } from '../types';
+import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES, TEN_VARIANTS, PREMIUM_TENS, TEN_VARIANT_COMPANY } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 import { compareCompanies, estimatePsaUpcharge, calculateCard } from '../gradingCalculator';
 import { isPkcEligible } from '../pokemonCenterCards';
@@ -938,9 +938,12 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               )}
             </div>
           )}
-          {/* Premium "10" grade selector — only when the card has such prices */}
+          {/* Premium "10" grade selector — only the variant(s) for this card's
+              grader, and only when the card has such prices. */}
           {!card.noGrading && (() => {
-            const variants = TEN_VARIANTS.filter((v) => (card.tenVariants?.[v.key] ?? 0) > 0);
+            const variants = TEN_VARIANTS.filter(
+              (v) => (card.tenVariants?.[v.key] ?? 0) > 0 && TEN_VARIANT_COMPANY[v.key] === effectiveCompany,
+            );
             if (variants.length === 0) return null;
             const stdPrice = card.gradeValues[10] ?? 0;
             return (
@@ -1033,6 +1036,14 @@ function InlineComparison({ card, settings, onUpdate }: { card: GradingCard; set
   const colSpan = 7 + settings.visibleGrades.length * 3 + 3;
   const lowSelected = selectedGrade <= 8;
 
+  // Premium "10+" for this card's grader (Beckett → Black Label, TAG/CGC →
+  // Pristine). Shown as a button left of the 10 button; PSA/ARS/PSG have none.
+  const premium = PREMIUM_TENS.find((p) => p.company === selectedCompany);
+  const premiumActive = selectedGrade === 10 && !!premium && card.tenVariant === premium.key;
+  const plainTenActive = selectedGrade === 10 && !premiumActive;
+  // Whether the bottom price box is editing a premium price vs a plain grade.
+  const editingPremiumPrice = premiumActive && premium != null;
+
   return (
     <tr className="inline-comparison">
       <td colSpan={colSpan}>
@@ -1040,22 +1051,32 @@ function InlineComparison({ card, settings, onUpdate }: { card: GradingCard; set
           {/* Expected grade — drives the table totals and greys higher columns */}
           <div className="comparison-grade-tabs" style={{ marginBottom: 4 }}>
             <span className="comparison-grade-label">Expected grade:</span>
+            {/* Premium "10+" for this card's grader, sitting left of the 10 button */}
+            {premium && (
+              <button
+                className={`comparison-grade-tab comparison-grade-tab--premium ${premiumActive ? 'comparison-grade-tab--active' : ''}`}
+                onClick={() => onUpdate({ targetGrade: 10, tenVariant: premium.key })}
+                title={`Value this card at ${premium.label}`}
+              >
+                {premium.short}
+              </button>
+            )}
             <button
-              className={`comparison-grade-tab ${selectedGrade === 10 ? 'comparison-grade-tab--active' : ''}`}
-              onClick={() => setSelectedGrade(10)}
+              className={`comparison-grade-tab ${plainTenActive ? 'comparison-grade-tab--active' : ''}`}
+              onClick={() => onUpdate({ targetGrade: 10, tenVariant: null })}
             >
               10
             </button>
             <button
               className={`comparison-grade-tab ${selectedGrade === 9 ? 'comparison-grade-tab--active' : ''}`}
-              onClick={() => setSelectedGrade(9)}
+              onClick={() => onUpdate({ targetGrade: 9, tenVariant: null })}
             >
               9
             </button>
             <select
               className={`comparison-grade-select${lowSelected ? ' comparison-grade-select--active' : ''}`}
               value={lowSelected ? String(selectedGrade) : ''}
-              onChange={(e) => { if (e.target.value) setSelectedGrade(parseInt(e.target.value, 10) as GradeNumber); }}
+              onChange={(e) => { if (e.target.value) onUpdate({ targetGrade: parseInt(e.target.value, 10) as GradeNumber, tenVariant: null }); }}
               title="Pick grade 8 or lower"
             >
               <option value="">8 or lower</option>
@@ -1064,13 +1085,27 @@ function InlineComparison({ card, settings, onUpdate }: { card: GradingCard; set
               ))}
             </select>
             {/* Expected price at the selected grade — editable here even when that
-                grade isn't a visible column in the table. */}
-            <span className="comparison-grade-label" style={{ marginLeft: 8 }}>Grade {selectedGrade} price $</span>
-            <NumberStepper
-              value={card.gradeValues[selectedGrade] ?? 0}
-              onChange={(v) => onUpdate({ gradeValues: { ...card.gradeValues, [selectedGrade]: v } })}
-              title={`Expected sale price at grade ${selectedGrade}`}
-            />
+                grade isn't a visible column in the table. For a premium pick it
+                edits that premium's price. */}
+            {editingPremiumPrice ? (
+              <>
+                <span className="comparison-grade-label" style={{ marginLeft: 8 }}>{premium!.label} price $</span>
+                <NumberStepper
+                  value={card.tenVariants?.[premium!.key] ?? 0}
+                  onChange={(v) => onUpdate({ tenVariants: { ...card.tenVariants, [premium!.key]: v } })}
+                  title={`Expected sale price at ${premium!.label}`}
+                />
+              </>
+            ) : (
+              <>
+                <span className="comparison-grade-label" style={{ marginLeft: 8 }}>Grade {selectedGrade} price $</span>
+                <NumberStepper
+                  value={card.gradeValues[selectedGrade] ?? 0}
+                  onChange={(v) => onUpdate({ gradeValues: { ...card.gradeValues, [selectedGrade]: v } })}
+                  title={`Expected sale price at grade ${selectedGrade}`}
+                />
+              </>
+            )}
           </div>
           <div className="comparison-hint">Click a company to grade with it. Green = your pick · purple = best value.</div>
 

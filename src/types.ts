@@ -83,6 +83,25 @@ export const TEN_VARIANTS: { key: TenVariantKey; label: string }[] = [
   { key: 'ace10', label: 'ACE 10' },
 ];
 
+// Premium "10+" grades that belong to a specific grader. Drives the default
+// expected grade options, the per-card premium buttons, and per-company
+// valuation (a premium only counts for cards graded by that company).
+export const PREMIUM_TENS: { key: TenVariantKey; label: string; short: string; company: GradingCompany }[] = [
+  { key: 'bgs10black', label: 'BGS Black Label', short: 'Black Label', company: 'Beckett' },
+  { key: 'tag10pristine', label: 'TAG 10 Pristine', short: 'Pristine', company: 'TAG' },
+  { key: 'cgc10pristine', label: 'CGC Pristine', short: 'Pristine', company: 'CGC' },
+];
+
+// Which grader each "10" variant belongs to (used to gate premium valuation).
+export const TEN_VARIANT_COMPANY: Partial<Record<TenVariantKey, GradingCompany>> = {
+  tag10: 'TAG', tag10pristine: 'TAG',
+  bgs10: 'Beckett', bgs10black: 'Beckett',
+  cgc10pristine: 'CGC',
+};
+
+// The default expected grade can be a normal grade (1–10) or a premium 10+.
+export type ExpectedGradeSetting = GradeNumber | TenVariantKey;
+
 export const ALL_GRADES: GradeNumber[] = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 export const DEFAULT_GRADES: GradeNumber[] = [9, 10];
 
@@ -181,6 +200,7 @@ export interface AppSettings {
   visibleGrades: GradeNumber[];
   showHalfGrades?: boolean;   // (deprecated) the Settings toggle is hidden; kept for back-compat
   defaultCompany: GradingCompany | null;
+  defaultExpectedGrade: ExpectedGradeSetting;   // expected grade applied to newly added cards
   defaultServiceLevel: Record<GradingCompany, string>;
   feeOverrides: Record<GradingCompany, Partial<CompanyFeeStructure>>;
   defaultLanguage: string;             // e.g. 'EN', 'JP' — applied to new cards
@@ -194,6 +214,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   darkMode: true,
   visibleGrades: [9, 10],
   defaultCompany: 'PSA',
+  defaultExpectedGrade: 10,
   defaultServiceLevel: {
     PSA: 'value',
     TAG: 'standard',

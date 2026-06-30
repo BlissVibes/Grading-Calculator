@@ -853,6 +853,15 @@ tr.card-row--draft > td {
 }
 .comparison-grade-tab:hover { border-color: var(--accent); color: var(--text); }
 .comparison-grade-tab--active { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* Premium "10+" tab — gold-tinted to read as the top grade */
+.comparison-grade-tab--premium { border-color: #9a7b1a; color: #b8860b; font-weight: 700; }
+.comparison-grade-tab--premium:hover { border-color: #b8860b; color: #b8860b; }
+.comparison-grade-tab--premium.comparison-grade-tab--active {
+  background: linear-gradient(120deg, #d6a730, #f6e08a 50%, #d6a730);
+  border-color: #9a7b1a; color: #3a2a00;
+}
+.submission-edit__btn--copy { border-color: var(--accent); color: var(--accent); }
+.submission-edit__btn--copy:hover { background: var(--accent); color: #fff; }
 
 .comparison-grade-select {
   padding: 6px 10px; border-radius: var(--radius-sm);

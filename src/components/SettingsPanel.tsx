@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { AppSettings, GradeNumber, GradingCompany, PromoCode } from '../types';
-import { ALL_GRADES, GRADING_COMPANIES, COMPANY_LABELS } from '../types';
+import { ALL_GRADES, GRADING_COMPANIES, COMPANY_LABELS, PREMIUM_TENS } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 
 interface Props {
@@ -157,6 +157,33 @@ export default function SettingsPanel({ settings, onUpdate, onOpenChangelog }: P
               {GRADING_COMPANIES.map((c) => (
                 <option key={c} value={c}>{COMPANY_LABELS[c]}</option>
               ))}
+            </select>
+          </div>
+          <div className="settings-item">
+            <span className="settings-item__label">Default Expected Grade</span>
+            <select
+              className="settings-select"
+              value={String(settings.defaultExpectedGrade ?? 10)}
+              onChange={(e) => {
+                const v = e.target.value;
+                const premium = PREMIUM_TENS.find((p) => p.key === v);
+                onUpdate({
+                  ...settings,
+                  defaultExpectedGrade: premium ? premium.key : (parseInt(v, 10) as GradeNumber),
+                });
+              }}
+              title="Expected grade applied to newly added cards. A premium points the card at that grader."
+            >
+              <optgroup label="Grade">
+                {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((g) => (
+                  <option key={g} value={String(g)}>Grade {g}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Premium 10+">
+                {PREMIUM_TENS.map((p) => (
+                  <option key={p.key} value={p.key}>{p.label}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
 

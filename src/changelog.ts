@@ -16,6 +16,15 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.0.10',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Added a "Default Expected Grade" setting (under Default Company) — pick any grade 1–10 or a premium 10+ (BGS Black Label, TAG 10 Pristine, CGC Pristine). New cards start at that grade; a premium default also points the card at that grader so it values correctly (handy for non-Pokémon sets like Dragon Ball).' },
+      { text: 'On each card\'s expected-grade picker, a premium button now sits left of the 10 button named for the card\'s grader (Beckett → Black Label, TAG/CGC → Pristine). Premium values only count for cards graded by that company.' },
+      { text: 'Submissions: the edit panel now has a "Copy to new" button that duplicates the submission and all its cards into a fresh submission with a new name.' },
+    ],
+  },
+  {
     version: '1.4.0.9',
     date: 'June 30, 2026',
     items: [

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { GradingCard, GradingCompany, AppSettings, Submission } from './types';
-import { DEFAULT_SETTINGS } from './types';
+import type { GradingCard, GradingCompany, GradeNumber, TenVariantKey, AppSettings, Submission } from './types';
+import { DEFAULT_SETTINGS, PREMIUM_TENS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
 import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, fieldsFromMatch } from './priceLookup';
@@ -187,6 +187,22 @@ export default function App() {
   }, []);
 
   const addCard = useCallback(() => {
+    // Apply the default expected grade. A premium "10+" default (e.g. Black
+    // Label) also points the card at its grader, so the premium actually values.
+    const deg = settings.defaultExpectedGrade ?? 10;
+    let targetGrade: GradeNumber = 10;
+    let tenVariant: TenVariantKey | null = null;
+    let company = targetCompany;
+    if (typeof deg === 'number') {
+      targetGrade = deg;
+    } else {
+      const prem = PREMIUM_TENS.find((p) => p.key === deg);
+      if (prem) {
+        targetGrade = 10;
+        tenVariant = prem.key;
+        company = prem.company;
+      }
+    }
     const newCard: GradingCard = {
       id: crypto.randomUUID(),
       cardName: '',
@@ -197,9 +213,11 @@ export default function App() {
       pricePaid: 0,
       rawPrice: 0,
       gradeValues: {},
+      targetGrade,
+      tenVariant,
       quantity: 1,
       includeInTotal: true,
-      company: targetCompany,
+      company,
       serviceLevel: null,
       customGradingFee: null,
       noGrading: false,
@@ -213,7 +231,7 @@ export default function App() {
     // user fills it in, optionally searches prices, and confirms.
     setDraftCard(newCard);
     setDraftLookupStatus(undefined);
-  }, [targetCompany, settings.defaultLanguage, targetSubmissionId]);
+  }, [targetCompany, settings.defaultLanguage, settings.defaultExpectedGrade, targetSubmissionId]);
 
   // ───── Submissions ─────
 
@@ -240,6 +258,28 @@ export default function App() {
       setActiveSubmissionId((cur) => (cur === id ? fallback : cur));
       return remaining;
     });
+  }, []);
+
+  // Duplicate a submission and all of its cards into a brand-new submission.
+  const copySubmission = useCallback((sourceId: string, newName: string) => {
+    const newSubId = newId();
+    setSubmissions((prev) => {
+      const source = prev.find((s) => s.id === sourceId);
+      if (!source) return prev;
+      const idx = prev.findIndex((s) => s.id === sourceId);
+      const copy: Submission = { id: newSubId, name: newName.trim() || `${source.name} (copy)`, defaultCompany: source.defaultCompany };
+      // Insert the copy right after the source for an intuitive ordering.
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+    setCards((cs) => {
+      const clones = cs
+        .filter((c) => c.submissionId === sourceId)
+        .map((c) => ({ ...c, id: crypto.randomUUID(), submissionId: newSubId }));
+      return [...cs, ...clones];
+    });
+    setActiveSubmissionId(newSubId);
   }, []);
 
   // ───── Draft card (compose before adding) ─────
@@ -458,6 +498,7 @@ export default function App() {
             onCreate={createSubmission}
             onUpdate={updateSubmission}
             onDelete={deleteSubmission}
+            onCopy={copySubmission}
           />
         </div>
 
