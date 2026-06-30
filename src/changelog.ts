@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.1.0',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Version 1.4.1 — rolls up the recent work: premium expected grades (per-company Black Label / TAG Pristine / CGC Pristine) with a "Default Expected Grade" setting and per-card premium buttons; TAG 10 Pristine added (CGC 10 / SGC 10 removed); lookup auto-fills an empty Set and Card # from the match with a confirmation; theme-aware checkboxes; slower/smoother gold & silver plaques with an end-of-sweep sparkle and a new silver tier; and a "Copy to new" submission action.' },
+    ],
+  },
+  {
     version: '1.4.0.10',
     date: 'June 30, 2026',
     items: [
