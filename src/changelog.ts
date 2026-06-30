@@ -16,6 +16,14 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.0.0',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Version 1.4 — a cleanup-and-polish milestone rolling up the recent UI work: the split summary bubbles (Submission Fees / Upcharges / Total Grading Charges), 2026 grader fees, the "Custom $" toolbar price, the unified dollar steppers with theme-aware arrows, and the PKC stamp fix.' },
+      { text: 'Multiplier badges now have a silver tier: over 5x shows a brushed-silver plaque, over 10x the gold plaque, and over 20x the cosmos badge.' },
+    ],
+  },
+  {
     version: '0.1.3.6.15',
     date: 'June 30, 2026',
     items: [

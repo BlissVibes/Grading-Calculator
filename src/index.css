@@ -613,6 +613,21 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 .multiplier--negative { background: var(--loss-bg); color: var(--loss); }
 .multiplier--neutral { background: var(--neutral-bg); color: var(--neutral); }
 
+/* 5x+ — brushed silver plaque with a moving sheen */
+.multiplier--silver {
+  color: #2b2f38; font-weight: 800; letter-spacing: 0.01em;
+  border: 1px solid #8a9098; border-radius: 5px;
+  background: linear-gradient(115deg, #9aa3ad 0%, #e8edf2 22%, #ffffff 42%, #e8edf2 60%, #9aa3ad 100%);
+  background-size: 230% 100%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.7);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  animation: silver-shine 3.6s linear infinite;
+}
+@keyframes silver-shine {
+  0%   { background-position: 0% 0; }
+  100% { background-position: -230% 0; }
+}
+
 /* 10x+ — shiny gold plaque with a moving sheen */
 .multiplier--gold {
   color: #3a2a00; font-weight: 800; letter-spacing: 0.01em;
@@ -646,7 +661,7 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
   50%      { box-shadow: 0 0 12px rgba(180,130,255,0.95), 0 0 26px rgba(130,80,255,0.6); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .multiplier--gold, .multiplier--cosmos { animation: none; }
+  .multiplier--silver, .multiplier--gold, .multiplier--cosmos { animation: none; }
 }
 
 /* Row actions */
