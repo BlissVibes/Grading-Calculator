@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { GradingCard, CardCalculation, AppSettings, Submission, GradingCompany } from '../types';
 import { COMPANY_LABELS } from '../types';
 import { COMPANY_FEES } from '../gradingData';
@@ -23,6 +24,16 @@ function fmt(n: number): string {
 export default function SubmissionsPanel({
   submissions, activeId, cards, calculations, settings, onSelect, onCreate, onRename, onDelete,
 }: Props) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState('');
+
+  const startEdit = (sub: Submission) => { setEditingId(sub.id); setDraftName(sub.name); };
+  const commitEdit = (id: string) => {
+    const name = draftName.trim();
+    if (name) onRename(id, name);
+    setEditingId(null);
+  };
+
   const calcById = new Map(calculations.map((c) => [c.cardId, c]));
 
   // Best-grade profit for the cards matching a predicate (counted cards only).
@@ -68,32 +79,55 @@ export default function SubmissionsPanel({
           const profit = profitFor((c) => c.submissionId === sub.id);
           const count = countFor((c) => c.submissionId === sub.id);
           const active = activeId === sub.id;
+          const editing = editingId === sub.id;
           return (
             <div key={sub.id} className={`submission-btn${active ? ' submission-btn--active' : ''}`}>
-              <button
-                className="submission-btn__main"
-                onClick={() => onSelect(sub.id)}
-                onDoubleClick={() => {
-                  const name = prompt('Rename submission:', sub.name);
-                  if (name && name.trim()) onRename(sub.id, name.trim());
-                }}
-                title="Click to view · double-click to rename"
-              >
-                <span className="submission-btn__name">{sub.name}</span>
-                <span className="submission-btn__meta">
-                  {count} card{count !== 1 ? 's' : ''} · <span className={profit >= 0 ? 'gain' : 'loss'}>{fmt(profit)}</span>
-                </span>
-              </button>
-              {submissions.length > 1 && (
-                <button
-                  className="submission-btn__del"
-                  onClick={() => {
-                    if (confirm(`Delete "${sub.name}"? Its cards move to another submission.`)) onDelete(sub.id);
-                  }}
-                  title="Delete submission"
-                >
-                  ✕
-                </button>
+              {editing ? (
+                <div className="submission-edit">
+                  <input
+                    className="submission-edit__input"
+                    value={draftName}
+                    autoFocus
+                    onChange={(e) => setDraftName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitEdit(sub.id);
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                  />
+                  <button className="submission-edit__btn submission-edit__btn--save" onClick={() => commitEdit(sub.id)} title="Save name">Save</button>
+                  <button className="submission-edit__btn" onClick={() => setEditingId(null)} title="Cancel">Cancel</button>
+                  {submissions.length > 1 && (
+                    <button
+                      className="submission-edit__btn submission-edit__btn--delete"
+                      onClick={() => {
+                        if (confirm(`Delete "${sub.name}"? Its cards move to another submission.`)) {
+                          onDelete(sub.id);
+                          setEditingId(null);
+                        }
+                      }}
+                      title="Delete this whole batch"
+                    >
+                      Delete batch
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <button className="submission-btn__main" onClick={() => onSelect(sub.id)} title="View this submission">
+                    <span className="submission-btn__name">{sub.name}</span>
+                    <span className="submission-btn__meta">
+                      {count} card{count !== 1 ? 's' : ''} · <span className={profit >= 0 ? 'gain' : 'loss'}>{fmt(profit)}</span>
+                    </span>
+                  </button>
+                  <button
+                    className="submission-btn__edit"
+                    onClick={(e) => { e.stopPropagation(); startEdit(sub); }}
+                    title="Rename or delete this submission"
+                    aria-label="Edit submission"
+                  >
+                    ✎
+                  </button>
+                </>
               )}
             </div>
           );

@@ -936,12 +936,34 @@ tr.card-row--draft > td {
 .submission-btn__meta { font-size: 0.74rem; opacity: 0.92; }
 .submission-btn__meta .gain { color: #c9ffe1; font-weight: 700; }
 .submission-btn__meta .loss { color: #ffd2d2; font-weight: 700; }
-.submission-btn__del {
-  position: absolute; top: 6px; right: 6px; width: 20px; height: 20px;
-  border: none; border-radius: 4px; background: rgba(0,0,0,0.28); color: #fff;
-  cursor: pointer; opacity: 0; transition: opacity 0.12s; line-height: 1;
+.submission-btn__edit {
+  position: absolute; top: 8px; right: 8px; width: 26px; height: 26px;
+  border: none; border-radius: 6px; background: rgba(255,255,255,0.16); color: #fff;
+  cursor: pointer; font-size: 0.85rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center; transition: background 0.12s;
 }
-.submission-btn:hover .submission-btn__del { opacity: 1; }
+.submission-btn__edit:hover { background: rgba(255,255,255,0.34); }
+
+/* Inline rename / delete editor */
+.submission-edit {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--surface2); border: 1px solid var(--accent);
+}
+.submission-edit__input {
+  flex: 1 1 140px; min-width: 0; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px; padding: 6px 9px; font-size: 0.9rem;
+}
+.submission-edit__input:focus { border-color: var(--accent); outline: none; }
+.submission-edit__btn {
+  padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+  background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+}
+.submission-edit__btn:hover { border-color: var(--accent); color: var(--text); }
+.submission-edit__btn--save { background: var(--accent); border-color: var(--accent); color: #fff; }
+.submission-edit__btn--save:hover { background: var(--accent-hover); color: #fff; }
+.submission-edit__btn--delete { border-color: var(--loss); color: var(--loss); }
+.submission-edit__btn--delete:hover { background: var(--loss); color: #fff; }
 
 .submission-btn--all, .submission-btn--new {
   width: 100%; box-sizing: border-box; text-align: left; cursor: pointer;
