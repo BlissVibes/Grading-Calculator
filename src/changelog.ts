@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.0.3',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Expanded the March 2026 history below with the full detail of that month’s work — the initial release, the PriceCharting lookup and all its matching/language/rate-limit/sealed-product fixes, sortable headers, profit row highlights, eBay comps, CSV export, and more — reconstructed from the GitHub commit history.' },
+    ],
+  },
+  {
     version: '1.4.0.2',
     date: 'June 30, 2026',
     items: [
@@ -164,42 +171,145 @@ export const CHANGELOG: ChangelogRelease[] = [
     version: '0.1.3.6',
     date: 'March 14, 2026',
     items: [
-      { text: 'Hardened price lookup: bulletproof sealed-product filtering and full card-number search; a card-number mismatch is now disqualifying.' },
+      { text: 'Hardened price lookup against wrong matches. Sealed products (packs, boosters, tins, bundles, decks) are now hard-filtered out of results, and the search runs a full card-number query with an early “name + number” variant.' },
+      { text: 'A card-number mismatch is now disqualifying — a result whose card number doesn’t match takes a −300 scoring penalty, so a wrong-numbered card can no longer win the match.' },
     ],
   },
   {
     version: '0.1.3.5',
     date: 'March 13, 2026',
     items: [
-      { text: 'eBay search now includes the grading company and grade 10.' },
+      { text: 'The eBay sold-listings search now appends the grading company and “Grade 10” to the query, so the comps you see are for the graded card rather than the raw one.' },
     ],
   },
   {
     version: '0.1.3.4',
     date: 'March 13, 2026',
     items: [
-      { text: 'Fixed lookup button visibility, moved the eBay link, and added Clear All.' },
+      { text: 'Fixed the price-lookup button so it’s reliably visible on every row, relocated the eBay link, and added a Clear All button to empty the table in one click.' },
     ],
   },
   {
     version: '0.1.3.3',
     date: 'March 13, 2026',
     items: [
-      { text: 'Added an eBay sold-listings button on each card row.' },
+      { text: 'Added an eBay sold-listings button to each card row for a quick recent-comps check.' },
     ],
   },
   {
     version: '0.1.3.2',
     date: 'March 13, 2026',
     items: [
-      { text: 'Added CSV export with a Collectr-compatible layout.' },
+      { text: 'Added CSV export in a Collectr-compatible layout, so your worked-up list can be re-imported into your collection tracker.' },
     ],
   },
   {
     version: '0.1.3.1',
     date: 'March 13, 2026',
     items: [
-      { text: 'Added a company fee-info popover.' },
+      { text: 'Added a per-company fee-info popover that lays out each grader’s service tiers and value upcharges at a glance.' },
+    ],
+  },
+  {
+    version: '0.1.3',
+    date: 'March 13, 2026',
+    items: [
+      { text: 'Tied the header version number to package.json so it always reflects the deployed build.' },
+      { text: 'Switched the profit row highlights from a gradient to a solid tint for better readability, and lowered the default green profit threshold from $100 to $50.' },
+    ],
+  },
+  {
+    version: '0.1.2.10',
+    date: 'March 13, 2026',
+    items: [
+      { text: 'Added a G9 / G10 toggle under Settings → Row Profit Highlights to choose which grade’s profit drives the green/yellow/red row colors (defaults to Grade 10).' },
+    ],
+  },
+  {
+    version: '0.1.2.9',
+    date: 'March 13, 2026',
+    items: [
+      { text: 'Profit-based row highlights with configurable thresholds: green when profit ≥ the green threshold, yellow when ≥ the yellow threshold, red below — driven by Grade 10 profit after fees, with a subtle left-border and tint. Thresholds are editable per-color in Settings.' },
+    ],
+  },
+  {
+    version: '0.1.2.8',
+    date: 'March 13, 2026',
+    items: [
+      { text: 'Sortable table headers — click any column (Card Name, Game, Set, Paid, Raw, plus each visible grade’s price, profit, and multiplier) to cycle ascending → descending → unsorted, with a sort indicator on the header and the active sort shown in the footer.' },
+    ],
+  },
+  {
+    version: '0.1.2.7',
+    date: 'March 13, 2026',
+    items: [
+      { text: 'The matched PriceCharting card now persists across page reloads — the matched title and link are stored on the card, so the “Matched: …” text and PriceCharting link stay visible after a refresh.' },
+    ],
+  },
+  {
+    version: '0.1.2.6',
+    date: 'March 13, 2026',
+    items: [
+      { text: 'Price-lookup reliability: handle PriceCharting redirects (an exact match jumps straight to the card page), add an autocomplete-endpoint fallback, and add a “name + number” query variant — fixing cards like Slowpoke 116 that failed with the full set name.' },
+      { text: 'Language-aware scoring penalizes foreign-language results when you’re searching an English card (−120), fixing cases like Charmander #044 matching the Japanese promo instead of the English one.' },
+      { text: 'Added the Pokémon Center (PKC) stamp toggle on Pokémon rows — it adds “pokemon center” to the search and prices the stamped variant separately, with a ±80 scoring nudge to avoid stamped/unstamped mismatches.' },
+    ],
+  },
+  {
+    version: '0.1.2.5',
+    date: 'March 8, 2026',
+    items: [
+      { text: 'Card number is now the dominant factor in search scoring, with slash card numbers (e.g. 008/025) handled as query variants. Also fixed the Set column width.' },
+    ],
+  },
+  {
+    version: '0.1.2.4',
+    date: 'March 8, 2026',
+    items: [
+      { text: 'Sealed-product results are penalized in search scoring (and bonus points when a result’s title contains the exact card number from the query).' },
+      { text: 'Upcharges are now computed from the declared submission (raw) value — the way PSA actually charges them — instead of the expected graded price.' },
+      { text: 'Your edited fee overrides are now actually applied throughout the calculations (base fee, comparisons, and batch comparisons).' },
+      { text: 'Multiplier and profit fall back to the raw market price as the cost basis when no price paid is entered; an entered price paid takes priority.' },
+    ],
+  },
+  {
+    version: '0.1.2.3',
+    date: 'March 8, 2026',
+    items: [
+      { text: 'Japanese/foreign card detection and language-aware search: language is detected from the card name (Unicode script and (JP)/(KR) tags) and the matching language keyword is added to the query so PriceCharting returns the right category. Added a Default Language setting applied to new and imported cards.' },
+      { text: 'Fixed an &-entity bug in lookup URLs that was redirecting to a search page instead of the product page (the “Kingdra” bug).' },
+    ],
+  },
+  {
+    version: '0.1.2.2',
+    date: 'March 8, 2026',
+    items: [
+      { text: 'Added rate limiting so batch lookups stop getting blocked by PriceCharting: a server-side throttle that detects 403/429/503 responses, plus client-side backoff (2s between cards, retries at 5s and 10s on a 429).' },
+    ],
+  },
+  {
+    version: '0.1.2',
+    date: 'March 7, 2026',
+    items: [
+      { text: 'Added a Google “site:pricecharting.com” search fallback for when PriceCharting blocks direct server requests, so lookups still resolve to the right card page.' },
+      { text: 'Improved match accuracy: results are relevance-scored instead of taking the first hit, parenthetical details (Full Art, JP) are kept for disambiguation, and query variants (VMAX↔V-MAX, Mega↔M, apostrophe removal) are tried. Fixes wrong matches like Kingdra ex → Charizard EX.' },
+    ],
+  },
+  {
+    version: '0.1.1',
+    date: 'March 7, 2026',
+    items: [
+      { text: 'Added PriceCharting price lookup — auto-populate raw, PSA 9, PSA 10, and other grade prices through a Vercel serverless proxy, per-card or batched, applied non-destructively so it won’t overwrite your edits.' },
+      { text: 'Added a per-card “No Grading” option — those cards stay in the list for reference but are excluded from fee, profit/multiplier, and comparison calculations, and the row is dimmed.' },
+      { text: 'Improved mobile CSV upload compatibility (explicit Choose File button and broader MIME handling), added the Pokéball calculator logo, and configured Vercel deployment.' },
+    ],
+  },
+  {
+    version: '0.1.0',
+    date: 'March 7, 2026',
+    items: [
+      { text: 'Initial release — a grading-profitability calculator for PSA, TAG, Beckett, ARS, and CGC with hardcoded and user-editable fee structures.' },
+      { text: 'Core features: CSV/text portfolio imports (Collectr & TCGPlayer), inline editing, per-card and global company selection, profit and multiplier columns, inline and summary company-comparison views, dark/light theme, and settings for grade visibility, service levels, and fee overrides.' },
     ],
   },
 ];
