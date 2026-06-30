@@ -16,6 +16,20 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.15',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Moved the quantity stepper arrows flush against the number box.' },
+    ],
+  },
+  {
+    version: '0.1.3.6.14',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Stepper arrows now adapt to the theme: dark mode uses a dark-purple button with a near-white arrow, while light mode keeps the light-purple button with a dark-purple arrow.' },
+    ],
+  },
+  {
     version: '0.1.3.6.13',
     date: 'June 30, 2026',
     items: [
