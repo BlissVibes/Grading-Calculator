@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.7',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Grading Submissions (beta): group cards into named batches you ship to graders. One submission is active at a time and drives the table; an "All Submissions" view shows the combined total. Per-submission profit and card counts show on each batch, and tier minimums (e.g. PSA Value Bulk’s 20) are flagged as qualifying or short.' },
+    ],
+  },
+  {
     version: '0.1.3.6.6',
     date: 'June 30, 2026',
     items: [

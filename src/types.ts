@@ -86,10 +86,20 @@ export const TEN_VARIANTS: { key: TenVariantKey; label: string }[] = [
 export const ALL_GRADES: GradeNumber[] = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 export const DEFAULT_GRADES: GradeNumber[] = [9, 10];
 
+// ───── Grading Submissions ─────
+// A submission is a named batch of cards you'll send to a grader together.
+// The name is just a label; each card keeps its own company/tier.
+
+export interface Submission {
+  id: string;
+  name: string;
+}
+
 // ───── Card Entry ─────
 
 export interface GradingCard {
   id: string;
+  submissionId?: string;   // which submission/batch this card belongs to
   cardName: string;
   cardGame: string;
   cardNumber: string;

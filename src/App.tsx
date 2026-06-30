@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { GradingCard, GradingCompany, AppSettings } from './types';
+import type { GradingCard, GradingCompany, AppSettings, Submission } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
@@ -13,9 +13,22 @@ import SummaryBar from './components/SummaryBar';
 import CompanyComparison from './components/CompanyComparison';
 import SettingsPanel from './components/SettingsPanel';
 import Changelog from './components/Changelog';
+import SubmissionsPanel from './components/SubmissionsPanel';
 
 const STORAGE_CARDS = 'gc_cards';
 const STORAGE_SETTINGS = 'gc_settings';
+const STORAGE_SUBMISSIONS = 'gc_submissions';
+const STORAGE_ACTIVE_SUB = 'gc_active_submission';
+const ALL = 'all';
+
+function newId(): string { return crypto.randomUUID(); }
+
+function loadSubmissions(): Submission[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_SUBMISSIONS);
+    return raw ? (JSON.parse(raw) as Submission[]) : [];
+  } catch { return []; }
+}
 
 function loadCards(): GradingCard[] {
   try {
@@ -55,6 +68,41 @@ export default function App() {
   const [lookupInProgress, setLookupInProgress] = useState(false);
   const [draftCard, setDraftCard] = useState<GradingCard | null>(null);
   const [draftLookupStatus, setDraftLookupStatus] = useState<LookupStatus | undefined>(undefined);
+  const [submissions, setSubmissions] = useState<Submission[]>(loadSubmissions);
+  const [activeSubmissionId, setActiveSubmissionId] = useState<string>(
+    () => localStorage.getItem(STORAGE_ACTIVE_SUB) || ALL,
+  );
+
+  // Persist submissions + active selection
+  useEffect(() => { localStorage.setItem(STORAGE_SUBMISSIONS, JSON.stringify(submissions)); }, [submissions]);
+  useEffect(() => { localStorage.setItem(STORAGE_ACTIVE_SUB, activeSubmissionId); }, [activeSubmissionId]);
+
+  // Migration: ensure at least one submission exists and every card belongs to one
+  useEffect(() => {
+    setSubmissions((subs) => {
+      let next = subs;
+      if (next.length === 0) {
+        next = [{ id: newId(), name: 'Submission #1' }];
+      }
+      const firstId = next[0].id;
+      const known = new Set(next.map((s) => s.id));
+      setCards((prev) => {
+        let changed = false;
+        const mapped = prev.map((c) => {
+          if (!c.submissionId || !known.has(c.submissionId)) { changed = true; return { ...c, submissionId: firstId }; }
+          return c;
+        });
+        return changed ? mapped : prev;
+      });
+      return next === subs ? subs : next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The submission new/imported cards land in (active one, or the first if "All")
+  const targetSubmissionId = activeSubmissionId !== ALL
+    ? activeSubmissionId
+    : (submissions[0]?.id ?? '');
 
   // Lightweight client-side routing (SPA fallback handles /changelog on refresh)
   const [route, setRoute] = useState<string>(() => window.location.pathname);
@@ -81,6 +129,16 @@ export default function App() {
   // Calculate
   const calculations = useMemo(() => calculateAll(cards, settings), [cards, settings]);
 
+  // Cards/calcs scoped to the active submission (or all)
+  const viewCards = useMemo(
+    () => (activeSubmissionId === ALL ? cards : cards.filter((c) => c.submissionId === activeSubmissionId)),
+    [cards, activeSubmissionId],
+  );
+  const viewCalcs = useMemo(() => {
+    const ids = new Set(viewCards.map((c) => c.id));
+    return calculations.filter((c) => ids.has(c.cardId));
+  }, [calculations, viewCards]);
+
   // Import handler
   const handleImport = useCallback((content: string, filename: string) => {
     const { cards: imported, error } = parseImport(content, filename);
@@ -93,9 +151,10 @@ export default function App() {
       ...c,
       company: settings.defaultCompany,
       language: c.language || detectLanguage(c.cardName) || settings.defaultLanguage,
+      submissionId: targetSubmissionId,
     }));
     setCards((prev) => [...prev, ...withDefaults]);
-  }, [settings.defaultCompany, settings.defaultLanguage]);
+  }, [settings.defaultCompany, settings.defaultLanguage, targetSubmissionId]);
 
   // Card CRUD
   const updateCard = useCallback((id: string, updates: Partial<GradingCard>) => {
@@ -131,12 +190,41 @@ export default function App() {
       pokemonCenter: false,
       notes: '',
       source: 'manual',
+      submissionId: targetSubmissionId,
     };
     // Stage the card in a draft area above the table — it isn't added until the
     // user fills it in, optionally searches prices, and confirms.
     setDraftCard(newCard);
     setDraftLookupStatus(undefined);
-  }, [settings.defaultCompany, settings.defaultLanguage]);
+  }, [settings.defaultCompany, settings.defaultLanguage, targetSubmissionId]);
+
+  // ───── Submissions ─────
+
+  const createSubmission = useCallback(() => {
+    const id = newId();
+    setSubmissions((prev) => {
+      const name = prompt('Name this submission:', `Submission #${prev.length + 1}`);
+      if (name === null) return prev;   // cancelled
+      return [...prev, { id, name: name.trim() || `Submission #${prev.length + 1}` }];
+    });
+    setActiveSubmissionId(id);
+  }, []);
+
+  const renameSubmission = useCallback((id: string, name: string) => {
+    setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, name } : s)));
+  }, []);
+
+  const deleteSubmission = useCallback((id: string) => {
+    setSubmissions((prev) => {
+      if (prev.length <= 1) return prev;   // keep at least one
+      const remaining = prev.filter((s) => s.id !== id);
+      const fallback = remaining[0].id;
+      // Move the deleted submission's cards to the first remaining submission
+      setCards((cs) => cs.map((c) => (c.submissionId === id ? { ...c, submissionId: fallback } : c)));
+      setActiveSubmissionId((cur) => (cur === id ? fallback : cur));
+      return remaining;
+    });
+  }, []);
 
   // ───── Draft card (compose before adding) ─────
 
@@ -261,7 +349,7 @@ export default function App() {
   }, []);
 
   const handleLookupAll = useCallback(async () => {
-    const cardsToLookup = cards.filter((c) => c.cardName.trim());
+    const cardsToLookup = viewCards.filter((c) => c.cardName.trim());
     if (cardsToLookup.length === 0) return;
 
     setLookupInProgress(true);
@@ -292,7 +380,7 @@ export default function App() {
     });
 
     setLookupInProgress(false);
-  }, [cards]);
+  }, [viewCards]);
 
   if (route === '/changelog') {
     return <Changelog onBack={() => navigate('/')} />;
@@ -313,12 +401,29 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {/* File Import */}
-        <FileDropZone
-          onImport={handleImport}
-          onClearAll={() => { setCards([]); setLookupStatuses(new Map()); }}
-          hasCards={cards.length > 0}
-        />
+        {/* File Import + Grading Submissions */}
+        <div className="import-row">
+          <FileDropZone
+            onImport={handleImport}
+            onClearAll={() => {
+              const ids = new Set(viewCards.map((c) => c.id));
+              setCards((prev) => prev.filter((c) => !ids.has(c.id)));
+              setLookupStatuses(new Map());
+            }}
+            hasCards={viewCards.length > 0}
+          />
+          <SubmissionsPanel
+            submissions={submissions}
+            activeId={activeSubmissionId}
+            cards={cards}
+            calculations={calculations}
+            settings={settings}
+            onSelect={setActiveSubmissionId}
+            onCreate={createSubmission}
+            onRename={renameSubmission}
+            onDelete={deleteSubmission}
+          />
+        </div>
 
         {/* Errors */}
         {errors.length > 0 && (
@@ -347,14 +452,14 @@ export default function App() {
         />
 
         {/* Summary */}
-        {cards.length > 0 && (
-          <SummaryBar cards={cards} calculations={calculations} />
+        {viewCards.length > 0 && (
+          <SummaryBar cards={viewCards} calculations={viewCalcs} />
         )}
 
         {/* Card Table */}
         <CardTable
-          cards={cards}
-          calculations={calculations}
+          cards={viewCards}
+          calculations={viewCalcs}
           settings={settings}
           lookupStatuses={lookupStatuses}
           onUpdateCard={updateCard}
@@ -375,8 +480,8 @@ export default function App() {
         />
 
         {/* Company Comparison */}
-        {cards.length > 0 && (
-          <CompanyComparison cards={cards} settings={settings} />
+        {viewCards.length > 0 && (
+          <CompanyComparison cards={viewCards} settings={settings} />
         )}
       </main>
     </div>
