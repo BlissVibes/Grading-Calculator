@@ -188,6 +188,7 @@ export interface AppSettings {
   profitThresholds: ProfitThresholds;
   globalCustomGradingFee: number | null;  // flat grading price applied to all cards (null = use tiers)
   promoCodes: PromoCode[];                 // grader promo / affiliate code discounts
+  deductRawFromProfit: boolean;            // subtract raw card cost from the summary's Best Grade Profit (default true)
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -219,4 +220,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
     { id: 'psg-psasux', code: 'PSASUX', company: 'PSG', serviceLevel: 'standard', type: 'flat', value: 17, enabled: false },
     { id: 'psg-express20', code: 'EXPRESS20', company: 'PSG', serviceLevel: 'express', type: 'flat', value: 20, enabled: false },
   ],
+  deductRawFromProfit: true,
 };

@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.1.0',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Added a "Raw Card Cost" bubble to the summary header showing how much raw card cost is being deducted from profit. It has a "Remove from profit" checkbox (on by default) — uncheck it to see the grading profit without the cost of the raw cards.' },
+    ],
+  },
+  {
     version: '1.4.0.0',
     date: 'June 30, 2026',
     items: [
