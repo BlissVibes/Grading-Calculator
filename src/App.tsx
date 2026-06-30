@@ -358,6 +358,7 @@ export default function App() {
           settings={settings}
           lookupStatuses={lookupStatuses}
           onUpdateCard={updateCard}
+          onUpdateSettings={setSettings}
           onDeleteCard={deleteCard}
           onAddCard={addCard}
           onSelectAll={() => setAllIncluded(true)}

@@ -4,6 +4,12 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 interface PriceResult {
   raw: number;
+  grade1: number;
+  grade2: number;
+  grade3: number;
+  grade4: number;
+  grade5: number;
+  grade6: number;
   grade7: number;
   grade8: number;
   grade9: number;
@@ -532,6 +538,34 @@ async function searchCard(query: string): Promise<SearchResult[]> {
 
 // ───── Fetch prices from a card detail page ─────
 
+// PriceCharting's card page includes an "additional price points" table with a
+// row per grade (Ungraded, Grade 1 … Grade 9.5, PSA 10, etc.). The headline
+// chart_data only covers 6 buckets, so this table is the only source for the
+// low grades (PSA 1–6). Returns whatever rows it can find.
+function parseGradeTable(html: string): Partial<Omit<PriceResult, 'url'>> | null {
+  const idx = html.indexOf('>Grade 1<');
+  if (idx === -1) return null;
+  const start = html.lastIndexOf('<table', idx);
+  const end = html.indexOf('</table>', idx);
+  if (start === -1 || end === -1) return null;
+
+  const tbl = html.slice(start, end);
+  const map: Record<string, number> = {};
+  const re = /<td>([^<]+)<\/td>\s*<td class="price[^"]*">\s*\$?([0-9,]+(?:\.\d+)?)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(tbl)) !== null) {
+    map[m[1].trim().toLowerCase()] = parseFloat(m[2].replace(/,/g, '')) || 0;
+  }
+  const g = (k: string): number => map[k] ?? 0;
+  return {
+    raw: g('ungraded'),
+    grade1: g('grade 1'), grade2: g('grade 2'), grade3: g('grade 3'),
+    grade4: g('grade 4'), grade5: g('grade 5'), grade6: g('grade 6'),
+    grade7: g('grade 7'), grade8: g('grade 8'), grade9: g('grade 9'),
+    grade9_5: g('grade 9.5'), psa10: g('psa 10'),
+  };
+}
+
 async function fetchPrices(cardPath: string): Promise<PriceResult> {
   // Handle both full URLs and paths
   const url = cardPath.startsWith('http')
@@ -543,33 +577,47 @@ async function fetchPrices(cardPath: string): Promise<PriceResult> {
   if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
   const html = await resp.text();
 
-  // Extract VGPC.chart_data JSON from the page
+  // The grade table is the richest source (all grades incl. PSA 1–6).
+  const table = parseGradeTable(html);
+
+  // Headline chart_data covers the 6 main buckets — used to backfill / fall back.
+  let chart: Partial<PriceResult> = {};
   const chartMatch = html.match(/VGPC\.chart_data\s*=\s*(\{[\s\S]*?\});/);
-  if (!chartMatch) {
+  if (chartMatch) {
+    try {
+      const data = JSON.parse(chartMatch[1]);
+      const getLatest = (arr: number[][] | undefined): number => {
+        if (!arr || arr.length === 0) return 0;
+        const last = arr[arr.length - 1];
+        return last ? last[1] / 100 : 0; // cents → dollars
+      };
+      chart = {
+        raw: getLatest(data.used),
+        grade7: getLatest(data.cib),
+        grade8: getLatest(data.new),
+        grade9: getLatest(data.graded),
+        grade9_5: getLatest(data.boxonly),
+        psa10: getLatest(data.manualonly),
+      };
+    } catch { /* fall through to table / regex */ }
+  }
+
+  if (!table && !chartMatch) {
     return extractTablePrices(html, url);
   }
 
-  try {
-    const data = JSON.parse(chartMatch[1]);
+  // Prefer the grade table; backfill any missing value from chart_data.
+  const pick = (key: keyof Omit<PriceResult, 'url'>): number =>
+    (table?.[key] || chart[key] || 0) as number;
 
-    const getLatest = (arr: number[][] | undefined): number => {
-      if (!arr || arr.length === 0) return 0;
-      const last = arr[arr.length - 1];
-      return last ? last[1] / 100 : 0; // cents → dollars
-    };
-
-    return {
-      raw: getLatest(data.used),
-      grade7: getLatest(data.cib),
-      grade8: getLatest(data.new),
-      grade9: getLatest(data.graded),
-      grade9_5: getLatest(data.boxonly),
-      psa10: getLatest(data.manualonly),
-      url,
-    };
-  } catch {
-    return extractTablePrices(html, url);
-  }
+  return {
+    url,
+    raw: pick('raw'),
+    grade1: pick('grade1'), grade2: pick('grade2'), grade3: pick('grade3'),
+    grade4: pick('grade4'), grade5: pick('grade5'), grade6: pick('grade6'),
+    grade7: pick('grade7'), grade8: pick('grade8'), grade9: pick('grade9'),
+    grade9_5: pick('grade9_5'), psa10: pick('psa10'),
+  };
 }
 
 // ───── Fallback: extract from HTML table ─────
@@ -584,6 +632,7 @@ function extractTablePrices(html: string, url: string): PriceResult {
 
   return {
     raw: prices[0] ?? 0,
+    grade1: 0, grade2: 0, grade3: 0, grade4: 0, grade5: 0, grade6: 0,
     grade7: prices[1] ?? 0,
     grade8: prices[2] ?? 0,
     grade9: prices[3] ?? 0,

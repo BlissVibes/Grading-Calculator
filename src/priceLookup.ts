@@ -4,6 +4,12 @@ import type { GradingCard, GradeNumber } from './types';
 
 export interface PriceLookupResult {
   raw: number;
+  grade1?: number;
+  grade2?: number;
+  grade3?: number;
+  grade4?: number;
+  grade5?: number;
+  grade6?: number;
   grade7: number;
   grade8: number;
   grade9: number;
@@ -216,6 +222,13 @@ export function applyPricesToCard(
   if (prices.grade9_5 > 0) gradeValues[9.5] = prices.grade9_5;
   if (prices.grade8 > 0) gradeValues[8] = prices.grade8;
   if (prices.grade7 > 0) gradeValues[7] = prices.grade7;
+  // Low grades (PSA 1–6) from the additional-price-points table
+  if (prices.grade6 && prices.grade6 > 0) gradeValues[6] = prices.grade6;
+  if (prices.grade5 && prices.grade5 > 0) gradeValues[5] = prices.grade5;
+  if (prices.grade4 && prices.grade4 > 0) gradeValues[4] = prices.grade4;
+  if (prices.grade3 && prices.grade3 > 0) gradeValues[3] = prices.grade3;
+  if (prices.grade2 && prices.grade2 > 0) gradeValues[2] = prices.grade2;
+  if (prices.grade1 && prices.grade1 > 0) gradeValues[1] = prices.grade1;
 
   return {
     rawPrice: prices.raw > 0 ? prices.raw : card.rawPrice,

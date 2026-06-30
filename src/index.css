@@ -343,6 +343,37 @@ body { min-height: 100vh; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ===== Grades quick toggle (toolbar) ===== */
+.grade-picker-wrap { position: relative; display: inline-block; }
+.btn-grades {
+  padding: 7px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--neutral); background: transparent;
+  color: var(--text); font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.btn-grades:hover, .btn-grades--open { border-color: var(--accent); color: var(--accent); }
+.grade-picker {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px; min-width: 210px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.grade-picker__title {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); margin-bottom: 8px;
+}
+.grade-picker__chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.grade-chip {
+  width: 32px; height: 30px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text-muted); font-size: 0.85rem; font-weight: 600;
+  transition: all 0.12s;
+}
+.grade-chip:hover { border-color: var(--accent); }
+.grade-chip--on {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+
 /* ===== Export Button ===== */
 .btn-export {
   padding: 7px 16px; border-radius: var(--radius-sm);
@@ -724,6 +755,15 @@ tr.card-row--draft > td {
 }
 .comparison-grade-tab:hover { border-color: var(--accent); color: var(--text); }
 .comparison-grade-tab--active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.comparison-grade-select {
+  padding: 6px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text-muted); font-size: 0.82rem; cursor: pointer;
+  transition: all 0.15s;
+}
+.comparison-grade-select:hover { border-color: var(--accent); }
+.comparison-grade-select--active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 .comparison-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
