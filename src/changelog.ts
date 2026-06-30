@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.4',
+    date: 'June 29, 2026',
+    items: [
+      { text: 'The build now fails unless this changelog has an entry for the current version — so every versioned release that reaches the site is recorded here.' },
+    ],
+  },
+  {
     version: '0.1.3.6.3',
     date: 'June 29, 2026',
     items: [
