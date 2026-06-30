@@ -252,6 +252,42 @@ export function applyPricesToCard(
   };
 }
 
+// Leading game tokens to strip off a PriceCharting console slug so what's left
+// reads as the set name (e.g. "pokemon-base-set" → "Base Set").
+const GAME_SLUG_PREFIXES = [
+  'pokemon', 'yugioh', 'magic', 'mtg', 'digimon', 'lorcana', 'onepiece', 'one-piece',
+  'dragon-ball', 'dragonball', 'weiss-schwarz', 'flesh-and-blood', 'metazoo', 'topps', 'panini', 'fleer',
+];
+
+/**
+ * Derive a human-readable set name from a PriceCharting URL/path. PriceCharting
+ * URLs look like `/game/pokemon-base-set/charizard-4`, where the console slug
+ * encodes the set. Returns '' if nothing usable can be extracted.
+ */
+export function setNameFromUrl(url?: string): string {
+  if (!url) return '';
+  try {
+    const path = url.replace(/^https?:\/\/[^/]+/, '');
+    const segs = path.split('/').filter(Boolean);
+    const gi = segs.indexOf('game');
+    const consoleSlug = gi >= 0 ? segs[gi + 1] : segs[0];
+    if (!consoleSlug) return '';
+    let tokens = consoleSlug.split('-').filter(Boolean);
+    // Strip a leading game-name prefix (one or two tokens, e.g. "one-piece").
+    for (const prefix of GAME_SLUG_PREFIXES) {
+      const pt = prefix.split('-');
+      if (tokens.length > pt.length && pt.every((t, i) => tokens[i] === t)) {
+        tokens = tokens.slice(pt.length);
+        break;
+      }
+    }
+    if (tokens.length === 0) return '';
+    return tokens.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(' ');
+  } catch {
+    return '';
+  }
+}
+
 // ───── Batch Lookup with Rate Limiting ─────
 
 export async function lookupBatch(

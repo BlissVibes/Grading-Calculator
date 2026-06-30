@@ -3,7 +3,7 @@ import type { GradingCard, GradingCompany, AppSettings, Submission } from './typ
 import { DEFAULT_SETTINGS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
-import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage } from './priceLookup';
+import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, setNameFromUrl } from './priceLookup';
 import type { LookupStatus } from './priceLookup';
 import { isStampedMatch } from './pokemonCenterCards';
 import FileDropZone from './components/FileDropZone';
@@ -274,6 +274,9 @@ export default function App() {
         const stamped = isStampedMatch(result.matchedTitle, result.url);
         setDraftCard((d) => (d ? {
           ...d, ...updates,
+          // Fill an empty Set field with the matched card's set so the user can
+          // confirm the right card was found.
+          set: d.set.trim() ? d.set : (setNameFromUrl(result.url) || d.set),
           priceChartingUrl: result.url || d.priceChartingUrl,
           priceChartingTitle: result.matchedTitle || d.priceChartingTitle,
           pokemonCenter: stamped ? true : d.pokemonCenter,
@@ -343,6 +346,9 @@ export default function App() {
         const stamped = isStampedMatch(result.matchedTitle, result.url);
         setCards((prev) => prev.map((c) => (c.id === card.id ? {
           ...c, ...updates,
+          // Fill an empty Set field with the matched card's set so the user can
+          // confirm the right card was found.
+          set: c.set.trim() ? c.set : (setNameFromUrl(result.url) || c.set),
           priceChartingUrl: result.url || c.priceChartingUrl,
           priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
           pokemonCenter: stamped ? true : c.pokemonCenter,
@@ -386,6 +392,9 @@ export default function App() {
             const updates = applyPricesToCard(c, result);
             return {
               ...c, ...updates,
+              // Fill an empty Set field with the matched card's set so the user
+              // can confirm the right card was found.
+              set: c.set.trim() ? c.set : (setNameFromUrl(result.url) || c.set),
               priceChartingUrl: result.url || c.priceChartingUrl,
               priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
               pokemonCenter: isStampedMatch(result.matchedTitle, result.url) ? true : c.pokemonCenter,

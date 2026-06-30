@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.0.7',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'When a price lookup finds a card and the Set field was left empty, it’s now auto-filled with the matched card’s set (read from the PriceCharting result) — a quick way to confirm the right card was found.' },
+    ],
+  },
+  {
     version: '1.4.0.6',
     date: 'June 30, 2026',
     items: [
