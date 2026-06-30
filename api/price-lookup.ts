@@ -17,11 +17,10 @@ interface PriceResult {
   psa10: number;
   // Premium / alternate "10" grades (when present in the grade table)
   tag10: number;
+  tag10pristine: number;
   bgs10: number;
   bgs10black: number;
-  cgc10: number;
   cgc10pristine: number;
-  sgc10: number;
   ace10: number;
   url: string;
 }
@@ -571,9 +570,9 @@ function parseGradeTable(html: string): Partial<Omit<PriceResult, 'url'>> | null
     grade4: g('grade 4'), grade5: g('grade 5'), grade6: g('grade 6'),
     grade7: g('grade 7'), grade8: g('grade 8'), grade9: g('grade 9'),
     grade9_5: g('grade 9.5'), psa10: g('psa 10'),
-    tag10: g('tag 10'), bgs10: g('bgs 10'), bgs10black: g('bgs 10 black'),
-    cgc10: g('cgc 10'), cgc10pristine: g('cgc 10 pristine'),
-    sgc10: g('sgc 10'), ace10: g('ace 10'),
+    tag10: g('tag 10'), tag10pristine: g('tag 10 pristine'),
+    bgs10: g('bgs 10'), bgs10black: g('bgs 10 black'),
+    cgc10pristine: g('cgc 10 pristine'), ace10: g('ace 10'),
   };
 }
 
@@ -628,9 +627,9 @@ async function fetchPrices(cardPath: string): Promise<PriceResult> {
     grade4: pick('grade4'), grade5: pick('grade5'), grade6: pick('grade6'),
     grade7: pick('grade7'), grade8: pick('grade8'), grade9: pick('grade9'),
     grade9_5: pick('grade9_5'), psa10: pick('psa10'),
-    tag10: pick('tag10'), bgs10: pick('bgs10'), bgs10black: pick('bgs10black'),
-    cgc10: pick('cgc10'), cgc10pristine: pick('cgc10pristine'),
-    sgc10: pick('sgc10'), ace10: pick('ace10'),
+    tag10: pick('tag10'), tag10pristine: pick('tag10pristine'),
+    bgs10: pick('bgs10'), bgs10black: pick('bgs10black'),
+    cgc10pristine: pick('cgc10pristine'), ace10: pick('ace10'),
   };
 }
 
@@ -652,7 +651,7 @@ function extractTablePrices(html: string, url: string): PriceResult {
     grade9: prices[3] ?? 0,
     grade9_5: prices[4] ?? 0,
     psa10: prices[5] ?? 0,
-    tag10: 0, bgs10: 0, bgs10black: 0, cgc10: 0, cgc10pristine: 0, sgc10: 0, ace10: 0,
+    tag10: 0, tag10pristine: 0, bgs10: 0, bgs10black: 0, cgc10pristine: 0, ace10: 0,
     url,
   };
 }

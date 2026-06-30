@@ -72,15 +72,14 @@ export type GradeNumber = 1 | 1.5 | 2 | 2.5 | 3 | 3.5 | 4 | 4.5 | 5 | 5.5 | 6 | 
 // ───── Premium / alternate "10" grades ─────
 // PriceCharting tracks several distinct "10" grades. PSA 10 is the default
 // grade-10 value; users can opt a card into one of these premium variants.
-export type TenVariantKey = 'tag10' | 'bgs10' | 'bgs10black' | 'cgc10' | 'cgc10pristine' | 'sgc10' | 'ace10';
+export type TenVariantKey = 'tag10' | 'tag10pristine' | 'bgs10' | 'bgs10black' | 'cgc10pristine' | 'ace10';
 
 export const TEN_VARIANTS: { key: TenVariantKey; label: string }[] = [
   { key: 'bgs10black', label: 'BGS Black Label' },
   { key: 'cgc10pristine', label: 'CGC Pristine' },
   { key: 'tag10', label: 'TAG 10' },
+  { key: 'tag10pristine', label: 'TAG 10 Pristine' },
   { key: 'bgs10', label: 'BGS 10' },
-  { key: 'cgc10', label: 'CGC 10' },
-  { key: 'sgc10', label: 'SGC 10' },
   { key: 'ace10', label: 'ACE 10' },
 ];
 

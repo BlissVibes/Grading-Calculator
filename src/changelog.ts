@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.0.9',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Added TAG 10 Pristine to the premium "10" grade list (captured from PriceCharting like BGS Black Label and CGC Pristine), and removed the CGC 10 and SGC 10 options.' },
+    ],
+  },
+  {
     version: '1.4.0.8',
     date: 'June 30, 2026',
     items: [

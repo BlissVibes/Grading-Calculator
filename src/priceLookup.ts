@@ -16,11 +16,10 @@ export interface PriceLookupResult {
   grade9_5: number;
   psa10: number;
   tag10?: number;
+  tag10pristine?: number;
   bgs10?: number;
   bgs10black?: number;
-  cgc10?: number;
   cgc10pristine?: number;
-  sgc10?: number;
   ace10?: number;
   url: string;
   matchedTitle?: string;
@@ -240,7 +239,7 @@ export function applyPricesToCard(
 
   // Premium / alternate "10" grades — stored so the user can opt a card into one
   const tenVariants: Partial<Record<TenVariantKey, number>> = { ...card.tenVariants };
-  const keys: TenVariantKey[] = ['tag10', 'bgs10', 'bgs10black', 'cgc10', 'cgc10pristine', 'sgc10', 'ace10'];
+  const keys: TenVariantKey[] = ['tag10', 'tag10pristine', 'bgs10', 'bgs10black', 'cgc10pristine', 'ace10'];
   for (const k of keys) {
     const v = prices[k];
     if (v && v > 0) tenVariants[k] = v;
