@@ -16,6 +16,14 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.6',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'Price lookup now also captures premium "10" grades — Beckett Black Label, CGC Pristine, TAG 10, SGC 10, ACE 10 — from the same page.' },
+      { text: 'Added a per-card "10 ▸" selector to value a card at one of those premium grades. PSA 10 stays the default; the premium is opt-in.' },
+    ],
+  },
+  {
     version: '0.1.3.6.5',
     date: 'June 29, 2026',
     items: [

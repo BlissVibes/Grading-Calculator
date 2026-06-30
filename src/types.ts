@@ -68,6 +68,21 @@ export interface CompanyFeeStructure {
 
 export type GradeNumber = 1 | 1.5 | 2 | 2.5 | 3 | 3.5 | 4 | 4.5 | 5 | 5.5 | 6 | 6.5 | 7 | 7.5 | 8 | 8.5 | 9 | 9.5 | 10;
 
+// ───── Premium / alternate "10" grades ─────
+// PriceCharting tracks several distinct "10" grades. PSA 10 is the default
+// grade-10 value; users can opt a card into one of these premium variants.
+export type TenVariantKey = 'tag10' | 'bgs10' | 'bgs10black' | 'cgc10' | 'cgc10pristine' | 'sgc10' | 'ace10';
+
+export const TEN_VARIANTS: { key: TenVariantKey; label: string }[] = [
+  { key: 'bgs10black', label: 'BGS Black Label' },
+  { key: 'cgc10pristine', label: 'CGC Pristine' },
+  { key: 'tag10', label: 'TAG 10' },
+  { key: 'bgs10', label: 'BGS 10' },
+  { key: 'cgc10', label: 'CGC 10' },
+  { key: 'sgc10', label: 'SGC 10' },
+  { key: 'ace10', label: 'ACE 10' },
+];
+
 export const ALL_GRADES: GradeNumber[] = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 export const DEFAULT_GRADES: GradeNumber[] = [9, 10];
 
@@ -83,6 +98,8 @@ export interface GradingCard {
   pricePaid: number;
   rawPrice: number;
   gradeValues: Partial<Record<GradeNumber, number>>;  // grade → expected price
+  tenVariants?: Partial<Record<TenVariantKey, number>>;  // premium "10" prices from lookup
+  tenVariant?: TenVariantKey | null;   // selected premium "10" (null = standard PSA 10)
   quantity: number;
   includeInTotal: boolean;             // count this card toward the summary totals
   company: GradingCompany | null;      // per-card override (null = use global)

@@ -10,6 +10,15 @@ import type {
 import { COMPANY_FEES, PSA_RETIER_LADDER } from './gradingData';
 import type { ServiceLevel } from './types';
 
+// Grade value used in calculations. For grade 10, honor a selected premium
+// variant (Black Label, CGC Pristine, TAG 10, …); otherwise the stored value.
+export function effectiveGradeValue(card: GradingCard, grade: GradeNumber): number {
+  if (grade === 10 && card.tenVariant) {
+    return card.tenVariants?.[card.tenVariant] ?? card.gradeValues[10] ?? 0;
+  }
+  return card.gradeValues[grade] ?? 0;
+}
+
 // ───── Fee Calculation ─────
 
 function getUpcharge(company: GradingCompany, declaredValue: number): number {
@@ -116,7 +125,7 @@ export function calculateCard(
   const currentUpcharge = upchargeFor(company, declaredValue, declaredValue, selectedTier);
 
   for (const grade of settings.visibleGrades) {
-    const expectedPrice = card.gradeValues[grade] ?? 0;
+    const expectedPrice = effectiveGradeValue(card, grade);
     // PSA's upcharge depends on the graded value, so it varies per grade.
     const upcharge = upchargeFor(company, expectedPrice, declaredValue, selectedTier);
     const totalCost = baseFee + upcharge + scoringFee;
@@ -223,7 +232,7 @@ export function compareCompanies(
   grade: GradeNumber,
   settings: AppSettings,
 ): CompanyComparisonResult[] {
-  const expectedPrice = card.gradeValues[grade] ?? 0;
+  const expectedPrice = effectiveGradeValue(card, grade);
   const costBasis = card.pricePaid || card.rawPrice || 0;
   const declaredValue = card.rawPrice || card.pricePaid || 0;
 
@@ -270,7 +279,7 @@ export function compareBatchCompanies(
 
     for (const card of cards) {
       if (card.noGrading) continue;
-      const expectedPrice = card.gradeValues[grade] ?? 0;
+      const expectedPrice = effectiveGradeValue(card, grade);
       if (expectedPrice === 0) continue;
 
       const costBasis = card.pricePaid || card.rawPrice || 0;

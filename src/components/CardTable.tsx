@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSettings, CompanyFeeStructure } from '../types';
-import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES } from '../types';
+import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSettings, CompanyFeeStructure, TenVariantKey } from '../types';
+import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES, TEN_VARIANTS } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 import { compareCompanies, estimatePsaUpcharge, calculateCard } from '../gradingCalculator';
 import { isPkcEligible } from '../pokemonCenterCards';
@@ -949,6 +949,29 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               )}
             </div>
           )}
+          {/* Premium "10" grade selector — only when the card has such prices */}
+          {!card.noGrading && (() => {
+            const variants = TEN_VARIANTS.filter((v) => (card.tenVariants?.[v.key] ?? 0) > 0);
+            if (variants.length === 0) return null;
+            const stdPrice = card.gradeValues[10] ?? 0;
+            return (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 3 }}>
+                <select
+                  className={`company-cell-select ten-variant-select${card.tenVariant ? ' ten-variant-select--active' : ''}`}
+                  value={card.tenVariant ?? ''}
+                  onChange={(e) => onUpdate({ tenVariant: (e.target.value || null) as TenVariantKey | null })}
+                  title="Which '10' grade to value this card at (default: PSA 10)"
+                >
+                  <option value="">10 ▸ PSA{stdPrice > 0 ? ` (${fmtMoney(stdPrice)})` : ''}</option>
+                  {variants.map((v) => (
+                    <option key={v.key} value={v.key}>
+                      10 ▸ {v.label} ({fmtMoney(card.tenVariants![v.key]!)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })()}
           {/* PSA tier-bump upcharge: charged, avoided, or overpaying — per card */}
           {(() => {
             const est = estimatePsaUpcharge(card, settings);
