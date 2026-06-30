@@ -563,14 +563,14 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 .num-stepper__btn { width: 15px; height: 10px; font-size: 0.45rem; border-radius: 3px; }
 
 /* Custom quantity stepper — rounded light-purple buttons with dark-purple arrows */
-.qty-stepper { display: inline-flex; align-items: center; gap: 3px; }
-.qty-stepper__btns { display: flex; flex-direction: column; gap: 2px; }
+.qty-stepper { display: inline-flex; align-items: center; gap: 1px; }
+.qty-stepper__btns { display: flex; flex-direction: column; gap: 1px; }
 .qty-btn {
   display: flex; align-items: center; justify-content: center;
-  width: 20px; height: 13px; padding: 0;
-  border: none; border-radius: 4px;
+  width: 15px; height: 10px; padding: 0;
+  border: none; border-radius: 3px;
   background: #e7e2ff; color: #5b21b6;
-  font-size: 0.5rem; line-height: 1; cursor: pointer;
+  font-size: 0.45rem; line-height: 1; cursor: pointer;
   transition: background 0.12s;
 }
 .qty-btn:hover { background: #d3c9ff; }
