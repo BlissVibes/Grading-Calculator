@@ -16,6 +16,15 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.5',
+    date: 'June 29, 2026',
+    items: [
+      { text: 'Added a "Grades" button to the toolbar to show/hide grade columns (1–10) without opening Settings.' },
+      { text: 'The per-card comparison now has quick 10 / 9 buttons plus an "8 or lower" dropdown (grades 8–1) that feeds the calculation.' },
+      { text: 'Price lookup now pulls low grades (PSA 1–6) from PriceCharting’s full grade table, so e.g. a PSA 1 Base Set Charizard now populates.' },
+    ],
+  },
+  {
     version: '0.1.3.6.4',
     date: 'June 29, 2026',
     items: [

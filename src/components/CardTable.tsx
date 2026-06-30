@@ -14,6 +14,7 @@ interface Props {
   settings: AppSettings;
   lookupStatuses: Map<string, LookupStatus>;
   onUpdateCard: (id: string, updates: Partial<GradingCard>) => void;
+  onUpdateSettings: (settings: AppSettings) => void;
   onDeleteCard: (id: string) => void;
   onAddCard: () => void;
   onSelectAll: () => void;
@@ -182,7 +183,7 @@ function CompanyInfoPopover({ fees }: { fees: CompanyFeeStructure }) {
 
 export default function CardTable({
   cards, calculations, settings, lookupStatuses,
-  onUpdateCard, onDeleteCard, onAddCard, onSelectAll, onClearSelection, onLookupCard, onLookupAll, lookupInProgress,
+  onUpdateCard, onUpdateSettings, onDeleteCard, onAddCard, onSelectAll, onClearSelection, onLookupCard, onLookupAll, lookupInProgress,
   draftCard, onUpdateDraft, onConfirmDraft, onCancelDraft, onLookupDraft, draftLookupStatus,
 }: Props) {
   const [search, setSearch] = useState('');
@@ -191,6 +192,27 @@ export default function CardTable({
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportSort, setExportSort] = useState<ExportSortKey>('g10-price');
+  const [showGradePicker, setShowGradePicker] = useState(false);
+  const gradePickerRef = useRef<HTMLDivElement>(null);
+
+  // Close the grade picker on outside click
+  useEffect(() => {
+    if (!showGradePicker) return;
+    const handler = (e: MouseEvent) => {
+      if (gradePickerRef.current && !gradePickerRef.current.contains(e.target as Node)) {
+        setShowGradePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showGradePicker]);
+
+  // Toggle a grade's visibility (mirrors the Settings panel control)
+  const toggleVisibleGrade = (g: GradeNumber) => {
+    const cur = settings.visibleGrades;
+    const next = cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g].sort((a, b) => a - b);
+    if (next.length > 0) onUpdateSettings({ ...settings, visibleGrades: next });
+  };
 
   const handleSort = (key: string) => {
     setSortKey((prev) => {
@@ -305,6 +327,31 @@ export default function CardTable({
         <button className="btn-add-card" onClick={onAddCard} disabled={!!draftCard} title={draftCard ? 'Finish the new card above first' : 'Add a new card'}>
           + Add Card
         </button>
+        <div className="grade-picker-wrap" ref={gradePickerRef}>
+          <button
+            className={`btn-grades${showGradePicker ? ' btn-grades--open' : ''}`}
+            onClick={() => setShowGradePicker((v) => !v)}
+            title="Show or hide grade columns"
+          >
+            Grades ▾
+          </button>
+          {showGradePicker && (
+            <div className="grade-picker">
+              <div className="grade-picker__title">Visible grades</div>
+              <div className="grade-picker__chips">
+                {([1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as GradeNumber[]).map((g) => (
+                  <button
+                    key={g}
+                    className={`grade-chip${settings.visibleGrades.includes(g) ? ' grade-chip--on' : ''}`}
+                    onClick={() => toggleVisibleGrade(g)}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         {cards.length > 0 && (
           <>
             <button
@@ -973,29 +1020,43 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 // ───── Inline Company Comparison ─────
 
 function InlineComparison({ card, settings }: { card: GradingCard; settings: AppSettings }) {
-  const [selectedGrade, setSelectedGrade] = useState<GradeNumber>(
-    settings.visibleGrades[settings.visibleGrades.length - 1] ?? 10
-  );
+  const [selectedGrade, setSelectedGrade] = useState<GradeNumber>(10);
 
   const comparisons = compareCompanies(card, selectedGrade, settings);
   const bestProfit = Math.max(...comparisons.map((c) => c.totalProfit));
 
   const colSpan = 7 + settings.visibleGrades.length * 3 + 3;
+  const lowSelected = selectedGrade <= 8;
 
   return (
     <tr className="inline-comparison">
       <td colSpan={colSpan}>
         <div className="inline-comparison__inner">
+          {/* Grade for the comparison: quick 10 / 9, plus an "8 or lower" picker */}
           <div className="comparison-grade-tabs" style={{ marginBottom: 10 }}>
-            {settings.visibleGrades.map((g) => (
-              <button
-                key={g}
-                className={`comparison-grade-tab ${selectedGrade === g ? 'comparison-grade-tab--active' : ''}`}
-                onClick={() => setSelectedGrade(g)}
-              >
-                Grade {g}
-              </button>
-            ))}
+            <button
+              className={`comparison-grade-tab ${selectedGrade === 10 ? 'comparison-grade-tab--active' : ''}`}
+              onClick={() => setSelectedGrade(10)}
+            >
+              10
+            </button>
+            <button
+              className={`comparison-grade-tab ${selectedGrade === 9 ? 'comparison-grade-tab--active' : ''}`}
+              onClick={() => setSelectedGrade(9)}
+            >
+              9
+            </button>
+            <select
+              className={`comparison-grade-select${lowSelected ? ' comparison-grade-select--active' : ''}`}
+              value={lowSelected ? String(selectedGrade) : ''}
+              onChange={(e) => { if (e.target.value) setSelectedGrade(parseInt(e.target.value, 10) as GradeNumber); }}
+              title="Pick grade 8 or lower"
+            >
+              <option value="">8 or lower</option>
+              {[8, 7, 6, 5, 4, 3, 2, 1].map((g) => (
+                <option key={g} value={g}>Grade {g}</option>
+              ))}
+            </select>
           </div>
 
           <div className="inline-comparison__grid">
