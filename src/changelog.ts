@@ -16,6 +16,14 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '0.1.3.6.8',
+    date: 'June 30, 2026',
+    items: [
+      { text: 'The per-card comparison is now interactive: click a company to grade with it (it syncs the company dropdown). Your pick is outlined green, the best value purple.' },
+      { text: 'The comparison’s grade buttons now set an "expected grade" for the card: grade columns above it grey out, and the summary totals value the card at that grade.' },
+    ],
+  },
+  {
     version: '0.1.3.6.7',
     date: 'June 30, 2026',
     items: [

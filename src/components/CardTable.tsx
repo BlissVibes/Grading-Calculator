@@ -592,6 +592,12 @@ interface CardRowProps {
 function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitTier, onToggleExpand, onUpdate, onUpdateGrade, onDelete, onLookup, isDraft, onConfirm }: CardRowProps) {
   const effectiveCompany = card.noGrading ? null : (card.company ?? settings.defaultCompany);
 
+  // Expected grade — columns for grades above it are greyed out (they're moot
+  // once you expect a lower grade). Default: the top visible grade.
+  const topVisible = settings.visibleGrades[settings.visibleGrades.length - 1] ?? 10;
+  const targetGrade = card.targetGrade ?? topVisible;
+  const aboveTarget = (g: GradeNumber) => g > targetGrade;
+
   const tierClass = `${isDraft ? 'card-row--draft ' : ''}${profitTier ? `row-profit-${profitTier}` : ''}${card.includeInTotal ? '' : ' row-excluded'}`.trim();
 
   return (
@@ -835,7 +841,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
         {/* Grade Price columns */}
         {settings.visibleGrades.map((g) => (
-          <td key={`price-${g}`} className="td-center">
+          <td key={`price-${g}`} className={`td-center${aboveTarget(g) ? ' col-above-target' : ''}`}>
             <input
               className="cell-input cell-input--number"
               type="number"
@@ -855,7 +861,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
           const profit = result?.profit ?? 0;
           const cls = profit > 0 ? 'profit-positive' : profit < 0 ? 'profit-negative' : 'profit-zero';
           return (
-            <td key={`profit-${g}`} className={`td-center ${cls}`}>
+            <td key={`profit-${g}`} className={`td-center ${cls}${aboveTarget(g) ? ' col-above-target' : ''}`}>
               {fmt(profit)}
             </td>
           );
@@ -872,7 +878,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
             : mult < 0 ? 'multiplier--negative'
             : 'multiplier--neutral';
           return (
-            <td key={`mult-${g}`} className="td-center">
+            <td key={`mult-${g}`} className={`td-center${aboveTarget(g) ? ' col-above-target' : ''}`}>
               <span className={`multiplier ${cls}`}>{fmtMult(mult)}</span>
             </td>
           );
@@ -1026,7 +1032,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
       {/* Inline comparison */}
       {expanded && !card.noGrading && (
-        <InlineComparison card={card} settings={settings} />
+        <InlineComparison card={card} settings={settings} onUpdate={onUpdate} />
       )}
     </>
   );
@@ -1034,11 +1040,14 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
 
 // ───── Inline Company Comparison ─────
 
-function InlineComparison({ card, settings }: { card: GradingCard; settings: AppSettings }) {
-  const [selectedGrade, setSelectedGrade] = useState<GradeNumber>(10);
+function InlineComparison({ card, settings, onUpdate }: { card: GradingCard; settings: AppSettings; onUpdate: (updates: Partial<GradingCard>) => void }) {
+  const topVisible = settings.visibleGrades[settings.visibleGrades.length - 1] ?? 10;
+  const selectedGrade: GradeNumber = card.targetGrade ?? topVisible;
+  const setSelectedGrade = (g: GradeNumber) => onUpdate({ targetGrade: g });
 
   const comparisons = compareCompanies(card, selectedGrade, settings);
   const bestProfit = Math.max(...comparisons.map((c) => c.totalProfit));
+  const selectedCompany = card.company ?? settings.defaultCompany;
 
   const colSpan = 7 + settings.visibleGrades.length * 3 + 3;
   const lowSelected = selectedGrade <= 8;
@@ -1047,8 +1056,9 @@ function InlineComparison({ card, settings }: { card: GradingCard; settings: App
     <tr className="inline-comparison">
       <td colSpan={colSpan}>
         <div className="inline-comparison__inner">
-          {/* Grade for the comparison: quick 10 / 9, plus an "8 or lower" picker */}
-          <div className="comparison-grade-tabs" style={{ marginBottom: 10 }}>
+          {/* Expected grade — drives the table totals and greys higher columns */}
+          <div className="comparison-grade-tabs" style={{ marginBottom: 4 }}>
+            <span className="comparison-grade-label">Expected grade:</span>
             <button
               className={`comparison-grade-tab ${selectedGrade === 10 ? 'comparison-grade-tab--active' : ''}`}
               onClick={() => setSelectedGrade(10)}
@@ -1073,14 +1083,19 @@ function InlineComparison({ card, settings }: { card: GradingCard; settings: App
               ))}
             </select>
           </div>
+          <div className="comparison-hint">Click a company to grade with it. Green = your pick · purple = best value.</div>
 
           <div className="inline-comparison__grid">
             {comparisons.map((comp) => {
               const isBest = comp.totalProfit === bestProfit && bestProfit > 0;
+              const isSelected = comp.company === selectedCompany;
               return (
-                <div
+                <button
+                  type="button"
                   key={comp.company}
-                  className={`inline-comp-card ${isBest ? 'inline-comp-card--best' : ''}`}
+                  className={`inline-comp-card${isBest ? ' inline-comp-card--best' : ''}${isSelected ? ' inline-comp-card--selected' : ''}`}
+                  onClick={() => onUpdate({ company: comp.company, serviceLevel: null })}
+                  title={`Grade this card with ${COMPANY_LABELS[comp.company]}`}
                 >
                   <div className="inline-comp-card__company">{COMPANY_LABELS[comp.company]}</div>
                   <div className="inline-comp-card__row">
@@ -1107,8 +1122,11 @@ function InlineComparison({ card, settings }: { card: GradingCard; settings: App
                       {fmtMult(comp.averageMultiplier)}
                     </span>
                   </div>
-                  {isBest && <div style={{ textAlign: 'center', marginTop: 6, color: 'var(--gain)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>Best Value</div>}
-                </div>
+                  <div className="inline-comp-card__badges">
+                    {isSelected && <span className="inline-comp-card__badge inline-comp-card__badge--selected">✓ Your pick</span>}
+                    {isBest && <span className="inline-comp-card__badge inline-comp-card__badge--best">★ Best value</span>}
+                  </div>
+                </button>
               );
             })}
           </div>

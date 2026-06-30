@@ -110,6 +110,7 @@ export interface GradingCard {
   pricePaid: number;
   rawPrice: number;
   gradeValues: Partial<Record<GradeNumber, number>>;  // grade → expected price
+  targetGrade?: GradeNumber;           // expected grade — drives totals & greys higher columns (default: top)
   tenVariants?: Partial<Record<TenVariantKey, number>>;  // premium "10" prices from lookup
   tenVariant?: TenVariantKey | null;   // selected premium "10" (null = standard PSA 10)
   quantity: number;

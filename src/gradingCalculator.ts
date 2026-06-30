@@ -148,7 +148,14 @@ export function calculateCard(
   // (top-grade) upcharge lives per-grade in the results below.
   const currentUpcharge = upchargeFor(company, declaredValue, declaredValue, selectedTier);
 
-  for (const grade of settings.visibleGrades) {
+  // Compute the visible grades plus the card's target grade (so totals can use
+  // a target grade that isn't one of the visible columns).
+  const gradesToCompute = [...new Set([
+    ...settings.visibleGrades,
+    ...(card.targetGrade != null ? [card.targetGrade] : []),
+  ])].sort((a, b) => a - b);
+
+  for (const grade of gradesToCompute) {
     const expectedPrice = effectiveGradeValue(card, grade);
     // PSA's upcharge depends on the graded value, so it varies per grade.
     const upcharge = upchargeFor(company, expectedPrice, declaredValue, selectedTier);

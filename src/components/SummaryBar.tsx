@@ -14,6 +14,7 @@ export default function SummaryBar({ cards, calculations }: Props) {
   const included = cards.filter((c) => c.includeInTotal);
   const includedIds = new Set(included.map((c) => c.id));
   const qtyById = new Map(cards.map((c) => [c.id, c.quantity]));
+  const cardById = new Map(cards.map((c) => [c.id, c]));
 
   const totalCards = included.reduce((sum, c) => sum + c.quantity, 0);
   const totalPricePaid = included.reduce((sum, c) => sum + c.pricePaid * c.quantity, 0);
@@ -34,8 +35,10 @@ export default function SummaryBar({ cards, calculations }: Props) {
   for (const calc of calculations) {
     if (!includedIds.has(calc.cardId)) continue;
     const qty = qtyById.get(calc.cardId) ?? 1;
-    // Use the best grade result (last visible grade, typically grade 10)
-    const best = calc.grades[calc.grades.length - 1];
+    // Value each card at its target grade if set, else the top (last) grade.
+    const targetGrade = cardById.get(calc.cardId)?.targetGrade;
+    const best = (targetGrade != null && calc.grades.find((g) => g.grade === targetGrade))
+      || calc.grades[calc.grades.length - 1];
     if (best) {
       totalSubmission += (best.totalCost - best.upcharge) * qty;
       totalCurrentUpcharge += calc.currentUpcharge * qty;
