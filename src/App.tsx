@@ -14,6 +14,7 @@ import CompanyComparison from './components/CompanyComparison';
 import SettingsPanel from './components/SettingsPanel';
 import Changelog from './components/Changelog';
 import SubmissionsPanel from './components/SubmissionsPanel';
+import AdSlots from './components/AdSlots';
 
 const STORAGE_CARDS = 'gc_cards';
 const STORAGE_SETTINGS = 'gc_settings';
@@ -569,6 +570,8 @@ export default function App() {
         {viewCards.length > 0 && (
           <CompanyComparison cards={viewCards} settings={settings} />
         )}
+
+        <AdSlots />
       </main>
     </div>
   );

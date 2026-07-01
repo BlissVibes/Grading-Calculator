@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.2.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Embedded into ShinyCardboard under /calculator: shared Firebase login, Adsterra ads (hidden for Pro), base-path-aware API.' },
+    ],
+  },
+  {
     version: '1.4.1.0',
     date: 'June 30, 2026',
     items: [
