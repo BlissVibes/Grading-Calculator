@@ -139,6 +139,22 @@
   padding: 0;
   display: inline-flex;
   align-items: center;
+  gap: 0.4rem;
+}
+/* Launch VIP badge — early-adopter status, cohesive with the main site. */
+.sh__vip {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+}
+.sh__viprow {
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  color: #06b6d4;
 }
 .sh__avatar {
   width: 30px;

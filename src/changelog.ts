@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.9.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Launch VIP: early adopters (June–July 2026 signups) now get a VIP badge in the header, shared across the site and tools.' },
+    ],
+  },
+  {
     version: '1.4.8.0',
     date: 'July 1, 2026',
     items: [

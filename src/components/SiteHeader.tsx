@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import type { User } from 'firebase/auth'
-import { auth } from '../config/firebase'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, db } from '../config/firebase'
 import AuthModal, { openAuthModal, completeEmailLinkSignIn } from './AuthModal'
 import './SiteHeader.css'
 
@@ -24,6 +25,7 @@ function initial(u: User): string {
 
 export default function SiteHeader() {
   const [user, setUser] = useState<User | null>(auth.currentUser)
+  const [isVip, setIsVip] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)
   const [userOpen, setUserOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -33,6 +35,28 @@ export default function SiteHeader() {
 
   // Finish a passwordless email-link sign-in if we arrived via one.
   useEffect(() => { void completeEmailLinkSignIn().catch(() => {}) }, [])
+
+  // Claim Launch VIP (idempotent, server-side) on login, then reflect the badge.
+  // The endpoint lives on the main site — reached same-origin behind the proxy.
+  useEffect(() => {
+    if (!user) { setIsVip(false); return }
+    let cancelled = false
+    void (async () => {
+      try {
+        const token = await user.getIdToken()
+        await fetch('/api/redeem-promo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ action: 'claim-vip' }),
+        })
+      } catch { /* non-fatal */ }
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid))
+        if (!cancelled) setIsVip(snap.exists() && snap.data().launchVip === true)
+      } catch { /* ignore */ }
+    })()
+    return () => { cancelled = true }
+  }, [user])
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -97,6 +121,7 @@ export default function SiteHeader() {
           {user ? (
             <div className="sh__dd">
               <button className="sh__user" onClick={() => setUserOpen((o) => !o)} aria-label="Account">
+                {isVip && <span className="sh__vip">VIP</span>}
                 {user.photoURL ? (
                   <img className="sh__avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" />
                 ) : (
@@ -105,7 +130,10 @@ export default function SiteHeader() {
               </button>
               {userOpen && (
                 <div className="sh__menu">
-                  <div className="sh__userinfo">{user.displayName || user.email}</div>
+                  <div className="sh__userinfo">
+                    {user.displayName || user.email}
+                    {isVip && <div className="sh__viprow">Launch VIP — founding member</div>}
+                  </div>
                   <button onClick={doSignOut}>Sign out</button>
                 </div>
               )}
@@ -139,7 +167,10 @@ export default function SiteHeader() {
           ))}
           <div className="sh__mobile-sep" />
           {user ? (
-            <button onClick={doSignOut}>Sign out ({user.displayName || user.email})</button>
+            <>
+              {isVip && <div className="sh__mobile-label"><span className="sh__vip">VIP</span> Launch VIP — founding member</div>}
+              <button onClick={doSignOut}>Sign out ({user.displayName || user.email})</button>
+            </>
           ) : (
             <button onClick={signIn}>Sign in</button>
           )}
