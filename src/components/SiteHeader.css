@@ -262,3 +262,178 @@
     margin: 0.35rem 0;
   }
 }
+
+/* ── Account-menu parity with the main site's Navbar ─────────────────────── */
+
+/* Name shown next to the avatar in the desktop account button. */
+.sh__uname {
+  color: #d1d5db;
+  font-size: 0.875rem;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sh__user {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+  background: #1a1a2e;
+  transition: border-color 0.2s;
+}
+.sh__user:hover {
+  border-color: #6b7280;
+}
+
+/* Tier badge (PRO gold / SILVER) — mirrors the main nav. */
+.sh__tier {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 0.12rem 0.4rem;
+  border-radius: 0.25rem;
+  color: #000;
+}
+.sh__tier--pro {
+  background: linear-gradient(90deg, #eab308, #f59e0b);
+}
+.sh__tier--silver {
+  background: linear-gradient(90deg, #d1d5db, #9ca3af);
+}
+
+.sh__menu--wide {
+  min-width: 256px;
+}
+.sh__uirow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.sh__uiname {
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sh__uimail {
+  color: #6b7280;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Amber action rows (Upgrade / Beta site). */
+.sh__menu .sh__amber,
+.sh__mobile .sh__amber {
+  color: #fbbf24;
+}
+.sh__menu .sh__amber:hover,
+.sh__mobile .sh__amber:hover {
+  color: #fcd34d;
+  background: #23273a;
+}
+/* Active-tier confirmation row (non-interactive). */
+.sh__tierrow {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  color: #4ade80;
+}
+.sh__menu .sh__donate,
+.sh__mobile .sh__donate {
+  color: #d1d5db;
+}
+.sh__menu .sh__donate:hover,
+.sh__mobile .sh__donate:hover {
+  color: #fff;
+  background: #23273a;
+}
+
+/* Promo code (menu variant). */
+.sh__promo {
+  border-top: 1px solid #2d3148;
+  margin-top: 0.25rem;
+  padding-top: 0.15rem;
+}
+.sh__promo-toggle {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+}
+.sh__promo-body {
+  padding: 0.15rem 0.35rem 0.4rem;
+}
+.sh__promo-row {
+  display: flex;
+  gap: 0.4rem;
+}
+.sh__promo-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.5rem;
+  background: #0f0f1a;
+  border: 1px solid #374151;
+  color: #fff;
+  font-size: 0.82rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+}
+.sh__promo-input::placeholder {
+  color: #6b7280;
+  letter-spacing: normal;
+}
+.sh__promo-input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 1px #8b5cf6;
+}
+.sh__promo-btn {
+  width: auto !important;
+  flex-shrink: 0;
+  padding: 0.5rem 0.9rem !important;
+  border-radius: 0.5rem;
+  color: #fff !important;
+  font-weight: 600;
+  font-size: 0.82rem;
+  background: linear-gradient(90deg, #8b5cf6, #6366f1) !important;
+}
+.sh__promo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sh__promo-hint {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+.sh__promo-ok {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: #4ade80;
+}
+.sh__promo-err {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: #f87171;
+}
+
+/* Mobile account header block. */
+.sh__mobileuser {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid #2d3148;
+  margin-bottom: 0.25rem;
+}
+.sh__mobileuser .sh__avatar {
+  width: 38px;
+  height: 38px;
+}
+.sh__mobileuser-info {
+  min-width: 0;
+  flex: 1;
+}

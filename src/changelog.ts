@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.14.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'New header in full parity with the main site: the gold Shiny Cardboard logo lockup plus a complete account menu (VIP and tier badges, Upgrade to Pro, Manage subscription, Beta site link, promo code redemption, and Donate).' },
+    ],
+  },
+  {
     version: '1.4.13.0',
     date: 'July 1, 2026',
     items: [
