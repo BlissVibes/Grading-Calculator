@@ -8,7 +8,6 @@ import {
   sendPasswordResetEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
-  sendSignInLinkToEmail,
 } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import './AuthModal.css'
@@ -69,21 +68,22 @@ function friendlyError(e: unknown): string {
 }
 
 async function requestSignInLink(email: string): Promise<void> {
-  // Folded into /api/redeem-promo (action dispatch) on the main site to stay
-  // under the Vercel Hobby-plan 12-function limit; reached same-origin via the
-  // proxy. Absolute path so it hits the main domain, not the tool's base path.
-  const res = await fetch('/api/redeem-promo', {
+  // The site's endpoint (reached same-origin via the proxy) generates the link
+  // AND sends the branded email; we just remember the email locally so
+  // completeEmailLinkSignIn() can finish on load. The continue URL keeps the
+  // tool's base path so the link returns to the right page.
+  const res = await fetch('/api/send-auth-email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'signin-link', email }),
+    body: JSON.stringify({
+      type: 'signin-link',
+      email,
+      continueUrl: `${window.location.origin}${import.meta.env.BASE_URL}`,
+    }),
   })
   let data: { ok?: boolean; message?: string } = {}
   try { data = await res.json() } catch { /* ignore */ }
   if (!res.ok || !data.ok) throw new Error(data.message || 'Could not send a sign-in link — try again.')
-  await sendSignInLinkToEmail(auth, email, {
-    url: `${window.location.origin}${import.meta.env.BASE_URL}`,
-    handleCodeInApp: true,
-  })
   try { window.localStorage.setItem(EMAIL_LINK_STORAGE_KEY, email) } catch { /* ignore */ }
 }
 
@@ -247,19 +247,22 @@ export default function AuthModal() {
               </button>
             </form>
 
-            <div className="am__row">
-              <button className="am__link" onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(null) }}>
-                {mode === 'signup' ? 'Have an account? Sign in' : 'New here? Create an account'}
+            {mode === 'signup' ? (
+              <button className="am__linkfull" onClick={() => { setMode('signin'); setError(null) }}>
+                Have an account? <span className="am__accent">Sign in</span>
               </button>
-              {mode === 'signin' && (
-                <button className="am__muted" onClick={doForgot} disabled={busy}>Forgot password?</button>
-              )}
-            </div>
-
-            {mode === 'signin' && (
-              <button className="am__linkfull" onClick={doEmailLink} disabled={busy}>
-                Prefer a link? <span className="am__accent">Email me a one-time sign-in link</span>
-              </button>
+            ) : (
+              <>
+                <button type="button" className="am__signup" onClick={() => { setMode('signup'); setError(null) }}>
+                  Sign up. Create an account.
+                </button>
+                <div className="am__center">
+                  <button className="am__muted" onClick={doForgot} disabled={busy}>Forgot password?</button>
+                </div>
+                <button className="am__linkfull" onClick={doEmailLink} disabled={busy}>
+                  Prefer a link? <span className="am__accent">Email me a one-time sign-in link</span>
+                </button>
+              </>
             )}
           </>
         )}

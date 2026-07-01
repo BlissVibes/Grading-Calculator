@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.8.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Header restyled to match the main ShinyCardboard site (spacing, fonts, buttons). Sign-in dialog gets a full-width "Sign up" button, and the passwordless "email me a sign-in link" message is now branded too.' },
+    ],
+  },
+  {
     version: '1.4.7.0',
     date: 'July 1, 2026',
     items: [

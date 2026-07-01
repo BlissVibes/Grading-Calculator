@@ -5,25 +5,25 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(26, 26, 46, 0.85); /* dark-surface @ 85% */
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid #262a3f;
+  background: rgba(26, 26, 46, 0.8); /* dark-surface/80 — matches main nav */
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #1f2937; /* gray-800 */
   font-family: inherit;
 }
 .sh__inner {
   max-width: 80rem;
   margin: 0 auto;
   padding: 0 1rem;
-  height: 56px;
+  height: 64px; /* h-16, matches main nav */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 .sh__logo {
-  font-size: 1.3rem;
-  font-weight: 800;
+  font-size: 1.5rem; /* text-2xl */
+  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
   background: linear-gradient(135deg, #8b5cf6, #6366f1, #06b6d4, #ec4899);
@@ -51,29 +51,29 @@
 .sh__nav {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 .sh__link {
-  padding: 0.5rem 0.85rem;
+  padding: 0.5rem 1rem; /* px-4 py-2, matches main nav links */
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #9aa0b4;
+  color: #9ca3af; /* gray-400 */
   text-decoration: none;
   background: transparent;
   border: none;
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s, color 0.2s;
 }
 .sh__link:hover {
-  color: #e8eaf0;
-  background: #23273a;
+  color: #f3f4f6; /* gray-100 */
+  background: #1f2937; /* gray-800 */
 }
 .sh__link.is-active {
-  color: #a78bfa;
-  background: rgba(139, 92, 246, 0.16);
+  color: #8b5cf6; /* holo-purple */
+  background: rgba(139, 92, 246, 0.2);
 }
 .sh__caret {
   font-size: 0.7rem;
@@ -155,19 +155,22 @@
   font-weight: 700;
   font-size: 0.8rem;
 }
+/* Matches the main nav "Sign in" button: bordered dark, not a gradient. */
 .sh__signin {
-  padding: 0.45rem 0.9rem;
+  padding: 0.5rem 1rem;
   border-radius: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
-  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #d1d5db; /* gray-300 */
+  background: #1a1a2e; /* dark-surface */
+  border: 1px solid #374151; /* gray-700 */
   cursor: pointer;
   font-family: inherit;
+  transition: color 0.2s, border-color 0.2s;
 }
 .sh__signin:hover {
-  filter: brightness(1.08);
+  color: #fff;
+  border-color: #6b7280; /* gray-500 */
 }
 /* Hamburger (mobile only) */
 .sh__burger {
