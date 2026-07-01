@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.10.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Sign-in / create-account dialog now has a Show/Hide toggle so you can see your password as you type.' },
+    ],
+  },
+  {
     version: '1.4.9.0',
     date: 'July 1, 2026',
     items: [

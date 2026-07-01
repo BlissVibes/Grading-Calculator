@@ -111,6 +111,23 @@
 }
 .am__input::placeholder { color: #6b7089; }
 .am__input:focus { outline: none; border-color: #8b5cf6; }
+/* Show/hide password toggle */
+.am__pwwrap { position: relative; }
+.am__input--pw { padding-right: 3.25rem; }
+.am__pwtoggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: #9aa0b4;
+  padding: 0.25rem 0.4rem;
+}
+.am__pwtoggle:hover { color: #fff; }
 .am__error { color: #f87171; font-size: 0.75rem; margin: 0; }
 .am__row {
   display: flex;

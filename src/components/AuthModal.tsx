@@ -126,6 +126,7 @@ export default function AuthModal() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -228,15 +229,25 @@ export default function AuthModal() {
                 type="email" autoComplete="email" required value={email}
                 onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className="am__input"
               />
-              <input
-                type="password" required minLength={6}
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === 'signup' ? 'Choose a password (6+ characters)' : 'Password'} className="am__input"
-              />
+              <div className="am__pwwrap">
+                <input
+                  type={showPw ? 'text' : 'password'} required minLength={6}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === 'signup' ? 'Choose a password (6+ characters)' : 'Password'}
+                  className="am__input am__input--pw"
+                />
+                <button
+                  type="button" className="am__pwtoggle"
+                  onClick={() => setShowPw((v) => !v)}
+                  aria-label={showPw ? 'Hide password' : 'Show password'}
+                >
+                  {showPw ? 'Hide' : 'Show'}
+                </button>
+              </div>
               {mode === 'signup' && (
                 <input
-                  type="password" required minLength={6} autoComplete="new-password"
+                  type={showPw ? 'text' : 'password'} required minLength={6} autoComplete="new-password"
                   value={confirm} onChange={(e) => setConfirm(e.target.value)}
                   placeholder="Confirm password" className="am__input"
                 />
