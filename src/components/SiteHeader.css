@@ -22,15 +22,16 @@
   gap: 1rem;
 }
 .sh__logo {
-  font-size: 1.5rem; /* text-2xl */
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
-  white-space: nowrap;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1, #06b6d4, #ec4899);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+}
+.sh__logo-img {
+  height: 40px;
+  width: auto;
+  display: block;
+  /* PNG is alpha-keyed (black field is real transparency), so it sits flush on
+     the dark-surface bar with no visible box. */
 }
 .sh__brand {
   display: flex;
