@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.11.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Memory hardening: the ad banners stop their background height-polling after load instead of running a timer forever, and repeated re-renders no longer thrash the ad listeners.' },
+    ],
+  },
+  {
     version: '1.4.10.0',
     date: 'July 1, 2026',
     items: [

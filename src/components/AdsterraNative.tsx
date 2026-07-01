@@ -34,7 +34,10 @@ function buildSrcDoc(): string {
     '<script>',
     `function p(){try{parent.postMessage({t:'${RESIZE_MSG}',h:document.body.scrollHeight},'*')}catch(e){}}`,
     'try{new ResizeObserver(p).observe(document.body)}catch(e){}',
-    "window.addEventListener('load',p);setInterval(p,1000);",
+    // Post height ~10 times after load (enough to detect a fill), then STOP —
+    // no forever-timer for the tab's whole life. The ResizeObserver still
+    // catches later changes.
+    "window.addEventListener('load',p);var n=0,id=setInterval(function(){p();if(++n>=10)clearInterval(id);},1000);",
     '<\/script>',
     '</body></html>',
   ].join('')
@@ -58,7 +61,8 @@ export function AdsterraNative({
     function onMsg(e: MessageEvent) {
       const d = e.data as { t?: string; h?: number } | null
       if (d && d.t === RESIZE_MSG && typeof d.h === 'number' && d.h >= FILL_THRESHOLD) {
-        setHeight(Math.min(Math.ceil(d.h), 1000))
+        const h = Math.min(Math.ceil(d.h), 1000)
+        setHeight((cur) => (Math.abs(cur - h) > 2 ? h : cur))
         if (!notified.current) {
           notified.current = true
           setFilled(true)

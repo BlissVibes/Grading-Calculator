@@ -37,7 +37,9 @@ function buildSrcDoc({ key, width, height }: AdsterraUnit): string {
     '<script>',
     `function p(){try{parent.postMessage({t:'${RESIZE_MSG}',k:'${key}',h:document.body.scrollHeight},'*')}catch(e){}}`,
     'try{new ResizeObserver(p).observe(document.body)}catch(e){}',
-    "window.addEventListener('load',p);setInterval(p,1000);",
+    // Post height ~10 times after load, then STOP — no forever-timer. The
+    // ResizeObserver still catches later changes.
+    "window.addEventListener('load',p);var n=0,id=setInterval(function(){p();if(++n>=10)clearInterval(id);},1000);",
     '<\/script>',
     '</body></html>',
   ].join('')

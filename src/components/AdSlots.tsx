@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import useAdFree from '../hooks/useAdFree'
 import { ADSTERRA } from '../config/ads'
 import { AdsterraBanner } from './AdsterraBanner'
@@ -18,6 +18,10 @@ export default function AdSlots() {
   const adFree = useAdFree()
   const [nativeFilled, setNativeFilled] = useState(false)
   const [bannerFilled, setBannerFilled] = useState(false)
+  // Stable callbacks so the ad components' message-listener effects don't
+  // re-subscribe on every host re-render (which happens on every keystroke).
+  const onNative = useCallback(() => setNativeFilled(true), [])
+  const onBanner = useCallback(() => setBannerFilled(true), [])
 
   if (adFree) return null
 
@@ -38,10 +42,10 @@ export default function AdSlots() {
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <AdsterraNative onLoaded={() => setNativeFilled(true)} />
+        <AdsterraNative onLoaded={onNative} />
       </div>
       <div style={{ flexShrink: 0 }}>
-        <AdsterraBanner unit={ADSTERRA.rectangle} onLoaded={() => setBannerFilled(true)} />
+        <AdsterraBanner unit={ADSTERRA.rectangle} onLoaded={onBanner} />
       </div>
     </div>
   )
