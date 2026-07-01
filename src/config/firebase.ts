@@ -18,3 +18,5 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+
+// Served under the ShinyCardboard proxy — requires VITE_FIREBASE_* env at build time.
