@@ -420,6 +420,23 @@
   color: #f87171;
 }
 
+/* "Our socials" sub-list (nested under Donate in the account menu). */
+.sh__socials {
+  padding: 0.15rem 0.15rem 0.3rem;
+}
+.sh__socials .sh__social {
+  display: flex !important;
+  align-items: center;
+  gap: 0.6rem;
+  padding-left: 1.1rem;
+  color: #cbd0e0;
+}
+.sh__social-ic {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 /* Mobile account header block. */
 .sh__mobileuser {
   display: flex;

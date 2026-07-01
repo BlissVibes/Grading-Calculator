@@ -53,6 +53,7 @@ export default function SiteHeader() {
   const [userOpen, setUserOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [promoOpen, setPromoOpen] = useState(false)
+  const [socialsOpen, setSocialsOpen] = useState(false)
   const barRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => onAuthStateChanged(auth, setUser), [])
@@ -176,6 +177,7 @@ export default function SiteHeader() {
       <a href={PAYPAL_DONATE_URL} target="_blank" rel="noopener noreferrer" className="sh__donate">
         ♥ Donate
       </a>
+      <SocialsRow open={socialsOpen} setOpen={setSocialsOpen} />
     </>
   )
 
@@ -351,6 +353,78 @@ function PromoRow({ open, setOpen, signedIn }: { open: boolean; setOpen: (v: boo
           </div>
           {!signedIn && <p className="sh__promo-hint">Sign in required to redeem codes</p>}
           {msg && <p className={msg.ok ? 'sh__promo-ok' : 'sh__promo-err'}>{msg.text}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Our socials. Entries flagged `hidden` are WIRED (data + icon ready) but not
+// shown yet — set `hidden: false` (and confirm the handle) to reveal one. Only
+// Instagram + X are live for now. Keep this list in sync with the main site's
+// Navbar so every account menu across the ecosystem looks and works the same.
+type Social = { label: string; href: string; hidden: boolean; path: string }
+const SOCIALS: Social[] = [
+  {
+    label: 'Instagram',
+    href: 'https://instagram.com/shinycardboard.win',
+    hidden: false,
+    path: 'M12 2.2c-2.7 0-3 .01-4.06.06-1.06.05-1.79.22-2.42.46-.65.26-1.2.6-1.76 1.15-.55.55-.89 1.1-1.15 1.76-.24.63-.41 1.36-.46 2.42C2.21 9.11 2.2 9.4 2.2 12s.01 2.89.06 3.95c.05 1.06.22 1.79.46 2.42.26.65.6 1.2 1.15 1.76.55.55 1.1.89 1.76 1.15.63.24 1.36.41 2.42.46 1.06.05 1.36.06 4.06.06s2.89-.01 3.95-.06c1.06-.05 1.79-.22 2.42-.46.65-.26 1.2-.6 1.76-1.15.55-.55.89-1.1 1.15-1.76.24-.63.41-1.36.46-2.42.05-1.06.06-1.36.06-4.06s-.01-2.89-.06-3.95c-.05-1.06-.22-1.79-.46-2.42-.26-.65-.6-1.2-1.15-1.76-.55-.55-1.1-.89-1.76-1.15-.63-.24-1.36-.41-2.42-.46C14.89 2.21 14.6 2.2 12 2.2zm0 1.8c2.67 0 2.98.01 4.03.06.97.04 1.5.21 1.85.34.47.18.8.4 1.15.75.35.35.57.68.75 1.15.13.35.3.88.34 1.85.05 1.05.06 1.36.06 4.03s-.01 2.98-.06 4.03c-.04.97-.21 1.5-.34 1.85-.18.47-.4.8-.75 1.15-.35.35-.68.57-1.15.75-.35.13-.88.3-1.85.34-1.05.05-1.36.06-4.03.06s-2.98-.01-4.03-.06c-.97-.04-1.5-.21-1.85-.34-.47-.18-.8-.4-1.15-.75-.35-.35-.57-.68-.75-1.15-.13-.35-.3-.88-.34-1.85C4.01 14.98 4 14.67 4 12s.01-2.98.06-4.03c.04-.97.21-1.5.34-1.85.18-.47.4-.8.75-1.15.35-.35.68-.57 1.15-.75.35-.13.88-.3 1.85-.34C9.02 4.01 9.33 4 12 4zm0 3.06A4.94 4.94 0 1012 16.94 4.94 4.94 0 0012 7.06zm0 8.14A3.2 3.2 0 1112 8.8a3.2 3.2 0 010 6.4zm5.14-8.34a1.15 1.15 0 11-2.3 0 1.15 1.15 0 012.3 0z',
+  },
+  {
+    label: 'X',
+    href: 'https://x.com/shinycardboard_',
+    hidden: false,
+    path: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.658l-5.214-6.817-5.966 6.817H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z',
+  },
+  // ── Wired but hidden (flip hidden:false + confirm the handle to reveal) ──
+  {
+    label: 'TikTok',
+    href: 'https://tiktok.com/@shinycardboard.win',
+    hidden: true,
+    path: 'M16.6 5.82a4.28 4.28 0 01-1.05-2.82h-3.3v13.05a2.59 2.59 0 01-2.59 2.5 2.59 2.59 0 01-2.59-2.59 2.59 2.59 0 013.4-2.46V7.72a5.88 5.88 0 00-6.9 5.79 5.88 5.88 0 0011.76 0V8.3a7.5 7.5 0 004.4 1.42V6.42a4.28 4.28 0 01-1.54-.6z',
+  },
+  {
+    label: 'YouTube',
+    href: 'https://youtube.com/@shinycardboard',
+    hidden: true,
+    path: 'M23.5 6.51a2.78 2.78 0 00-1.96-1.96C19.8 4.08 12 4.08 12 4.08s-7.8 0-9.54.47A2.78 2.78 0 00.5 6.51 29 29 0 000 12a29 29 0 00.5 5.49 2.78 2.78 0 001.96 1.96c1.74.47 9.54.47 9.54.47s7.8 0 9.54-.47a2.78 2.78 0 001.96-1.96A29 29 0 0024 12a29 29 0 00-.5-5.49zM9.6 15.4V8.6l6 3.4-6 3.4z',
+  },
+  {
+    label: 'Twitch',
+    href: 'https://twitch.tv/shinycardboard',
+    hidden: true,
+    path: 'M2.15 0L.54 4.12v16.83h5.73V24h3.22l3.05-3.05h4.66L23.46 14.5V0H2.15zm19.16 13.61l-3.58 3.58h-5.73l-3.05 3.05v-3.05H4.51V2.15h16.8v11.46zM17.46 6.34h-2.15v6.19h2.15V6.34zm-5.73 0H9.58v6.19h2.15V6.34z',
+  },
+  {
+    label: 'Kick',
+    href: 'https://kick.com/shinycardboard',
+    hidden: true,
+    path: 'M1.5 0h7.5v4.5h2.25V2.25h2.25V0H24v9h-2.25v2.25H19.5v1.5h2.25V15H24v9h-8.25v-2.25H13.5V19.5h-2.25V24H1.5V0z',
+  },
+]
+
+// Collapsible "Our socials" row: an inline sub-list of social links inside the
+// account menu, under Donate. Renders nothing if no socials are currently shown.
+function SocialsRow({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
+  const visible = SOCIALS.filter((s) => !s.hidden)
+  if (visible.length === 0) return null
+  return (
+    <div className="sh__promo">
+      <button className="sh__promo-toggle" onClick={() => setOpen(!open)}>
+        <span>🔗 Our socials</span>
+        <span className={`sh__caret${open ? ' open' : ''}`}>▾</span>
+      </button>
+      {open && (
+        <div className="sh__socials">
+          {visible.map((s) => (
+            <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="sh__social">
+              <svg className="sh__social-ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d={s.path} />
+              </svg>
+              {s.label}
+            </a>
+          ))}
         </div>
       )}
     </div>
