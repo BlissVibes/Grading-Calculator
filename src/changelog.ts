@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.6.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Email sign-up now sends a branded ShinyCardboard verification email (logo + one-tap verify button), falling back to the plain email if the branded sender is unavailable.' },
+    ],
+  },
+  {
     version: '1.4.5.0',
     date: 'July 1, 2026',
     items: [

@@ -87,6 +87,23 @@ async function requestSignInLink(email: string): Promise<void> {
   try { window.localStorage.setItem(EMAIL_LINK_STORAGE_KEY, email) } catch { /* ignore */ }
 }
 
+// Send the branded verification email via the site's Resend endpoint (reached
+// same-origin behind the proxy); fall back to Firebase's built-in email if it
+// isn't configured or errors, so a new user always gets a verification email.
+async function sendVerificationEmail(user: import('firebase/auth').User): Promise<void> {
+  try {
+    const token = await user.getIdToken()
+    const res = await fetch('/api/send-verify-email', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) return
+  } catch {
+    // fall through to Firebase's built-in email
+  }
+  try { await sendEmailVerification(user) } catch { /* non-fatal */ }
+}
+
 export default function AuthModal() {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<Mode>('signin')
@@ -129,7 +146,7 @@ export default function AuthModal() {
     try {
       if (mode === 'signup') {
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), password)
-        try { await sendEmailVerification(cred.user) } catch { /* non-fatal */ }
+        await sendVerificationEmail(cred.user)
         setSuccess(
           `You're signed in! We emailed a verification link to ${email.trim()}. ` +
           `Verify it to enable passwordless "email me a link" sign-in later.`,
