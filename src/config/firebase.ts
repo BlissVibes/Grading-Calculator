@@ -15,6 +15,21 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
 }
 
+// Deploy-safety net (kept in sync with the website's firebase.ts). getAuth()
+// throws `auth/invalid-api-key` on an empty apiKey; since this module loads at
+// startup, that would white-screen the whole tool. Only happens from a missing
+// VITE_FIREBASE_* env var. Fall back to a placeholder so the shell still loads;
+// auth/firestore calls then fail at runtime but are handled gracefully.
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error(
+    '[firebase] Missing VITE_FIREBASE_* env vars — auth/database will NOT work. ' +
+    'Check this Vercel project\'s Environment Variables.',
+  )
+  if (!firebaseConfig.apiKey) firebaseConfig.apiKey = 'AIzaSyMISSING0CONFIG0PLACEHOLDER00000000000'
+  if (!firebaseConfig.authDomain) firebaseConfig.authDomain = 'missing-config.firebaseapp.com'
+  if (!firebaseConfig.projectId) firebaseConfig.projectId = 'missing-config'
+}
+
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)

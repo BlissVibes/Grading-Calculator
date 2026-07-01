@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.12.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Resilience: if the Firebase config is ever missing at build time, the app now loads with a clear console error instead of showing a blank white page.' },
+    ],
+  },
+  {
     version: '1.4.11.0',
     date: 'July 1, 2026',
     items: [
