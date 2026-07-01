@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.3.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Sign-in now offers email + password and a passwordless "email me a link" option alongside Google — matching the main site. Same shared account across the site and tools.' },
+    ],
+  },
+  {
     version: '1.4.2.0',
     date: 'July 1, 2026',
     items: [

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import type { User } from 'firebase/auth'
 import { auth } from '../config/firebase'
+import AuthModal, { openAuthModal, completeEmailLinkSignIn } from './AuthModal'
 import './SiteHeader.css'
 
 // Shared ShinyCardboard site header, ported to plain CSS so the two tools carry
@@ -30,6 +31,9 @@ export default function SiteHeader() {
 
   useEffect(() => onAuthStateChanged(auth, setUser), [])
 
+  // Finish a passwordless email-link sign-in if we arrived via one.
+  useEffect(() => { void completeEmailLinkSignIn().catch(() => {}) }, [])
+
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (barRef.current && !barRef.current.contains(e.target as Node)) {
@@ -48,7 +52,8 @@ export default function SiteHeader() {
   const isBeta = typeof window !== 'undefined' && window.location.hostname.startsWith('beta.')
 
   const signIn = () => {
-    void signInWithPopup(auth, new GoogleAuthProvider()).catch(() => {})
+    setMenuOpen(false)
+    openAuthModal()
   }
   const doSignOut = () => {
     setUserOpen(false)
@@ -57,6 +62,8 @@ export default function SiteHeader() {
   }
 
   return (
+    <>
+    <AuthModal />
     <header className="sh">
       <div className="sh__inner" ref={barRef}>
         <div className="sh__brand">
@@ -134,10 +141,11 @@ export default function SiteHeader() {
           {user ? (
             <button onClick={doSignOut}>Sign out ({user.displayName || user.email})</button>
           ) : (
-            <button onClick={signIn}>Sign in with Google</button>
+            <button onClick={signIn}>Sign in</button>
           )}
         </div>
       )}
     </header>
+    </>
   )
 }
