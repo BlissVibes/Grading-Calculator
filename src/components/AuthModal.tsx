@@ -93,7 +93,7 @@ async function requestSignInLink(email: string): Promise<void> {
 async function sendVerificationEmail(user: import('firebase/auth').User): Promise<void> {
   try {
     const token = await user.getIdToken()
-    const res = await fetch('/api/send-verify-email', {
+    const res = await fetch('/api/send-auth-email', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -104,25 +104,42 @@ async function sendVerificationEmail(user: import('firebase/auth').User): Promis
   try { await sendEmailVerification(user) } catch { /* non-fatal */ }
 }
 
+// Send the branded password-reset email via the site endpoint; fall back to
+// Firebase's built-in reset email if it isn't configured or errors.
+async function sendResetEmail(email: string): Promise<void> {
+  try {
+    const res = await fetch('/api/send-auth-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'reset', email }),
+    })
+    if (res.ok) return
+  } catch {
+    // fall through
+  }
+  await sendPasswordResetEmail(auth, email)
+}
+
 export default function AuthModal() {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     const o = () => {
-      setOpen(true); setMode('signin'); setError(null); setSuccess(null); setPassword('')
+      setOpen(true); setMode('signin'); setError(null); setSuccess(null); setPassword(''); setConfirm('')
     }
     openers.add(o)
     return () => { openers.delete(o) }
   }, [])
 
   const close = () => {
-    setOpen(false); setBusy(false); setError(null); setSuccess(null); setPassword('')
+    setOpen(false); setBusy(false); setError(null); setSuccess(null); setPassword(''); setConfirm('')
   }
 
   useEffect(() => {
@@ -145,6 +162,11 @@ export default function AuthModal() {
     setBusy(true); setError(null)
     try {
       if (mode === 'signup') {
+        if (password !== confirm) {
+          setError('Passwords do not match.')
+          setBusy(false)
+          return
+        }
         const cred = await createUserWithEmailAndPassword(auth, email.trim(), password)
         await sendVerificationEmail(cred.user)
         setSuccess(
@@ -161,7 +183,7 @@ export default function AuthModal() {
   const doForgot = async () => {
     if (!email.trim()) { setError('Enter your email first, then tap “Forgot password”.'); return }
     setBusy(true); setError(null)
-    try { await sendPasswordResetEmail(auth, email.trim()); setSuccess(`Password reset email sent to ${email.trim()}.`) }
+    try { await sendResetEmail(email.trim()); setSuccess(`Password reset email sent to ${email.trim()}.`) }
     catch (err) { const m = friendlyError(err); if (m) setError(m); setBusy(false) }
   }
 
@@ -212,6 +234,13 @@ export default function AuthModal() {
                 value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder={mode === 'signup' ? 'Choose a password (6+ characters)' : 'Password'} className="am__input"
               />
+              {mode === 'signup' && (
+                <input
+                  type="password" required minLength={6} autoComplete="new-password"
+                  value={confirm} onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="Confirm password" className="am__input"
+                />
+              )}
               {error && <p className="am__error">{error}</p>}
               <button type="submit" className="am__primary" disabled={busy}>
                 {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}

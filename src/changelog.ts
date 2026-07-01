@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.7.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Sign-up now asks you to confirm your password (type it twice), and password-reset emails are branded to match the verification email.' },
+    ],
+  },
+  {
     version: '1.4.6.0',
     date: 'July 1, 2026',
     items: [
