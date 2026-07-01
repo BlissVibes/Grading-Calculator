@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AdsterraUnit } from '../config/ads'
 
 /**
@@ -9,11 +9,20 @@ import type { AdsterraUnit } from '../config/ads'
  * each banner its own isolated <iframe srcDoc>, so every unit has its own
  * atOptions and document context. Reliable, no global collisions.
  *
- * Ported from the ShinyCardboard website. These apps DON'T use Tailwind, so
- * every className has been replaced with an inline style object. The production
- * ad logic (srcDoc builder, iframe sandbox, scrolling="no") is byte-for-byte
- * identical to the website version.
+ * Fill detection: the srcDoc reports its real content height back via
+ * postMessage. Adsterra frequently serves NOTHING (unapproved domain, no
+ * inventory for the geo, VPN/datacenter IP, ad blocker) — which would otherwise
+ * leave an empty white box. If the reported height stays below FILL_THRESHOLD we
+ * treat the slot as unfilled and collapse it to nothing.
+ *
+ * Ported from the ShinyCardboard website (inline styles — these apps have no
+ * Tailwind). The sandbox flags and srcDoc ad snippet match the site version.
  */
+
+const RESIZE_MSG = 'sc-banner-resize'
+// A real banner in these slots is tall (rectangle = 250). An empty Adsterra
+// response leaves a near-zero body, so anything under this is "unfilled".
+const FILL_THRESHOLD = 30
 
 function buildSrcDoc({ key, width, height }: AdsterraUnit): string {
   return [
@@ -23,11 +32,45 @@ function buildSrcDoc({ key, width, height }: AdsterraUnit): string {
     `atOptions={'key':'${key}','format':'iframe','height':${height},'width':${width},'params':{}};`,
     '<\/script>',
     `<script type="text/javascript" src="https://www.highperformanceformat.com/${key}/invoke.js"><\/script>`,
+    // Report our content height so the parent can hide the slot if no ad fills
+    // (it can't measure an opaque-origin sandboxed iframe directly).
+    '<script>',
+    `function p(){try{parent.postMessage({t:'${RESIZE_MSG}',k:'${key}',h:document.body.scrollHeight},'*')}catch(e){}}`,
+    'try{new ResizeObserver(p).observe(document.body)}catch(e){}',
+    "window.addEventListener('load',p);setInterval(p,1000);",
+    '<\/script>',
     '</body></html>',
   ].join('')
 }
 
-export function AdsterraBanner({ unit, className = '' }: { unit: AdsterraUnit; className?: string }) {
+export function AdsterraBanner({
+  unit,
+  className = '',
+  onLoaded,
+}: {
+  unit: AdsterraUnit
+  className?: string
+  onLoaded?: (loaded: boolean) => void
+}) {
+  const [filled, setFilled] = useState(false)
+  const notified = useRef(false)
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return
+    function onMsg(e: MessageEvent) {
+      const d = e.data as { t?: string; k?: string; h?: number } | null
+      if (d && d.t === RESIZE_MSG && d.k === unit.key && typeof d.h === 'number' && d.h >= FILL_THRESHOLD) {
+        if (!notified.current) {
+          notified.current = true
+          setFilled(true)
+          onLoaded?.(true)
+        }
+      }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [unit.key, onLoaded])
+
   if (import.meta.env.DEV) {
     return (
       <div className={className} style={{ display: 'flex', justifyContent: 'center' }}>
@@ -52,7 +95,18 @@ export function AdsterraBanner({ unit, className = '' }: { unit: AdsterraUnit; c
   }
 
   return (
-    <div className={className} style={{ display: 'flex', justifyContent: 'center' }}>
+    // While unfilled the wrapper is collapsed to 0 height and clips the iframe,
+    // so an empty ad shows nothing — but the iframe stays mounted so its ad
+    // script runs and can report a fill.
+    <div
+      className={className}
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        height: filled ? undefined : 0,
+        overflow: 'hidden',
+      }}
+    >
       <iframe
         title="Advertisement"
         width={unit.width}
@@ -79,10 +133,12 @@ export function ResponsiveAdsterraBanner({
   desktop,
   mobile,
   className = '',
+  onLoaded,
 }: {
   desktop: AdsterraUnit
   mobile: AdsterraUnit
   className?: string
+  onLoaded?: (loaded: boolean) => void
 }) {
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches,
@@ -96,7 +152,7 @@ export function ResponsiveAdsterraBanner({
     return () => mq.removeEventListener('change', update)
   }, [])
 
-  return <AdsterraBanner unit={isMobile ? mobile : desktop} className={className} />
+  return <AdsterraBanner unit={isMobile ? mobile : desktop} className={className} onLoaded={onLoaded} />
 }
 
 export default AdsterraBanner

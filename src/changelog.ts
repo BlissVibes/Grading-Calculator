@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.4.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Ads that don\'t fill (no inventory / VPN / blocked) now collapse instead of showing an empty white box — the bottom ad row only appears when a real ad loads.' },
+    ],
+  },
+  {
     version: '1.4.3.0',
     date: 'July 1, 2026',
     items: [
