@@ -471,10 +471,9 @@ export default function App() {
       <SettingsPanel settings={settings} onUpdate={setSettings} onOpenChangelog={() => navigate('/changelog')} />
 
       <header className="app-header">
-        <img src="/logo.svg" alt="Grading Calculator Logo" className="app-logo" />
+        <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Grading Calculator Logo" className="app-logo" />
         <h1 className="app-title">Grading Calculator</h1>
-        <p className="app-byline">by BlissVibes</p>
-        <p className="app-version">v{__APP_VERSION__}</p>
+        <p className="app-byline">by BlissVibes <span className="app-version">v{__APP_VERSION__}</span></p>
         <p className="app-subtitle">
           Calculate grading profits, fees & upcharges for PSA, TAG, Beckett, ARS, and CGC
         </p>

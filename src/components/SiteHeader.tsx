@@ -44,6 +44,8 @@ export default function SiteHeader() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/'
   const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href))
   const onTools = TOOLS.some((t) => path.startsWith(t.href))
+  // Show a BETA badge on the beta channel (served under beta.shinycardboard.win).
+  const isBeta = typeof window !== 'undefined' && window.location.hostname.startsWith('beta.')
 
   const signIn = () => {
     void signInWithPopup(auth, new GoogleAuthProvider()).catch(() => {})
@@ -57,7 +59,10 @@ export default function SiteHeader() {
   return (
     <header className="sh">
       <div className="sh__inner" ref={barRef}>
-        <a className="sh__logo" href="/">Shiny Cardboard</a>
+        <div className="sh__brand">
+          <a className="sh__logo" href="/">Shiny Cardboard</a>
+          {isBeta && <span className="sh__beta">Beta</span>}
+        </div>
 
         {/* Desktop nav */}
         <nav className="sh__nav">

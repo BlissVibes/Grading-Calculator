@@ -32,6 +32,22 @@
   -webkit-text-fill-color: transparent;
   color: transparent;
 }
+.sh__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sh__beta {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
 .sh__nav {
   display: flex;
   align-items: center;
