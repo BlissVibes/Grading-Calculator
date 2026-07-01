@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.5.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Ad keys are now channel-aware: the beta site serves its own Adsterra units and production serves the live ones, selected automatically by domain — same code on both.' },
+    ],
+  },
+  {
     version: '1.4.4.0',
     date: 'July 1, 2026',
     items: [
