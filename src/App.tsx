@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, PREMIUM_TENS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
 import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, fieldsFromMatch } from './priceLookup';
+import SiteHeader from './components/SiteHeader';
 import type { LookupStatus } from './priceLookup';
 import { isStampedMatch } from './pokemonCenterCards';
 import FileDropZone from './components/FileDropZone';
@@ -464,7 +465,9 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <>
+      <SiteHeader />
+      <div className="app">
       <SettingsPanel settings={settings} onUpdate={setSettings} onOpenChangelog={() => navigate('/changelog')} />
 
       <header className="app-header">
@@ -573,6 +576,7 @@ export default function App() {
 
         <AdSlots />
       </main>
-    </div>
+      </div>
+    </>
   );
 }

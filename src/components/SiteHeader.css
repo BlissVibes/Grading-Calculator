@@ -1,0 +1,228 @@
+/* ShinyCardboard shared site header — matches the main site's Navbar aesthetic
+   (holo-gradient wordmark, dark-surface blurred bar) using plain CSS so it can
+   live in the Tailwind-free tool apps. */
+.sh {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(26, 26, 46, 0.85); /* dark-surface @ 85% */
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #262a3f;
+  font-family: inherit;
+}
+.sh__inner {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.sh__logo {
+  font-size: 1.3rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1, #06b6d4, #ec4899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.sh__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.sh__link {
+  padding: 0.5rem 0.85rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #9aa0b4;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.sh__link:hover {
+  color: #e8eaf0;
+  background: #23273a;
+}
+.sh__link.is-active {
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.16);
+}
+.sh__caret {
+  font-size: 0.7rem;
+  display: inline-block;
+  transition: transform 0.15s;
+}
+.sh__caret.open {
+  transform: rotate(180deg);
+}
+.sh__dd {
+  position: relative;
+}
+.sh__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 210px;
+  background: #1a1a2e;
+  border: 1px solid #2d3148;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  padding: 0.35rem;
+  z-index: 110;
+}
+.sh__menu a,
+.sh__menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #cbd0e0;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.sh__menu a:hover,
+.sh__menu button:hover {
+  background: #23273a;
+  color: #fff;
+}
+.sh__menu a.is-active {
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.12);
+}
+.sh__userinfo {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: #8b90a8;
+  border-bottom: 1px solid #2d3148;
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sh__user {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.sh__avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.sh__avatar--fallback {
+  background: rgba(139, 92, 246, 0.3);
+  color: #a78bfa;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.sh__signin {
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.sh__signin:hover {
+  filter: brightness(1.08);
+}
+/* Hamburger (mobile only) */
+.sh__burger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+}
+.sh__burger span {
+  width: 20px;
+  height: 2px;
+  background: #cbd0e0;
+  border-radius: 2px;
+}
+.sh__mobile {
+  display: none;
+}
+@media (max-width: 760px) {
+  .sh__nav {
+    display: none;
+  }
+  .sh__burger {
+    display: flex;
+  }
+  .sh__mobile {
+    display: block;
+    border-top: 1px solid #262a3f;
+    padding: 0.5rem;
+    background: rgba(26, 26, 46, 0.98);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .sh__mobile a,
+  .sh__mobile button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.7rem 0.85rem;
+    border-radius: 0.5rem;
+    color: #cbd0e0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .sh__mobile a:hover,
+  .sh__mobile button:hover {
+    background: #23273a;
+  }
+  .sh__mobile a.is-active {
+    color: #a78bfa;
+    background: rgba(139, 92, 246, 0.12);
+  }
+  .sh__mobile-label {
+    padding: 0.5rem 0.85rem 0.25rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #8b90a8;
+  }
+  .sh__indent {
+    padding-left: 1.5rem !important;
+  }
+  .sh__mobile-sep {
+    height: 1px;
+    background: #262a3f;
+    margin: 0.35rem 0;
+  }
+}
