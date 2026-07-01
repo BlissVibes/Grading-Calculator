@@ -69,10 +69,13 @@ function friendlyError(e: unknown): string {
 }
 
 async function requestSignInLink(email: string): Promise<void> {
-  const res = await fetch('/api/request-signin-link', {
+  // Folded into /api/redeem-promo (action dispatch) on the main site to stay
+  // under the Vercel Hobby-plan 12-function limit; reached same-origin via the
+  // proxy. Absolute path so it hits the main domain, not the tool's base path.
+  const res = await fetch('/api/redeem-promo', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ action: 'signin-link', email }),
   })
   let data: { ok?: boolean; message?: string } = {}
   try { data = await res.json() } catch { /* ignore */ }
