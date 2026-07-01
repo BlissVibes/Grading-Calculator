@@ -132,7 +132,7 @@ export default function SiteHeader() {
                 <div className="sh__menu">
                   <div className="sh__userinfo">
                     {user.displayName || user.email}
-                    {isVip && <div className="sh__viprow">Launch VIP — founding member</div>}
+                    {isVip && <div className="sh__viprow">Launch VIP - founding member</div>}
                   </div>
                   <button onClick={doSignOut}>Sign out</button>
                 </div>
@@ -168,7 +168,7 @@ export default function SiteHeader() {
           <div className="sh__mobile-sep" />
           {user ? (
             <>
-              {isVip && <div className="sh__mobile-label"><span className="sh__vip">VIP</span> Launch VIP — founding member</div>}
+              {isVip && <div className="sh__mobile-label"><span className="sh__vip">VIP</span> Launch VIP - founding member</div>}
               <button onClick={doSignOut}>Sign out ({user.displayName || user.email})</button>
             </>
           ) : (

@@ -28,7 +28,7 @@ export default function CompanyComparison({ cards, settings }: Props) {
   return (
     <div className="comparison-section">
       <div className="comparison-section__title">
-        Company Comparison — {included.length === cards.length ? 'All Cards' : `${included.length} Counted Card${included.length === 1 ? '' : 's'}`}
+        Company Comparison - {included.length === cards.length ? 'All Cards' : `${included.length} Counted Card${included.length === 1 ? '' : 's'}`}
       </div>
 
       <div className="comparison-grade-tabs">

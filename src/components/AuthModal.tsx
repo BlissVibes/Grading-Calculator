@@ -51,19 +51,19 @@ function friendlyError(e: unknown): string {
   switch (code) {
     case 'auth/invalid-email': return 'That email address looks invalid.'
     case 'auth/missing-password': return 'Enter your password.'
-    case 'auth/weak-password': return 'Password is too weak — use at least 6 characters.'
-    case 'auth/email-already-in-use': return 'That email is already registered — try signing in instead.'
+    case 'auth/weak-password': return 'Password is too weak - use at least 6 characters.'
+    case 'auth/email-already-in-use': return 'That email is already registered - try signing in instead.'
     case 'auth/invalid-credential':
     case 'auth/wrong-password':
     case 'auth/user-not-found': return 'Incorrect email or password.'
-    case 'auth/account-exists-with-different-credential': return 'That email is registered with Google — continue with Google.'
-    case 'auth/too-many-requests': return 'Too many attempts — please wait a bit and try again.'
-    case 'auth/network-request-failed': return 'Network error — check your connection and retry.'
+    case 'auth/account-exists-with-different-credential': return 'That email is registered with Google - continue with Google.'
+    case 'auth/too-many-requests': return 'Too many attempts - please wait a bit and try again.'
+    case 'auth/network-request-failed': return 'Network error - check your connection and retry.'
     case 'auth/popup-closed-by-user':
     case 'auth/cancelled-popup-request': return ''
     default:
       if (e instanceof Error && e.message) return e.message
-      return 'Something went wrong — please try again.'
+      return 'Something went wrong - please try again.'
   }
 }
 
@@ -83,7 +83,7 @@ async function requestSignInLink(email: string): Promise<void> {
   })
   let data: { ok?: boolean; message?: string } = {}
   try { data = await res.json() } catch { /* ignore */ }
-  if (!res.ok || !data.ok) throw new Error(data.message || 'Could not send a sign-in link — try again.')
+  if (!res.ok || !data.ok) throw new Error(data.message || 'Could not send a sign-in link - try again.')
   try { window.localStorage.setItem(EMAIL_LINK_STORAGE_KEY, email) } catch { /* ignore */ }
 }
 
@@ -191,7 +191,7 @@ export default function AuthModal() {
   const doEmailLink = async () => {
     if (!email.trim()) { setError('Enter your email first, then request a sign-in link.'); return }
     setBusy(true); setError(null)
-    try { await requestSignInLink(email.trim()); setSuccess(`Check your inbox — we sent a one-time sign-in link to ${email.trim()}.`) }
+    try { await requestSignInLink(email.trim()); setSuccess(`Check your inbox - we sent a one-time sign-in link to ${email.trim()}.`) }
     catch (err) { const m = friendlyError(err); if (m) setError(m); setBusy(false) }
   }
 

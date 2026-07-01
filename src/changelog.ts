@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.13.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Moved the + Add Card button to the left of the search box. Tidied the price-lookup confirmation ("Found. Base Set #4 - Filled in Set & Card #") and swapped em dashes for hyphens in status messages.' },
+    ],
+  },
+  {
     version: '1.4.12.0',
     date: 'July 1, 2026',
     items: [
