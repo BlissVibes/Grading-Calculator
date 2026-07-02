@@ -101,7 +101,9 @@
 }
 .sh__menu a,
 .sh__menu button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   width: 100%;
   text-align: left;
   padding: 0.55rem 0.75rem;
@@ -113,6 +115,18 @@
   border: none;
   cursor: pointer;
   font-family: inherit;
+}
+/* Coloured account-menu icons (match the main site's Navbar exactly). */
+.sh__mi {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+/* Left side of a collapsible toggle row (icon + label), caret stays on the right. */
+.sh__milabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 .sh__menu a:hover,
 .sh__menu button:hover {
@@ -225,7 +239,9 @@
   }
   .sh__mobile a,
   .sh__mobile button {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
     width: 100%;
     text-align: left;
     padding: 0.7rem 0.85rem;
@@ -337,6 +353,9 @@
 }
 /* Active-tier confirmation row (non-interactive). */
 .sh__tierrow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   padding: 0.55rem 0.75rem;
   font-size: 0.875rem;
   color: #4ade80;

@@ -40,6 +40,44 @@ function initial(u: User): string {
   return (u.displayName || u.email || '?').charAt(0).toUpperCase()
 }
 
+// Account-menu icons + colors, matched EXACTLY to the main site's Navbar so every
+// page shows the same coloured glyphs (green tier check, purple tag/link, yellow
+// heart, amber upgrade/beta, gray gear/sign-out).
+const IC = {
+  bolt: 'M13 10V3L4 14h7v7l9-11h-7z',
+  star: 'M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z',
+  check: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  gear: [
+    'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
+    'M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+  ],
+  tag: 'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A2 2 0 013 8V4a1 1 0 011-1z',
+  heart: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
+  link: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
+  signout: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
+} as const
+
+function MenuIcon({ d, color, fill = false }: { d: string | readonly string[]; color: string; fill?: boolean }) {
+  const paths = Array.isArray(d) ? d : [d as string]
+  return (
+    <svg
+      className="sh__mi"
+      viewBox="0 0 24 24"
+      style={{ color }}
+      fill={fill ? 'currentColor' : 'none'}
+      stroke={fill ? 'none' : 'currentColor'}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths.map((p, i) => (
+        <path key={i} d={p} />
+      ))}
+    </svg>
+  )
+}
+
 export default function SiteHeader() {
   const [user, setUser] = useState<User | null>(auth.currentUser)
   const [sub, setSub] = useState<SubData>(EMPTY_SUB)
@@ -151,23 +189,26 @@ export default function SiteHeader() {
   const accountActions = (
     <>
       {showBetaLink && (
-        <a href={BETA_SITE_URL} className="sh__amber">⚡ Beta site</a>
+        <a href={BETA_SITE_URL} className="sh__amber"><MenuIcon d={IC.bolt} color="#fcd34d" />Beta site</a>
       )}
       {!isPro && (
         <button onClick={handleUpgrade} disabled={upgrading} className="sh__amber">
+          <MenuIcon d={IC.star} color="#fbbf24" fill />
           {upgrading ? 'Redirecting...' : 'Upgrade to Pro - $4.99/mo'}
         </button>
       )}
       {isPro && (
         <>
-          <div className="sh__tierrow">✓ {label || 'Pro subscriber'}</div>
+          <div className="sh__tierrow"><MenuIcon d={IC.check} color="#4ade80" />{label || 'Pro subscriber'}</div>
           {isSilver && (
             <button onClick={handleUpgrade} disabled={upgrading} className="sh__amber">
+              <MenuIcon d={IC.star} color="#fbbf24" fill />
               {upgrading ? 'Redirecting...' : 'Upgrade to Pro Gold'}
             </button>
           )}
           {hasStripeCustomer && (
             <button onClick={handleManage} disabled={managing}>
+              <MenuIcon d={IC.gear} color="#9ca3af" />
               {managing ? 'Opening...' : 'Manage subscription'}
             </button>
           )}
@@ -175,7 +216,7 @@ export default function SiteHeader() {
       )}
       <PromoRow open={promoOpen} setOpen={setPromoOpen} signedIn={!!user} />
       <a href={PAYPAL_DONATE_URL} target="_blank" rel="noopener noreferrer" className="sh__donate">
-        ♥ Donate
+        <MenuIcon d={IC.heart} color="#facc15" fill />Donate
       </a>
       <SocialsRow open={socialsOpen} setOpen={setSocialsOpen} />
     </>
@@ -239,7 +280,7 @@ export default function SiteHeader() {
                     {isVip && <div className="sh__viprow">Launch VIP - founding member</div>}
                   </div>
                   {accountActions}
-                  <button onClick={doSignOut}>Sign out</button>
+                  <button onClick={doSignOut}><MenuIcon d={IC.signout} color="#9ca3af" />Sign out</button>
                 </div>
               )}
             </div>
@@ -295,7 +336,7 @@ export default function SiteHeader() {
             <>
               <div className="sh__mobile-sep" />
               {accountActions}
-              <button onClick={doSignOut}>Sign out</button>
+              <button onClick={doSignOut}><MenuIcon d={IC.signout} color="#9ca3af" />Sign out</button>
             </>
           )}
         </div>
@@ -333,7 +374,7 @@ function PromoRow({ open, setOpen, signedIn }: { open: boolean; setOpen: (v: boo
   return (
     <div className="sh__promo">
       <button className="sh__promo-toggle" onClick={() => setOpen(!open)}>
-        <span>🏷 Have a promo code?</span>
+        <span className="sh__milabel"><MenuIcon d={IC.tag} color="#8b5cf6" />Have a promo code?</span>
         <span className={`sh__caret${open ? ' open' : ''}`}>▾</span>
       </button>
       {open && (
@@ -412,7 +453,7 @@ function SocialsRow({ open, setOpen }: { open: boolean; setOpen: (v: boolean) =>
   return (
     <div className="sh__promo">
       <button className="sh__promo-toggle" onClick={() => setOpen(!open)}>
-        <span>🔗 Our socials</span>
+        <span className="sh__milabel"><MenuIcon d={IC.link} color="#8b5cf6" />Our socials</span>
         <span className={`sh__caret${open ? ' open' : ''}`}>▾</span>
       </button>
       {open && (
