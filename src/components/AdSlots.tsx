@@ -56,7 +56,7 @@ export default function AdSlots() {
       style={{
         // Push the ad block well clear of the functional UI so it's never mistaken
         // for part of the tool — with extra breathing room on mobile.
-        marginTop: anyFilled ? (isDesktop ? '3rem' : '4.5rem') : 0,
+        marginTop: anyFilled ? (isDesktop ? '6rem' : '7rem') : 0,
       }}
     >
       <div
