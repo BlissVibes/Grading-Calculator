@@ -23,6 +23,7 @@ export const CHANGELOG: ChangelogRelease[] = [
       { text: 'The header Beta badge now also shows on the Vercel git-beta preview host, matching the main site.' },
       { text: 'Fixed the bottom ad row on mobile: ads now stack vertically (matching the main site) instead of crushing the native banner into a narrow column.' },
       { text: 'Added "Our socials" to the account menu (under Donate): Instagram and X, matching the main site.' },
+      { text: 'Ads are now pushed further below the tool (more so on mobile) and wrapped in an outlined box labelled "Ads Help Us Pay the Bills", so it is clear those images are advertisements.' },
     ],
   },
   {

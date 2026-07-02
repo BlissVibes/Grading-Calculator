@@ -26,15 +26,16 @@ function useIsDesktop(): boolean {
  * else — signed out, free, or Silver — sees a native banner alongside a 300x250
  * rectangle. Ported to inline styles (no Tailwind in these apps).
  *
+ * UX: the ads are pushed well BELOW the functional UI (extra gap, more on mobile)
+ * and wrapped in an outlined, labelled box ("Ads Help Us Pay the Bills") so it's
+ * obvious the images below the tool are advertisements, not part of the app. The
+ * box + label + spacing only appear once a real ad actually fills — Adsterra
+ * frequently serves nothing (unapproved domain, no inventory, VPN/datacenter IP),
+ * and an empty labelled box would look broken.
+ *
  * Layout mirrors the main site's `flex-col md:flex-row`: the ads STACK on mobile
  * (native full-width on top, rectangle centered below) and sit side-by-side on
- * desktop. The old always-row layout crushed the native ad into a narrow column
- * beside the rectangle on phones.
- *
- * Each ad reports whether it actually filled (Adsterra frequently serves nothing
- * on unapproved domains / VPN IPs / no inventory). The separator + spacing only
- * appear once at least one ad fills, so an empty row shows nothing at all rather
- * than a blank white box with a divider line.
+ * desktop.
  */
 export default function AdSlots() {
   const adFree = useAdFree()
@@ -53,22 +54,50 @@ export default function AdSlots() {
   return (
     <div
       style={{
-        // Only take up space / draw the divider once something actually renders.
-        marginTop: anyFilled ? '2rem' : 0,
-        paddingTop: anyFilled ? '1rem' : 0,
-        borderTop: anyFilled ? '1px solid #1f2937' : 'none',
-        display: 'flex',
-        flexDirection: isDesktop ? 'row' : 'column',
-        gap: '1.5rem',
-        justifyContent: 'center',
-        alignItems: isDesktop ? 'flex-start' : 'center',
+        // Push the ad block well clear of the functional UI so it's never mistaken
+        // for part of the tool — with extra breathing room on mobile.
+        marginTop: anyFilled ? (isDesktop ? '3rem' : '4.5rem') : 0,
       }}
     >
-      <div style={isDesktop ? { flex: 1, minWidth: 0 } : { width: '100%' }}>
-        <AdsterraNative onLoaded={onNative} />
-      </div>
-      <div style={{ flexShrink: 0 }}>
-        <AdsterraBanner unit={ADSTERRA.rectangle} onLoaded={onBanner} />
+      <div
+        style={{
+          // Outlined "these are ads" box — only drawn once a real ad fills.
+          border: anyFilled ? '1px solid #2d3148' : 'none',
+          borderRadius: anyFilled ? '0.75rem' : 0,
+          background: anyFilled ? 'rgba(26, 26, 46, 0.4)' : 'transparent',
+          padding: anyFilled ? '0.75rem 1rem 1rem' : 0,
+        }}
+      >
+        {anyFilled && (
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+              color: '#8b90a8',
+              marginBottom: '0.85rem',
+            }}
+          >
+            💛 Ads Help Us Pay the Bills
+          </div>
+        )}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: isDesktop ? 'row' : 'column',
+            gap: '1.5rem',
+            justifyContent: 'center',
+            alignItems: isDesktop ? 'flex-start' : 'center',
+          }}
+        >
+          <div style={isDesktop ? { flex: 1, minWidth: 0 } : { width: '100%' }}>
+            <AdsterraNative onLoaded={onNative} />
+          </div>
+          <div style={{ flexShrink: 0 }}>
+            <AdsterraBanner unit={ADSTERRA.rectangle} onLoaded={onBanner} />
+          </div>
+        </div>
       </div>
     </div>
   )
