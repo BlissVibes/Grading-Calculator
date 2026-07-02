@@ -122,6 +122,16 @@
   height: 16px;
   flex-shrink: 0;
 }
+/* Sign out is red, matching the main site. Overrides the default menu row color. */
+.sh__menu .sh__signout,
+.sh__mobile .sh__signout {
+  color: #f87171;
+}
+.sh__menu .sh__signout:hover,
+.sh__mobile .sh__signout:hover {
+  color: #fca5a5;
+  background: #2a1e22;
+}
 /* Left side of a collapsible toggle row (icon + label), caret stays on the right. */
 .sh__milabel {
   display: inline-flex;

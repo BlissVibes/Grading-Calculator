@@ -280,7 +280,7 @@ export default function SiteHeader() {
                     {isVip && <div className="sh__viprow">Launch VIP - founding member</div>}
                   </div>
                   {accountActions}
-                  <button onClick={doSignOut}><MenuIcon d={IC.signout} color="#9ca3af" />Sign out</button>
+                  <button onClick={doSignOut} className="sh__signout"><MenuIcon d={IC.signout} color="#f87171" />Sign out</button>
                 </div>
               )}
             </div>
@@ -336,7 +336,7 @@ export default function SiteHeader() {
             <>
               <div className="sh__mobile-sep" />
               {accountActions}
-              <button onClick={doSignOut}><MenuIcon d={IC.signout} color="#9ca3af" />Sign out</button>
+              <button onClick={doSignOut} className="sh__signout"><MenuIcon d={IC.signout} color="#f87171" />Sign out</button>
             </>
           )}
         </div>

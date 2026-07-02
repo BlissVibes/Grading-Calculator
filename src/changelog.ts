@@ -25,7 +25,7 @@ export const CHANGELOG: ChangelogRelease[] = [
       { text: 'Added "Our socials" to the account menu (under Donate): Instagram and X, matching the main site.' },
       { text: 'Ads are now pushed further below the tool (more so on mobile) and wrapped in an outlined box labelled "Ads Help Us Pay the Bills", so it is clear those images are advertisements.' },
       { text: 'Fixed the settings cog on mobile/small windows: it now sits below the site header instead of overlapping the navigation menu.' },
-      { text: 'Account-menu icons now use the same colours as the main site (green tier check, purple promo/socials, yellow donate, gray sign-out).' },
+      { text: 'Account-menu icons now use the same colours as the main site (green tier check, purple promo/socials, yellow donate, red sign-out).' },
     ],
   },
   {
