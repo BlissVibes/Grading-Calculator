@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.20.1',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Grading Submissions panel (and all buttons/inputs) now use the same font as the rest of the page — browsers were rendering form controls in their default font.' },
+    ],
+  },
+  {
     version: '1.4.20.0',
     date: 'July 3, 2026',
     items: [
