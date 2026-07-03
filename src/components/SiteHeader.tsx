@@ -228,17 +228,26 @@ export default function SiteHeader() {
       )}
       {isPro && (
         <>
-          <div className="sh__tierrow"><MenuIcon d={IC.check} color="#4ade80" />{label || 'Pro subscriber'}</div>
+          <div className="sh__tierrow">
+            <MenuIcon d={IC.check} color="#4ade80" />
+            <span>{label || 'Pro subscriber'}</span>
+            {hasStripeCustomer && (
+              <button
+                type="button"
+                className={`sh__cog${managing ? ' is-busy' : ''}`}
+                onClick={handleManage}
+                disabled={managing}
+                title="Manage or cancel subscription"
+                aria-label="Manage or cancel subscription"
+              >
+                <MenuIcon d={IC.gear} color="#9ca3af" />
+              </button>
+            )}
+          </div>
           {isSilver && (
             <button onClick={handleUpgrade} disabled={upgrading} className="sh__amber">
               <MenuIcon d={IC.star} color="#fbbf24" fill />
               {upgrading ? 'Redirecting...' : upgradeText('Upgrade to Pro Gold')}
-            </button>
-          )}
-          {hasStripeCustomer && (
-            <button onClick={handleManage} disabled={managing}>
-              <MenuIcon d={IC.gear} color="#9ca3af" />
-              {managing ? 'Opening...' : 'Manage subscription'}
             </button>
           )}
         </>

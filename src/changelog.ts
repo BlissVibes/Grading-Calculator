@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.19.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Active subscribers get a cog next to their tier that opens the Stripe billing portal to manage, upgrade, or cancel their subscription.' },
+    ],
+  },
+  {
     version: '1.4.18.0',
     date: 'July 3, 2026',
     items: [
