@@ -36,6 +36,16 @@
 
 body { min-height: 100vh; }
 
+/* Form controls don't inherit the page font by default (browsers give buttons
+   Arial etc.) — force every control onto the app font so panels built from
+   <button>s (e.g. Grading Submissions) match the surrounding page.
+   The shared site header (.sh) is EXCLUDED: it's the cross-tool kit and must
+   render identically to the Portfolio tool (which has no such global rule) —
+   its CSS opts specific elements into the page font itself. */
+button:not(.sh *), input:not(.sh *), select:not(.sh *), textarea:not(.sh *) {
+  font-family: inherit;
+}
+
 /* ===== Light mode ===== */
 :root[data-theme="light"] {
   color-scheme: light;
