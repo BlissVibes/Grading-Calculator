@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.20.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Comp / manually-granted tiers now show a "Granted" tag (they have no Stripe subscription, so no manage cog).' },
+    ],
+  },
+  {
     version: '1.4.19.0',
     date: 'July 3, 2026',
     items: [

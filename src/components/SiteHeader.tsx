@@ -231,7 +231,7 @@ export default function SiteHeader() {
           <div className="sh__tierrow">
             <MenuIcon d={IC.check} color="#4ade80" />
             <span>{label || 'Pro subscriber'}</span>
-            {hasStripeCustomer && (
+            {hasStripeCustomer ? (
               <button
                 type="button"
                 className={`sh__cog${managing ? ' is-busy' : ''}`}
@@ -242,6 +242,10 @@ export default function SiteHeader() {
               >
                 <MenuIcon d={IC.gear} color="#9ca3af" />
               </button>
+            ) : (
+              <span className="sh__granted" title="Comp / manually granted — no Stripe subscription behind this tier">
+                Granted
+              </span>
             )}
           </div>
           {isSilver && (
