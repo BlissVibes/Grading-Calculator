@@ -194,18 +194,25 @@ export default function SiteHeader() {
     </span>
   )
 
-  // Upgrade menu label: "<title> - $4.99/mo - Ad Free", and for a launch VIP the
-  // 50%-off price with the base struck through (the discount auto-applies at
-  // checkout, so surface it here before they click).
-  const upgradeText = (title: string) =>
-    isVip ? (
-      <span>
-        {title} - <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{usd(PRO_PRICE_CENTS)}</span>{' '}
-        {usd(VIP_PRICE_CENTS)}/mo - Ad Free · VIP 50% off
+  // Upgrade menu label — two-line flex-column that mirrors the main site's Navbar
+  // exactly (title on top, a smaller dimmed price/benefits sub-line below) so the
+  // spacing matches across the ecosystem. Launch VIPs see the 50%-off price with
+  // the base struck through (the discount auto-applies at checkout).
+  const upgradeText = (title: string) => (
+    <span className="sh__upsell">
+      <span>{title}</span>
+      <span className="sh__upsell-sub">
+        {isVip ? (
+          <>
+            <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{usd(PRO_PRICE_CENTS)}</span>{' '}
+            {usd(VIP_PRICE_CENTS)}/mo · Ad Free · VIP 50% off
+          </>
+        ) : (
+          <>{usd(PRO_PRICE_CENTS)}/mo · Ad Free</>
+        )}
       </span>
-    ) : (
-      <span>{title} - {usd(PRO_PRICE_CENTS)}/mo - Ad Free</span>
-    )
+    </span>
+  )
 
   // Upgrade / tier rows shared by the desktop dropdown and the mobile menu.
   const accountActions = (

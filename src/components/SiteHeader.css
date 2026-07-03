@@ -361,6 +361,17 @@
   color: #fcd34d;
   background: #23273a;
 }
+/* Upgrade upsell: title on line 1, dimmed price/benefits sub-line below — mirrors
+   the main site's Navbar two-line flex-col so spacing matches across the apps. */
+.sh__upsell {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.sh__upsell-sub {
+  font-size: 0.75rem;
+  color: rgba(251, 191, 36, 0.8); /* amber-400/80, matches the main site */
+}
 /* Active-tier confirmation row (non-interactive). */
 .sh__tierrow {
   display: flex;

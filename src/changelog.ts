@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.17.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Account menu: the "Upgrade to Pro" line now matches the main site’s two-line spacing (title above a dimmed price/benefits sub-line).' },
+    ],
+  },
+  {
     version: '1.4.16.0',
     date: 'July 3, 2026',
     items: [
