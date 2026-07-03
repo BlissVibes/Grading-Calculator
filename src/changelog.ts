@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.18.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Header: the brand lockup is now a separate icon + larger SHINY CARDBOARD wordmark, matching the main site.' },
+    ],
+  },
+  {
     version: '1.4.17.0',
     date: 'July 3, 2026',
     items: [

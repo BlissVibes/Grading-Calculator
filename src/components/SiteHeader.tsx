@@ -258,7 +258,8 @@ export default function SiteHeader() {
       <div className="sh__inner" ref={barRef}>
         <div className="sh__brand">
           <a className="sh__logo" href="/">
-            <img className="sh__logo-img" src={`${import.meta.env.BASE_URL}header-logo.png`} alt="Shiny Cardboard" />
+            <img className="sh__logo-icon" src={`${import.meta.env.BASE_URL}header-icon.png`} alt="" />
+            <img className="sh__logo-title" src={`${import.meta.env.BASE_URL}header-title.png`} alt="Shiny Cardboard" />
           </a>
           {isBeta && <span className="sh__beta">Beta</span>}
         </div>

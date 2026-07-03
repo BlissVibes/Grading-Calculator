@@ -24,14 +24,21 @@
 .sh__logo {
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
   text-decoration: none;
 }
-.sh__logo-img {
+/* Brand lockup split into two alpha-keyed PNGs (the black field is real
+   transparency, so they sit flush on the dark bar with no box) — matches the
+   main site: a circular icon left of a larger SHINY CARDBOARD wordmark. */
+.sh__logo-icon {
   height: 40px;
   width: auto;
   display: block;
-  /* PNG is alpha-keyed (black field is real transparency), so it sits flush on
-     the dark-surface bar with no visible box. */
+}
+.sh__logo-title {
+  height: 52px;
+  width: auto;
+  display: block;
 }
 .sh__brand {
   display: flex;
@@ -233,6 +240,14 @@
   display: none;
 }
 @media (max-width: 760px) {
+  /* Scale the brand lockup down on small screens (matches the main site's
+     h-9 icon / h-10 title mobile sizes) so it never crowds the burger. */
+  .sh__logo-icon {
+    height: 36px;
+  }
+  .sh__logo-title {
+    height: 40px;
+  }
   .sh__nav {
     display: none;
   }
