@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.20.2',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Account header (PRO tag etc.) restored to the same look as the Portfolio tool — the page-font fix no longer applies inside the shared site header.' },
+    ],
+  },
+  {
     version: '1.4.20.1',
     date: 'July 3, 2026',
     items: [
