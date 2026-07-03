@@ -69,17 +69,20 @@ export default function AdSlots() {
         }}
       >
         {anyFilled && (
-          <div
-            style={{
-              textAlign: 'center',
-              fontSize: '0.72rem',
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-              color: '#8b90a8',
-              marginBottom: '0.85rem',
-            }}
-          >
-            💛 Ads Help Us Pay the Bills
+          <div style={{ textAlign: 'center', marginBottom: '0.85rem' }}>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                color: '#8b90a8',
+              }}
+            >
+              💛 Ads Help Us Pay the Bills
+            </div>
+            <div style={{ fontSize: '0.66rem', color: '#6b7089', marginTop: '0.2rem' }}>
+              Subscribe to Pro to Remove Ads
+            </div>
           </div>
         )}
         <div

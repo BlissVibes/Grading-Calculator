@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.15.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'The ad box now notes "Subscribe to Pro to Remove Ads" under its label.' },
+    ],
+  },
+  {
     version: '1.4.14.0',
     date: 'July 1, 2026',
     items: [
