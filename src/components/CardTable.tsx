@@ -648,6 +648,11 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
             </button>
             <input
               className="cell-input cell-input--name"
+              // Focus the name field the instant the draft row mounts, so
+              // clicking "+ New Card" lets the user start typing immediately
+              // without a second click into the box. autoFocus only fires on
+              // mount, which happens exactly when a fresh draft row appears.
+              autoFocus={isDraft}
               value={card.cardName}
               onChange={(e) => onUpdate({ cardName: e.target.value })}
               placeholder="Card name"
