@@ -36,6 +36,15 @@ const PAYPAL_DONATE_URL =
 
 const EMPTY_SUB: SubData = { status: null, plan: null, currentPeriodEnd: null }
 
+// Pro Gold pricing shown in the upgrade menu. MIRRORS the server — keep in sync if
+// the plan/coupon changes: base 499¢ = $4.99/mo (api/stripe.js INLINE_PRICE.gold),
+// VIP 50% off = the VIP50FOREVER Stripe coupon applied at checkout for launchVip
+// accounts. Stripe rounds the discount to the nearest cent then subtracts it.
+const PRO_PRICE_CENTS = 499
+const VIP_PERCENT_OFF = 50
+const VIP_PRICE_CENTS = PRO_PRICE_CENTS - Math.round((PRO_PRICE_CENTS * VIP_PERCENT_OFF) / 100)
+const usd = (c: number) => `$${(c / 100).toFixed(2)}`
+
 function initial(u: User): string {
   return (u.displayName || u.email || '?').charAt(0).toUpperCase()
 }
@@ -185,6 +194,19 @@ export default function SiteHeader() {
     </span>
   )
 
+  // Upgrade menu label: "<title> - $4.99/mo - Ad Free", and for a launch VIP the
+  // 50%-off price with the base struck through (the discount auto-applies at
+  // checkout, so surface it here before they click).
+  const upgradeText = (title: string) =>
+    isVip ? (
+      <span>
+        {title} - <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{usd(PRO_PRICE_CENTS)}</span>{' '}
+        {usd(VIP_PRICE_CENTS)}/mo - Ad Free · VIP 50% off
+      </span>
+    ) : (
+      <span>{title} - {usd(PRO_PRICE_CENTS)}/mo - Ad Free</span>
+    )
+
   // Upgrade / tier rows shared by the desktop dropdown and the mobile menu.
   const accountActions = (
     <>
@@ -194,7 +216,7 @@ export default function SiteHeader() {
       {!isPro && (
         <button onClick={handleUpgrade} disabled={upgrading} className="sh__amber">
           <MenuIcon d={IC.star} color="#fbbf24" fill />
-          {upgrading ? 'Redirecting...' : 'Upgrade to Pro - $4.99/mo'}
+          {upgrading ? 'Redirecting...' : upgradeText('Upgrade to Pro')}
         </button>
       )}
       {isPro && (
@@ -203,7 +225,7 @@ export default function SiteHeader() {
           {isSilver && (
             <button onClick={handleUpgrade} disabled={upgrading} className="sh__amber">
               <MenuIcon d={IC.star} color="#fbbf24" fill />
-              {upgrading ? 'Redirecting...' : 'Upgrade to Pro Gold'}
+              {upgrading ? 'Redirecting...' : upgradeText('Upgrade to Pro Gold')}
             </button>
           )}
           {hasStripeCustomer && (

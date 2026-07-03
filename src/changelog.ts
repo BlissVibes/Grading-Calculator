@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.16.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'The account menu’s "Upgrade to Pro" line now shows the price and "Ad Free", and launch VIPs see their 50%-off price before checkout.' },
+    ],
+  },
+  {
     version: '1.4.15.0',
     date: 'July 3, 2026',
     items: [
