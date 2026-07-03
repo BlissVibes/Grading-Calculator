@@ -47,7 +47,7 @@ export default function CompanySelector({
         >
           {serviceLevels.map((sl) => (
             <option key={sl.id} value={sl.id}>
-              {sl.name} — ${sl.baseFee}/card ({sl.turnaround})
+              {sl.name} - ${sl.baseFee}/card ({sl.turnaround})
               {sl.minCards ? ` [min ${sl.minCards}]` : ''}
             </option>
           ))}

@@ -75,6 +75,18 @@ export default function SummaryBar({ cards, calculations, deductRawFromProfit, o
         <span className="summary-stat__label">Total Invested</span>
         <span className="summary-stat__value">{fmt(totalPricePaid)}</span>
       </div>
+      <div className="summary-stat summary-stat--rawcost">
+        <span className="summary-stat__label">Raw Card Cost</span>
+        <span className="summary-stat__value">{fmt(totalRawCost)}</span>
+        <label className="summary-stat__check" title="Subtract the raw card cost from Best Grade Profit">
+          <input
+            type="checkbox"
+            checked={deductRawFromProfit}
+            onChange={(e) => onToggleDeductRaw(e.target.checked)}
+          />
+          <span>Remove from profit</span>
+        </label>
+      </div>
       <div className="summary-stat">
         <span className="summary-stat__label">Submission Fees</span>
         <span className="summary-stat__value">{fmt(totalSubmission)}</span>
@@ -87,18 +99,6 @@ export default function SummaryBar({ cards, calculations, deductRawFromProfit, o
       <div className="summary-stat summary-stat--cost">
         <span className="summary-stat__label">Total Grading Charges</span>
         <span className="summary-stat__value">{fmt(totalGradingCharges)}</span>
-      </div>
-      <div className="summary-stat summary-stat--rawcost">
-        <span className="summary-stat__label">Raw Card Cost</span>
-        <span className="summary-stat__value">{fmt(totalRawCost)}</span>
-        <label className="summary-stat__check" title="Subtract the raw card cost from Best Grade Profit">
-          <input
-            type="checkbox"
-            checked={deductRawFromProfit}
-            onChange={(e) => onToggleDeductRaw(e.target.checked)}
-          />
-          <span>Remove from profit</span>
-        </label>
       </div>
       <div className={`summary-stat summary-stat--profit ${profitClass}`}>
         <span className="summary-stat__label">Best Grade Profit</span>

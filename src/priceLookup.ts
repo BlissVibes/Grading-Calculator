@@ -200,7 +200,10 @@ export async function lookupCard(card: GradingCard): Promise<PriceLookupResult> 
   if (!query) throw new Error('No card name to search for');
 
   const apiBase = getApiBase();
-  const url = `${apiBase}/api/price-lookup?q=${encodeURIComponent(query)}`;
+  const base = import.meta.env.BASE_URL;
+  const url = apiBase
+    ? `${apiBase}/api/price-lookup?q=${encodeURIComponent(query)}`
+    : `${base}api/price-lookup?q=${encodeURIComponent(query)}`;
 
   const resp = await fetch(url);
   if (!resp.ok) {
@@ -382,7 +385,10 @@ export async function lookupBatch(
 
 export async function lookupByPath(path: string): Promise<PriceLookupResult> {
   const apiBase = getApiBase();
-  const url = `${apiBase}/api/price-lookup?mode=prices&path=${encodeURIComponent(path)}`;
+  const base = import.meta.env.BASE_URL;
+  const url = apiBase
+    ? `${apiBase}/api/price-lookup?mode=prices&path=${encodeURIComponent(path)}`
+    : `${base}api/price-lookup?mode=prices&path=${encodeURIComponent(path)}`;
 
   const resp = await fetch(url);
   if (!resp.ok) {

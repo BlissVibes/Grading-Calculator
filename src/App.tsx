@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, PREMIUM_TENS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
 import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, fieldsFromMatch } from './priceLookup';
+import SiteHeader from './components/SiteHeader';
 import type { LookupStatus } from './priceLookup';
 import { isStampedMatch } from './pokemonCenterCards';
 import FileDropZone from './components/FileDropZone';
@@ -14,6 +15,7 @@ import CompanyComparison from './components/CompanyComparison';
 import SettingsPanel from './components/SettingsPanel';
 import Changelog from './components/Changelog';
 import SubmissionsPanel from './components/SubmissionsPanel';
+import AdSlots from './components/AdSlots';
 
 const STORAGE_CARDS = 'gc_cards';
 const STORAGE_SETTINGS = 'gc_settings';
@@ -463,14 +465,15 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <>
+      <SiteHeader />
+      <div className="app">
       <SettingsPanel settings={settings} onUpdate={setSettings} onOpenChangelog={() => navigate('/changelog')} />
 
       <header className="app-header">
-        <img src="/logo.svg" alt="Grading Calculator Logo" className="app-logo" />
+        <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="Grading Calculator Logo" className="app-logo" />
         <h1 className="app-title">Grading Calculator</h1>
-        <p className="app-byline">by BlissVibes</p>
-        <p className="app-version">v{__APP_VERSION__}</p>
+        <p className="app-byline">by BlissVibes <span className="app-version">v{__APP_VERSION__}</span></p>
         <p className="app-subtitle">
           Calculate grading profits, fees & upcharges for PSA, TAG, Beckett, ARS, and CGC
         </p>
@@ -569,7 +572,10 @@ export default function App() {
         {viewCards.length > 0 && (
           <CompanyComparison cards={viewCards} settings={settings} />
         )}
+
+        <AdSlots />
       </main>
-    </div>
+      </div>
+    </>
   );
 }

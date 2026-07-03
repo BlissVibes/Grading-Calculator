@@ -318,6 +318,9 @@ export default function CardTable({
   return (
     <div>
       <div className="table-controls">
+        <button className="btn-add-card" onClick={onAddCard} disabled={!!draftCard} title={draftCard ? 'Finish the new card above first' : 'Add a new card'}>
+          + Add Card
+        </button>
         <input
           className="search-input"
           type="text"
@@ -325,9 +328,6 @@ export default function CardTable({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <button className="btn-add-card" onClick={onAddCard} disabled={!!draftCard} title={draftCard ? 'Finish the new card above first' : 'Add a new card'}>
-          + Add Card
-        </button>
         <div className="grade-picker-wrap" ref={gradePickerRef}>
           <button
             className={`btn-grades${showGradePicker ? ' btn-grades--open' : ''}`}
@@ -501,7 +501,7 @@ export default function CardTable({
               <>
                 <tr className="draft-banner-row">
                   <td colSpan={100}>
-                    New card — fill in the details, search prices with 🔍, then press ✓ to add it (✕ discards).
+                    New card - fill in the details, search prices with 🔍, then press ✓ to add it (✕ discards).
                   </td>
                 </tr>
                 <CardRow
@@ -709,13 +709,13 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
           {lookupStatus?.status === 'done' && lookupStatus.filled
             && (lookupStatus.filled.set || lookupStatus.filled.number) && (
             <div className="lookup-filled">
-              ✓ Found {card.cardName}
-              {lookupStatus.filled.set ? ` · ${lookupStatus.filled.set}` : ''}
+              ✓ Found.
+              {lookupStatus.filled.set ? ` ${lookupStatus.filled.set}` : ''}
               {lookupStatus.filled.number ? ` #${lookupStatus.filled.number}` : ''}
-              {' '}— filled in {[
-                lookupStatus.filled.set ? 'set' : null,
-                lookupStatus.filled.number ? 'card #' : null,
-              ].filter(Boolean).join(' & ')} for you
+              {' - '}Filled in {[
+                lookupStatus.filled.set ? 'Set' : null,
+                lookupStatus.filled.number ? 'Card #' : null,
+              ].filter(Boolean).join(' & ')}
             </div>
           )}
           {lookupStatus?.status === 'error' && (

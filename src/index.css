@@ -93,7 +93,11 @@ body { min-height: 100vh; }
 .app-main { display: flex; flex-direction: column; gap: 32px; }
 
 /* ===== Settings cog ===== */
-.settings-wrap { position: fixed; top: 16px; right: 16px; z-index: 300; }
+/* Sit BELOW the 64px shared site header (top: 76px) and under it in the stacking
+   order (z-index: 90 < header's 100) so the cog never overlaps the header's
+   hamburger (mobile) / account button (desktop), and an open mobile nav menu
+   covers it instead of the cog punching through. */
+.settings-wrap { position: fixed; top: 76px; right: 16px; z-index: 90; }
 
 .settings-cog {
   width: 38px; height: 38px; border-radius: 50%;

@@ -16,6 +16,145 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.20.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Comp / manually-granted tiers now show a "Granted" tag (they have no Stripe subscription, so no manage cog).' },
+    ],
+  },
+  {
+    version: '1.4.19.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Active subscribers get a cog next to their tier that opens the Stripe billing portal to manage, upgrade, or cancel their subscription.' },
+    ],
+  },
+  {
+    version: '1.4.18.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Header: the brand lockup is now a separate icon + larger SHINY CARDBOARD wordmark, matching the main site.' },
+    ],
+  },
+  {
+    version: '1.4.17.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Account menu: the "Upgrade to Pro" line now matches the main site’s two-line spacing (title above a dimmed price/benefits sub-line).' },
+    ],
+  },
+  {
+    version: '1.4.16.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'The account menu’s "Upgrade to Pro" line now shows the price and "Ad Free", and launch VIPs see their 50%-off price before checkout.' },
+    ],
+  },
+  {
+    version: '1.4.15.0',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'The ad box now notes "Subscribe to Pro to Remove Ads" under its label.' },
+    ],
+  },
+  {
+    version: '1.4.14.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'New header in full parity with the main site: the gold Shiny Cardboard logo lockup plus a complete account menu (VIP and tier badges, Upgrade to Pro, Manage subscription, Beta site link, promo code redemption, and Donate).' },
+      { text: 'The header Beta badge now also shows on the Vercel git-beta preview host, matching the main site.' },
+      { text: 'Fixed the bottom ad row on mobile: ads now stack vertically (matching the main site) instead of crushing the native banner into a narrow column.' },
+      { text: 'Added "Our socials" to the account menu (under Donate): Instagram and X, matching the main site.' },
+      { text: 'Ads are now pushed further below the tool (more so on mobile) and wrapped in an outlined box labelled "Ads Help Us Pay the Bills", so it is clear those images are advertisements.' },
+      { text: 'Fixed the settings cog on mobile/small windows: it now sits below the site header instead of overlapping the navigation menu.' },
+      { text: 'Account-menu icons now use the same colours as the main site (green tier check, purple promo/socials, yellow donate, red sign-out).' },
+    ],
+  },
+  {
+    version: '1.4.13.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Moved the + Add Card button to the left of the search box. Tidied the price-lookup confirmation ("Found. Base Set #4 - Filled in Set & Card #") and swapped em dashes for hyphens in status messages.' },
+    ],
+  },
+  {
+    version: '1.4.12.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Resilience: if the Firebase config is ever missing at build time, the app now loads with a clear console error instead of showing a blank white page.' },
+    ],
+  },
+  {
+    version: '1.4.11.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Memory hardening: the ad banners stop their background height-polling after load instead of running a timer forever, and repeated re-renders no longer thrash the ad listeners.' },
+    ],
+  },
+  {
+    version: '1.4.10.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Sign-in / create-account dialog now has a Show/Hide toggle so you can see your password as you type.' },
+    ],
+  },
+  {
+    version: '1.4.9.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Launch VIP: early adopters (June–July 2026 signups) now get a VIP badge in the header, shared across the site and tools.' },
+    ],
+  },
+  {
+    version: '1.4.8.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Header restyled to match the main ShinyCardboard site (spacing, fonts, buttons). Sign-in dialog gets a full-width "Sign up" button, and the passwordless "email me a sign-in link" message is now branded too.' },
+    ],
+  },
+  {
+    version: '1.4.7.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Sign-up now asks you to confirm your password (type it twice), and password-reset emails are branded to match the verification email.' },
+    ],
+  },
+  {
+    version: '1.4.6.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Email sign-up now sends a branded ShinyCardboard verification email (logo + one-tap verify button), falling back to the plain email if the branded sender is unavailable.' },
+    ],
+  },
+  {
+    version: '1.4.5.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Ad keys are now channel-aware: the beta site serves its own Adsterra units and production serves the live ones, selected automatically by domain — same code on both.' },
+    ],
+  },
+  {
+    version: '1.4.4.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Ads that don\'t fill (no inventory / VPN / blocked) now collapse instead of showing an empty white box — the bottom ad row only appears when a real ad loads.' },
+    ],
+  },
+  {
+    version: '1.4.3.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Sign-in now offers email + password and a passwordless "email me a link" option alongside Google — matching the main site. Same shared account across the site and tools.' },
+    ],
+  },
+  {
+    version: '1.4.2.0',
+    date: 'July 1, 2026',
+    items: [
+      { text: 'Embedded into ShinyCardboard under /calculator: shared Firebase login, Adsterra ads (hidden for Pro), base-path-aware API.' },
+    ],
+  },
+  {
     version: '1.4.1.0',
     date: 'June 30, 2026',
     items: [
