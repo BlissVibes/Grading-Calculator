@@ -36,6 +36,11 @@
 
 body { min-height: 100vh; }
 
+/* Form controls don't inherit the page font by default (browsers give buttons
+   Arial etc.) — force every control onto the app font so panels built from
+   <button>s (e.g. Grading Submissions) match the surrounding page. */
+button, input, select, textarea { font-family: inherit; }
+
 /* ===== Light mode ===== */
 :root[data-theme="light"] {
   color-scheme: light;
