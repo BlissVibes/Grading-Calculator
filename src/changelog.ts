@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.20.3',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'New Card: the name field is now focused automatically, so you can start typing right after clicking "+ New Card" instead of clicking into the box first.' },
+    ],
+  },
+  {
     version: '1.4.20.2',
     date: 'July 3, 2026',
     items: [
