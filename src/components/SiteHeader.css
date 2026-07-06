@@ -376,6 +376,17 @@
   color: #fcd34d;
   background: #23273a;
 }
+/* Cyan action row (Production site — the reverse of the beta link, shown on the
+   beta channel). */
+.sh__menu .sh__cyan,
+.sh__mobile .sh__cyan {
+  color: #22d3ee;
+}
+.sh__menu .sh__cyan:hover,
+.sh__mobile .sh__cyan:hover {
+  color: #67e8f9;
+  background: #23273a;
+}
 /* Upgrade upsell: title on line 1, dimmed price/benefits sub-line below — mirrors
    the main site's Navbar two-line flex-col so spacing matches across the apps. */
 .sh__upsell {
