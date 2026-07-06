@@ -31,6 +31,7 @@ const TOOLS = [
 
 const ADMIN_EMAIL = 'markwilson.vfx@gmail.com'
 const BETA_SITE_URL = 'https://beta.shinycardboard.win'
+const PRODUCTION_SITE_URL = 'https://shinycardboard.win'
 const PAYPAL_DONATE_URL =
   'https://www.paypal.com/donate?business=markwilson713%40gmail.com&currency_code=USD'
 
@@ -64,6 +65,7 @@ const IC = {
   heart: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
   link: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
   signout: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
+  arrowLeft: 'M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18',
 } as const
 
 function MenuIcon({ d, color, fill = false }: { d: string | readonly string[]; color: string; fill?: boolean }) {
@@ -165,6 +167,10 @@ export default function SiteHeader() {
   const label = tierLabel(sub)
   const betaEligible = isAdmin || betaAccess || tier === 'gold' || tier === 'platinum'
   const showBetaLink = betaEligible && !isBeta
+  // Mirror of showBetaLink: on the beta channel, offer a link back to production
+  // in the same menu slot (parity with the hub's Navbar). No eligibility check —
+  // being on beta already means the user cleared the gate.
+  const showProductionLink = isBeta
   const hasStripeCustomer = !!stripeCustomerId
 
   const signIn = () => { setMenuOpen(false); openAuthModal() }
@@ -219,6 +225,9 @@ export default function SiteHeader() {
     <>
       {showBetaLink && (
         <a href={BETA_SITE_URL} className="sh__amber"><MenuIcon d={IC.bolt} color="#fcd34d" />Beta site</a>
+      )}
+      {showProductionLink && (
+        <a href={PRODUCTION_SITE_URL} className="sh__cyan"><MenuIcon d={IC.arrowLeft} color="#06b6d4" />Production site</a>
       )}
       {!isPro && (
         <button onClick={handleUpgrade} disabled={upgrading} className="sh__amber">

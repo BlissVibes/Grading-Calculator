@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.20.4',
+    date: 'July 3, 2026',
+    items: [
+      { text: 'Account menu: on the beta site, a "Production site" link back to the main site now appears (mirrors the "Beta site" link shown on production).' },
+    ],
+  },
+  {
     version: '1.4.20.3',
     date: 'July 3, 2026',
     items: [
