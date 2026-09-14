@@ -37,8 +37,10 @@ behind a Cloudflare bot challenge for datacenter IPs (HTTP 403), but card pages,
 set listings (`/console/<set>`) and the category index stay open, so scraping mode
 resolves the card's **Set** to its listing page and finds the card there, filtered
 by card number. Without a Set, Pokémon cards are resolved through the free
-[TCGdex](https://tcgdex.dev) card database (name + number -> candidate sets); other
-games fall back to Google (if configured) and then the challenged search endpoint. The following
+[TCGdex](https://tcgdex.dev) card database (name + number -> candidate sets), and
+Dragon Ball / One Piece / Digimon cards through the set code in their number
+(FB10-059, OP05-119, BT12-001). Other games fall back to Google (if configured)
+and then the challenged search endpoint. The following
 optional environment variables (set them on the Vercel project) make it more
 robust. All are optional and can be combined.
 
