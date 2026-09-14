@@ -16,6 +16,22 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.22.0',
+    date: 'September 14, 2026',
+    items: [
+      { text: 'Price lookup works again. PriceCharting put its search endpoint behind a bot challenge (the real cause of the "rate limited" errors), while card pages and set listings stayed open. Lookups now resolve the card\'s Set to PriceCharting\'s set listing and find the card there, so no search endpoint is used. Fill in the Set (and Card #) for best results; a lookup with no Set falls back to the old search and may still be blocked.' },
+      { text: 'The lookup now sends the card\'s name, number, set, game and language as separate fields, and a wrong card number in the right set reports "No cards found" instead of a misleading block error.' },
+    ],
+  },
+  {
+    version: '1.4.21.0',
+    date: 'September 14, 2026',
+    items: [
+      { text: 'Price lookup rebuilt to stop PriceCharting rate limits. Results are now cached (edge + optional Redis), a single request-per-second limit is shared across every server instance, each lookup tries far fewer query variants (cheap autocomplete first), and Google is no longer scraped from the server. Supports the official PriceCharting API when a token is configured (see README), with the page scrape for PSA 1-6 / premium 10s left in but off by default in API mode.' },
+      { text: 'Lookup All now honours PriceCharting\'s retry-after hint, distinguishes "rate limited" from "blocked", and stops the batch after repeated limits instead of hammering every remaining card. Re-running picks up cached results instantly.' },
+    ],
+  },
+  {
     version: '1.4.20.4',
     date: 'July 3, 2026',
     items: [
