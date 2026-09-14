@@ -32,10 +32,14 @@ A web app to calculate grading profits, fees & upcharges for PSA, TAG, Beckett, 
 3. Follow the prompts and link to your GitHub repo for automatic deployments
 
 The serverless API (`/api/price-lookup`) handles PriceCharting lookups on deployment.
-It works with no configuration (scraping mode), but PriceCharting rate-limits and
-blocks by source IP, and every Vercel function shares the same egress IP pool. The
-following optional environment variables (set them on the Vercel project) make it
-far more robust. All are optional and can be combined.
+It works with no configuration (scraping mode). PriceCharting's search endpoint is
+behind a Cloudflare bot challenge for datacenter IPs (HTTP 403), but card pages,
+set listings (`/console/<set>`) and the category index stay open, so scraping mode
+resolves the card's **Set** to its listing page and finds the card there. Cards
+need a Set (and ideally a Card #) to be found; without a Set the function falls
+back to the challenged search endpoint (or Google, if configured). The following
+optional environment variables (set them on the Vercel project) make it more
+robust. All are optional and can be combined.
 
 | Variable | Effect |
 | --- | --- |

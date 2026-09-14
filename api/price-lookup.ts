@@ -14,9 +14,17 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 //      KV_REST_API_URL/TOKEN), and a per-instance in-memory map.
 //   3. A global 1 req/sec limiter shared across function instances via Redis
 //      (falls back to a per-instance gap when Redis isn't configured).
-//   4. Cheapest scrape endpoints first, a hard cap on query variants, and no
-//      Google scraping (datacenter IPs are blocked by Google anyway). Google
-//      fallback uses the Custom Search JSON API when GOOGLE_CSE_KEY/CX are set.
+//   4. Search WITHOUT PriceCharting's search endpoints. Since ~mid 2026 both
+//      /search-products?type=suggestions and ?type=prices sit behind a
+//      Cloudflare "Just a moment" JS challenge for datacenter IPs (HTTP 403,
+//      regardless of headers), while card pages (/game/...), set listings
+//      (/console/...) and the category index (/category/...) stay open. So the
+//      primary scrape search resolves the set to its /console/ slug via the
+//      category index and scans the set listing for the card. The old search
+//      endpoints are kept as a last resort in case the challenge is lifted.
+//   5. Hard cap on query variants, and no Google scraping (datacenter IPs are
+//      blocked by Google anyway). Google fallback uses the Custom Search JSON
+//      API when GOOGLE_CSE_KEY/CX are set.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ───── Types ─────
@@ -81,6 +89,8 @@ const MAX_VARIANTS = 5;
 const TTL_SEARCH = 7 * 24 * 3600;    // query -> matched card URL (stable)
 const TTL_SEARCH_MISS = 3600;        // query -> nothing found
 const TTL_PRICES = 12 * 3600;        // card page -> prices
+const TTL_SET_INDEX = 7 * 24 * 3600; // category page -> list of set slugs
+const TTL_SET_LISTING = 24 * 3600;   // /console/<set> page -> rows
 const EDGE_MAX_AGE = 12 * 3600;      // Cache-Control s-maxage for successful responses
 const EDGE_MISS_MAX_AGE = 600;       // s-maxage for "no cards found"
 
@@ -95,6 +105,8 @@ class UpstreamError extends Error {
   host: string;
   status: number;
   retryAfter: number; // seconds
+  /** Optional actionable advice for the user, appended to the error message. */
+  hint?: string;
 
   constructor(status: number, host: string, retryAfterHeader?: string | null) {
     const kind: UpstreamKind = status === 429 ? 'rate-limited' : 'blocked';
@@ -524,7 +536,7 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
   // Bonus: title contains the card name substring
   // Extract card name (first significant part of query, before numbers/set)
   const GENERIC_TOKENS = ['pokemon', 'magic', 'yugioh', 'the', 'gathering', 'japanese', 'korean', 'chinese', 'german', 'french', 'italian', 'spanish', 'portuguese'];
-  const cardNamePart = qTokens.filter((t) => !/^\d+$/.test(t) && !GENERIC_TOKENS.includes(t));
+  const cardNamePart = qTokens.filter((t) => !/^#?\d+$/.test(t) && !GENERIC_TOKENS.includes(t));
   const cardNameStr = cardNamePart.join(' ');
   if (cardNameStr && tNorm.includes(cardNameStr)) {
     score += 20; // card name appears as substring in title
@@ -534,7 +546,7 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
   // buildQuery puts the card name first (after the game/language prefix), so the
   // first distinctive token is the card's subject (e.g. "armored" in "Armored
   // Mewtwo"). A result that lacks it — like plain "Mewtwo" — is the wrong card.
-  const primarySubject = qTokens.find((t) => !/^\d/.test(t) && !GENERIC_TOKENS.includes(t));
+  const primarySubject = qTokens.find((t) => !/^#?\d/.test(t) && !GENERIC_TOKENS.includes(t));
   if (primarySubject) {
     const slug = (resultUrl ?? '').toLowerCase();
     const subjectPresent =
@@ -619,6 +631,222 @@ function rankResults(query: string, results: SearchResult[]): SearchResult[] {
 }
 
 
+// ───── Structured query ─────
+// The client sends the card's fields separately (name/number/set/game/lang/pc)
+// alongside the legacy free-text `q`. When only `q` is present we parse it
+// back apart using the same shape buildQuery() on the client produces:
+//   "<game> [<language>] <name> <number> <set> [pokemon center]"
+
+type Game = 'pokemon' | 'magic' | 'yugioh';
+
+interface StructuredQuery {
+  game: Game | null;
+  lang: string | null;      // 'japanese', 'korean', ... (null = English)
+  name: string;
+  number: string | null;    // as typed, e.g. "4", "008/025", "#131"
+  set: string;
+  pokemonCenter: boolean;
+}
+
+const GAME_WORDS: Record<string, Game> = {
+  'pokemon': 'pokemon', 'pokémon': 'pokemon',
+  'magic the gathering': 'magic', 'magic: the gathering': 'magic', 'magic': 'magic', 'mtg': 'magic',
+  'yugioh': 'yugioh', 'yu-gi-oh!': 'yugioh', 'yu-gi-oh': 'yugioh',
+};
+
+const LANG_CODE_WORDS: Record<string, string> = {
+  JP: 'japanese', KR: 'korean', CN: 'chinese', DE: 'german', FR: 'french',
+  IT: 'italian', ES: 'spanish', PT: 'portuguese',
+};
+
+function parseFreeTextQuery(q: string): StructuredQuery {
+  let rest = q.trim();
+  let game: Game | null = null;
+  const gm = rest.match(/^(pokemon|magic the gathering|yugioh)\s+/i);
+  if (gm) { game = GAME_WORDS[gm[1].toLowerCase()] ?? null; rest = rest.slice(gm[0].length); }
+  let lang: string | null = null;
+  const lm = rest.match(/^(japanese|korean|chinese|german|french|italian|spanish|portuguese)\s+/i);
+  if (lm) { lang = lm[1].toLowerCase(); rest = rest.slice(lm[0].length); }
+  let pokemonCenter = false;
+  if (/\s+pokemon center$/i.test(rest)) { pokemonCenter = true; rest = rest.replace(/\s+pokemon center$/i, ''); }
+  const nm = rest.match(/^(.+?)\s+(#?\d{1,4}(?:\/\d{1,4})?)(?:\s+(.*))?$/);
+  if (nm) return { game, lang, name: nm[1].trim(), number: nm[2], set: (nm[3] ?? '').trim(), pokemonCenter };
+  return { game, lang, name: rest, number: null, set: '', pokemonCenter };
+}
+
+function structuredFromParams(p: Record<string, string | string[] | undefined>, q: string): StructuredQuery {
+  const str = (k: string) => (typeof p[k] === 'string' ? (p[k] as string).trim() : '');
+  if (!str('name')) return parseFreeTextQuery(q);
+  const gameRaw = str('game').toLowerCase();
+  const gameKey = GAME_WORDS[gameRaw] ? gameRaw : Object.keys(GAME_WORDS).find((k) => gameRaw.includes(k));
+  const game: Game | null = gameKey ? GAME_WORDS[gameKey] : null;
+  const langRaw = str('lang').toUpperCase();
+  const lang = langRaw && langRaw !== 'EN' ? (LANG_CODE_WORDS[langRaw] ?? null) : null;
+  return {
+    game, lang,
+    name: str('name').replace(/\s*\(([A-Za-z]{2,3})\)\s*/g, (m, code) => (LANG_CODE_WORDS[code.toUpperCase()] ? ' ' : m)).replace(/\s+/g, ' ').trim(),
+    number: str('number') || null,
+    set: str('set'),
+    pokemonCenter: str('pc') === '1',
+  };
+}
+
+// ───── Scrape search v2: set listing pages ─────
+
+const CATEGORY_BY_GAME: Record<Game, string> = {
+  pokemon: 'pokemon-cards',
+  magic: 'magic-cards',
+  yugioh: 'yugioh-cards',
+};
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&#39;|&#x27;|&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+}
+
+interface SetEntry { slug: string; title: string }
+
+/** All /console/<slug> sets for a game, from the category index page (cached 7d). */
+async function getSetIndex(game: Game): Promise<SetEntry[]> {
+  const key = `pc:sets:v1:${game}`;
+  const cached = await cacheGet<SetEntry[]>(key);
+  if (cached) return cached;
+
+  const resp = await scrapeFetch(`https://www.pricecharting.com/category/${CATEGORY_BY_GAME[game]}`);
+  if (!resp.ok) return [];
+  const html = await resp.text();
+  const seen = new Set<string>();
+  const out: SetEntry[] = [];
+  const re = /<a\s+href="\/console\/([^"?#]+)"[^>]*>([^<]+)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    // Keep the slug exactly as the href has it (percent-encoding included, e.g.
+    // "mcdonald%27s") — only HTML entities need decoding ("&amp;" -> "&").
+    const slug = decodeEntities(m[1]);
+    if (!slug.startsWith(`${game}-`) || seen.has(slug)) continue;
+    seen.add(slug);
+    out.push({ slug, title: decodeEntities(m[2]).trim() });
+  }
+  if (out.length > 0) await cacheSet(key, out, TTL_SET_INDEX);
+  return out;
+}
+
+const SET_NOISE_TOKENS = new Set(['pokemon', 'magic', 'the', 'gathering', 'yugioh', 'cards', 'card', 'tcg',
+  ...LANGUAGE_KEYWORDS]);
+
+function setTokens(s: string): string[] {
+  return tokenize(s).filter((t) => !SET_NOISE_TOKENS.has(t));
+}
+
+/** Pick the /console/ set that best matches the user's set text, honouring language. */
+function findSet(index: SetEntry[], setText: string, lang: string | null): SetEntry | null {
+  const want = setTokens(setText);
+  if (want.length === 0) return null;
+  const wantStr = want.join(' ');
+
+  let best: SetEntry | null = null;
+  let bestScore = 0;
+  for (const entry of index) {
+    const slugLang = LANGUAGE_KEYWORDS.find((l) => entry.slug.includes(`-${l}-`) || entry.slug.endsWith(`-${l}`)) ?? null;
+    if ((lang ?? null) !== slugLang) continue; // English wants English sets; Japanese wants -japanese- sets
+
+    const have = setTokens(entry.title);
+    if (have.length === 0) continue;
+    const haveStr = have.join(' ');
+    let score: number;
+    if (haveStr === wantStr) score = 1;
+    else {
+      const overlap = want.filter((t) => have.includes(t)).length;
+      score = overlap / Math.max(want.length, have.length);
+      // Substring containment either way is a strong signal ("151" vs "pokemon 151")
+      if (overlap > 0 && (haveStr.includes(wantStr) || wantStr.includes(haveStr))) score = Math.max(score, 0.75);
+    }
+    if (score > bestScore) { bestScore = score; best = entry; }
+  }
+  return bestScore >= 0.5 ? best : null;
+}
+
+/** One page (150 rows) of a set listing, as search results (cached 24h). */
+async function getSetListingPage(set: SetEntry, cursor: number): Promise<{ rows: SearchResult[]; nextCursor: number | null }> {
+  const key = `pc:console:v1:${set.slug}:${cursor}`;
+  const cached = await cacheGet<{ rows: SearchResult[]; nextCursor: number | null }>(key);
+  if (cached) return cached;
+
+  const url = `https://www.pricecharting.com/console/${set.slug}${cursor > 0 ? `?cursor=${cursor}` : ''}`;
+  const resp = await scrapeFetch(url);
+  if (!resp.ok) return { rows: [], nextCursor: null };
+  const html = await resp.text();
+
+  const rows: SearchResult[] = [];
+  const re = /<td\s+class="title"[^>]*>\s*<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    rows.push({ url: decodeEntities(m[1]), title: `${decodeEntities(m[2]).trim()} [${set.title}]` });
+  }
+  const nm = html.match(/name="cursor"\s+value="(\d+)"/);
+  const nextCursor = nm && rows.length > 0 ? Number(nm[1]) : null;
+  const result = { rows, nextCursor };
+  if (rows.length > 0) await cacheSet(key, result, TTL_SET_LISTING);
+  return result;
+}
+
+const MAX_SET_PAGES = 4; // 600 rows — covers every set incl. 1st-edition/reverse variants
+
+/**
+ * Find the card by scanning its set's listing pages instead of using the
+ * (Cloudflare-challenged) search endpoint. Returns ranked single-card results,
+ * or [] when the set can't be resolved or the card isn't in it.
+ */
+async function searchViaSetListing(sq: StructuredQuery): Promise<{ results: SearchResult[]; setResolved: boolean }> {
+  if (!sq.game || !sq.set || !sq.name) return { results: [], setResolved: false };
+  const index = await getSetIndex(sq.game);
+  const set = findSet(index, sq.set, sq.lang);
+  if (!set) return { results: [], setResolved: false };
+  return { results: await scanSetListing(sq, set), setResolved: true };
+}
+
+async function scanSetListing(sq: StructuredQuery, set: SetEntry): Promise<SearchResult[]> {
+
+  // Score against "[lang] name number [pokemon center]" so the existing scorer's
+  // number / language / stamp logic applies, without the set name adding noise.
+  // The number goes in "#NNN" form so the scorer treats it as a card number
+  // (bare "025" would not be recognised; leading zeros are matched numerically).
+  const num = sq.number ? `#${sq.number.replace(/^#/, '').replace(/\/\d+$/, '')}` : null;
+  const cardQuery = [sq.lang, sq.name, num, sq.pokemonCenter ? 'pokemon center' : null]
+    .filter(Boolean).join(' ');
+
+  const all: SearchResult[] = [];
+  let cursor: number | null = 0;
+  for (let page = 0; page < MAX_SET_PAGES && cursor !== null; page++) {
+    const { rows, nextCursor } = await getSetListingPage(set, cursor);
+    all.push(...rows);
+    const ranked = keepSingleCards(cardQuery, all);
+    if (ranked.length > 0) {
+      const top = ranked[0];
+      const topScore = Math.max(
+        scoreResult(cardQuery, top.title, top.url),
+        scoreResult(cardQuery, top.url.split('/').pop()?.replace(/-/g, ' ') ?? '', top.url),
+      );
+      // Name + number both matched (>= 100 bonus) — no need to read further pages.
+      if (topScore >= 100) return ranked;
+      // No number in the query: accept a clear name hit.
+      if (!sq.number && topScore >= 20) return ranked;
+    }
+    cursor = nextCursor;
+  }
+  const ranked = keepSingleCards(cardQuery, all);
+  if (ranked.length === 0) return [];
+  // Last page read and still no confident hit: only accept a result that at least
+  // carries the right card number (or a name match when no number was given).
+  const top = ranked[0];
+  const topScore = Math.max(
+    scoreResult(cardQuery, top.title, top.url),
+    scoreResult(cardQuery, top.url.split('/').pop()?.replace(/-/g, ' ') ?? '', top.url),
+  );
+  return topScore >= (sq.number ? 100 : 20) ? ranked : [];
+}
+
 // ───── Query Variants ─────
 // Alternative queries if the original doesn't match. Ordered by hit rate, and
 // capped at MAX_VARIANTS by searchCard — each variant can cost two scrape
@@ -685,13 +913,14 @@ function keepSingleCards(query: string, results: SearchResult[]): SearchResult[]
   return singles.length > 0 ? rankResults(query, singles) : [];
 }
 
-async function searchCard(query: string): Promise<SearchResult[]> {
+async function searchCard(query: string, sq: StructuredQuery): Promise<SearchResult[]> {
   const cacheKey = cacheKeyForQuery(query);
   const cached = await cacheGet<SearchResult[]>(cacheKey);
   if (cached) return cached;
 
   const variants = buildQueryVariants(query).slice(0, MAX_VARIANTS);
   let found: SearchResult[] = [];
+  let setResolved = false;
 
   if (apiEnabled) {
     // Official API: no IP limits, so trying every variant is cheap.
@@ -700,6 +929,40 @@ async function searchCard(query: string): Promise<SearchResult[]> {
       if (found.length > 0) break;
     }
   } else {
+    // Primary: set listing pages (open, not challenged). Needs game + set.
+    const viaSet = await searchViaSetListing(sq);
+    found = viaSet.results;
+    setResolved = viaSet.setResolved;
+  }
+
+  // Google (official Custom Search API), once per lookup, before we touch the
+  // challenged search endpoints.
+  if (found.length === 0) {
+    found = keepSingleCards(query, await searchViaGoogleApi(query));
+  }
+
+  if (found.length === 0 && !apiEnabled && !setResolved) {
+    // Last resort, only when we couldn't even resolve the set (a full scan of
+    // the right set with no hit is a genuine "not found"): the legacy search
+    // endpoints. These currently answer with a Cloudflare challenge
+    // (403 -> UpstreamError 'blocked') from datacenter IPs.
+    try {
+      found = await searchViaLegacyEndpoints(query, variants);
+    } catch (err) {
+      if (err instanceof UpstreamError && !sq.set) {
+        err.hint = 'PriceCharting search is bot-protected. Fill in the card\'s Set (and Card #) so it can be found from the set list instead.';
+      }
+      throw err;
+    }
+  }
+
+  await cacheSet(cacheKey, found, found.length > 0 ? TTL_SEARCH : TTL_SEARCH_MISS);
+  return found;
+}
+
+async function searchViaLegacyEndpoints(query: string, variants: string[]): Promise<SearchResult[]> {
+  let found: SearchResult[] = [];
+  {
     for (const variant of variants) {
       try {
         // Cheap JSON suggestions first; the full search page only if that misses.
@@ -713,13 +976,6 @@ async function searchCard(query: string): Promise<SearchResult[]> {
       }
     }
   }
-
-  // Google (official Custom Search API) as a last resort, once per lookup.
-  if (found.length === 0) {
-    found = keepSingleCards(query, await searchViaGoogleApi(query));
-  }
-
-  await cacheSet(cacheKey, found, found.length > 0 ? TTL_SEARCH : TTL_SEARCH_MISS);
   return found;
 }
 
@@ -867,9 +1123,10 @@ function setEdgeCache(res: VercelResponse, maxAge: number) {
 function sendUpstreamError(res: VercelResponse, err: UpstreamError) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Retry-After', String(err.retryAfter));
-  const message = err.kind === 'rate-limited'
+  const base = err.kind === 'rate-limited'
     ? `PriceCharting is rate limiting us right now. Please wait ${err.retryAfter}s and try again.`
     : `PriceCharting blocked the request (bot protection, HTTP ${err.status}). Please wait a minute and try again.`;
+  const message = err.hint ? `${base} ${err.hint}` : base;
   return res.status(429).json({ error: message, kind: err.kind, host: err.host, retryAfter: err.retryAfter });
 }
 
@@ -894,7 +1151,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Mode 2: Search for cards
     if (typeof q === 'string' && q.trim()) {
-      const results = await searchCard(q.trim());
+      const results = await searchCard(q.trim(), structuredFromParams(req.query, q.trim()));
 
       if (mode === 'search') {
         setEdgeCache(res, results.length > 0 ? EDGE_MAX_AGE : EDGE_MISS_MAX_AGE);

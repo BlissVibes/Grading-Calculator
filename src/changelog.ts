@@ -16,6 +16,14 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.22.0',
+    date: 'September 14, 2026',
+    items: [
+      { text: 'Price lookup works again. PriceCharting put its search endpoint behind a bot challenge (the real cause of the "rate limited" errors), while card pages and set listings stayed open. Lookups now resolve the card\'s Set to PriceCharting\'s set listing and find the card there, so no search endpoint is used. Fill in the Set (and Card #) for best results; a lookup with no Set falls back to the old search and may still be blocked.' },
+      { text: 'The lookup now sends the card\'s name, number, set, game and language as separate fields, and a wrong card number in the right set reports "No cards found" instead of a misleading block error.' },
+    ],
+  },
+  {
     version: '1.4.21.0',
     date: 'September 14, 2026',
     items: [
