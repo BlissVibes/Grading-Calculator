@@ -16,6 +16,14 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.24.0',
+    date: 'September 14, 2026',
+    items: [
+      { text: 'Price lookup now supports Dragon Ball (Fusion World + Super), One Piece and Digimon cards. Their numbers carry the set code (FB10-059, OP05-119, BT12-001), so typing name + number finds the card with no Set needed - the game is detected from the number.' },
+      { text: 'Lookup All no longer stalls: a card the bot-protected search can\'t find is reported as "No match" with a hint, instead of a block error that made the batch wait a minute and retry. Only genuine rate limits are retried.' },
+    ],
+  },
+  {
     version: '1.4.23.0',
     date: 'September 14, 2026',
     items: [

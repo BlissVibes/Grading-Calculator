@@ -376,7 +376,7 @@ export function fieldsFromMatch(
 // ───── Batch Lookup with Rate Limiting ─────
 
 /** Cap on how long a single rate-limit pause can be (ms). */
-const MAX_BACKOFF_MS = 60_000;
+const MAX_BACKOFF_MS = 30_000;
 
 export async function lookupBatch(
   cards: GradingCard[],
@@ -421,12 +421,16 @@ export async function lookupBatch(
         const limited = err instanceof LookupError
           ? err.isUpstreamLimit
           : message.includes('429') || /rate limit/i.test(message);
+        // A 'blocked' (403 bot protection) answer is deterministic — retrying the
+        // same card just parks the batch for the Retry-After window. Only a real
+        // 429 rate limit is worth waiting out.
+        const retryable = limited && !(err instanceof LookupError && err.kind === 'blocked');
 
         if (limited) {
           retries++;
           const hinted = err instanceof LookupError && err.retryAfter ? err.retryAfter * 1000 : 0;
-          if (retries <= maxRetries) {
-            // Honour the server's Retry-After; otherwise back off 5s, 10s.
+          if (retryable && retries <= maxRetries) {
+            // Honour the server's Retry-After (capped); otherwise back off 5s, 10s.
             const wait = Math.min(Math.max(hinted, 5000 * retries), MAX_BACKOFF_MS);
             await new Promise((r) => setTimeout(r, wait));
             continue;
