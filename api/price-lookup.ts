@@ -416,6 +416,7 @@ async function searchViaGoogleApi(query: string): Promise<SearchResult[]> {
 function normalizeForMatch(s: string): string {
   return s
     .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // "Pokémon" -> "pokemon"
     .replace(/['']/g, '')            // remove apostrophes
     .replace(/[-–—]/g, ' ')          // dashes to spaces
     .replace(/[^a-z0-9#.\s]/g, ' ') // strip special chars
@@ -478,6 +479,10 @@ function extractAllNumbers(s: string): string[] {
     if (n.length <= 3 || n.startsWith('0')) {
       if (!nums.includes(n)) nums.push(n);
     }
+  }
+  // Letter-prefixed promo / gallery numbers: "SM227", "SWSH039", "TG12", "GG01", "SV107"
+  for (const m of s.matchAll(/\b[a-z]{1,5}(\d{1,4})\b/gi)) {
+    if (!nums.includes(m[1])) nums.push(m[1]);
   }
   return nums;
 }
@@ -682,13 +687,16 @@ function structuredFromParams(p: Record<string, string | string[] | undefined>, 
   const game: Game | null = gameKey ? GAME_WORDS[gameKey] : null;
   const langRaw = str('lang').toUpperCase();
   const lang = langRaw && langRaw !== 'EN' ? (LANG_CODE_WORDS[langRaw] ?? null) : null;
-  return {
-    game, lang,
-    name: str('name').replace(/\s*\(([A-Za-z]{2,3})\)\s*/g, (m, code) => (LANG_CODE_WORDS[code.toUpperCase()] ? ' ' : m)).replace(/\s+/g, ' ').trim(),
-    number: str('number') || null,
-    set: str('set'),
-    pokemonCenter: str('pc') === '1',
-  };
+  let name = str('name')
+    .replace(/\s*\(([A-Za-z]{2,3})\)\s*/g, (m, code) => (LANG_CODE_WORDS[code.toUpperCase()] ? ' ' : m))
+    .replace(/\s+/g, ' ').trim();
+  let number: string | null = str('number') || null;
+  // "pikachu 227" typed into the name field with no Card # -> name + number
+  if (!number) {
+    const tail = name.match(/^(.+?)\s+#?(\d{1,4}(?:\/\d{1,4})?)$/);
+    if (tail) { name = tail[1]; number = tail[2]; }
+  }
+  return { game, lang, name, number, set: str('set'), pokemonCenter: str('pc') === '1' };
 }
 
 // ───── Scrape search v2: set listing pages ─────
@@ -791,6 +799,38 @@ async function getSetListingPage(set: SetEntry, cursor: number): Promise<{ rows:
   return result;
 }
 
+/**
+ * Set listing filtered to one card number via the page's "model-number" filter
+ * (exact string match on PriceCharting's number, e.g. "4", "25", "SM227").
+ * Tiny page (~70KB) instead of 650KB per 150 rows. Cached 24h.
+ */
+async function getSetListingByNumber(set: SetEntry, number: string): Promise<SearchResult[]> {
+  const key = `pc:console:v1:${set.slug}:mn:${number.toLowerCase()}`;
+  const cached = await cacheGet<SearchResult[]>(key);
+  if (cached) return cached;
+
+  const resp = await scrapeFetch(`https://www.pricecharting.com/console/${set.slug}?model-number=${encodeURIComponent(number)}`);
+  if (!resp.ok) return [];
+  const html = await resp.text();
+  const rows: SearchResult[] = [];
+  const re = /<td\s+class="title"[^>]*>\s*<a\s+href="([^"]+)"[^>]*>([^<]+)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    rows.push({ url: decodeEntities(m[1]), title: `${decodeEntities(m[2]).trim()} [${set.title}]` });
+  }
+  await cacheSet(key, rows, rows.length > 0 ? TTL_SET_LISTING : TTL_SEARCH_MISS);
+  return rows;
+}
+
+/** Number spellings to try with the model-number filter: as typed, no leading zeros, 3-digit. */
+function numberForms(number: string, hints: string[] = []): string[] {
+  const base = number.replace(/^#/, '').replace(/\/\d+$/, '').trim();
+  const digits = base.replace(/^0+(?=\d)/, '');
+  const forms = [base, digits, digits.padStart(3, '0'), ...hints.map((h) => h.trim())].filter(Boolean);
+  return [...new Set(forms)];
+}
+
+const MAX_NUMBER_FORMS = 3;
 const MAX_SET_PAGES = 4; // 600 rows — covers every set incl. 1st-edition/reverse variants
 
 /**
@@ -806,7 +846,31 @@ async function searchViaSetListing(sq: StructuredQuery): Promise<{ results: Sear
   return { results: await scanSetListing(sq, set), setResolved: true };
 }
 
-async function scanSetListing(sq: StructuredQuery, set: SetEntry): Promise<SearchResult[]> {
+async function scanSetListing(sq: StructuredQuery, set: SetEntry, numberHints: string[] = []): Promise<SearchResult[]> {
+  // Fast path: filter the listing by card number (a few rows, one small page).
+  if (sq.number) {
+    const num = `#${sq.number.replace(/^#/, '').replace(/\/\d+$/, '')}`;
+    const cardQuery = [sq.lang, sq.name, num, sq.pokemonCenter ? 'pokemon center' : null].filter(Boolean).join(' ');
+    // Prefer the exact spellings TCGdex gave us (e.g. "SM227"), then the plain forms.
+    const forms = [...new Set([...numberHints.filter(Boolean), ...numberForms(sq.number)])].slice(0, MAX_NUMBER_FORMS);
+    for (const form of forms) {
+      const rows = await getSetListingByNumber(set, form);
+      if (rows.length === 0) continue;
+      const ranked = keepSingleCards(cardQuery, rows);
+      if (ranked.length === 0) continue;
+      const top = ranked[0];
+      const topScore = Math.max(
+        scoreResult(cardQuery, top.title, top.url),
+        scoreResult(cardQuery, top.url.split('/').pop()?.replace(/-/g, ' ') ?? '', top.url),
+      );
+      if (topScore >= 60) return ranked; // name matched on a number-filtered page
+    }
+  }
+  return scanSetListingPages(sq, set);
+}
+
+/** Slow path: page through the whole set listing (150 rows a page). */
+async function scanSetListingPages(sq: StructuredQuery, set: SetEntry): Promise<SearchResult[]> {
 
   // Score against "[lang] name number [pokemon center]" so the existing scorer's
   // number / language / stamp logic applies, without the set name adding noise.
@@ -845,6 +909,106 @@ async function scanSetListing(sq: StructuredQuery, set: SetEntry): Promise<Searc
     scoreResult(cardQuery, top.url.split('/').pop()?.replace(/-/g, ' ') ?? '', top.url),
   );
   return topScore >= (sq.number ? 100 : 20) ? ranked : [];
+}
+
+// ───── Set-less lookups: candidate sets from TCGdex (Pokémon, English) ─────
+// When the user gave no Set (or one we can't map), ask the free TCGdex card
+// database which sets contain a card with this name + number, then scan those
+// PriceCharting set listings. TCGdex filters are "contains" matches, so the
+// existing scorer does the final ranking. Data: https://api.tcgdex.net (no key).
+
+const TCGDEX_BASE = 'https://api.tcgdex.net/v2/en';
+const TTL_TCGDEX = 7 * 24 * 3600;
+const MAX_CANDIDATE_SETS = 3;
+
+interface TcgdexSet { id: string; name: string }
+interface TcgdexCardBrief { id: string; localId: string; name: string }
+
+async function tcgdexJson<T>(path: string): Promise<T | null> {
+  try {
+    const resp = await fetch(`${TCGDEX_BASE}${path}`, { headers: { Accept: 'application/json' } });
+    if (!resp.ok) return null;
+    return (await resp.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** TCGdex set id -> name, excluding the "Pokémon TCG Pocket" app sets (cached 7d). */
+async function getTcgdexSets(): Promise<Map<string, string>> {
+  const key = 'tcgdex:sets:v1';
+  const cached = await cacheGet<[string, string][]>(key);
+  if (cached) return new Map(cached);
+
+  const [sets, pocket] = await Promise.all([
+    tcgdexJson<TcgdexSet[]>('/sets'),
+    tcgdexJson<{ sets?: TcgdexSet[] }>('/series/tcgp'),
+  ]);
+  if (!sets) return new Map();
+  const exclude = new Set((pocket?.sets ?? []).map((x) => x.id));
+  const entries: [string, string][] = sets
+    .filter((x) => x.id && x.name && !exclude.has(x.id))
+    .map((x) => [x.id, x.name]);
+  await cacheSet(key, entries, TTL_TCGDEX);
+  return new Map(entries);
+}
+
+/** PriceCharting groups every English promo under "Pokemon Promo". */
+function pcSetTextFor(tcgdexSetName: string): string {
+  return /promo/i.test(tcgdexSetName) ? 'Promo' : tcgdexSetName;
+}
+
+interface CandidateSet { text: string; localIds: string[] }
+
+/** Candidate PriceCharting set texts (+ TCGdex number spellings) for a name + number, best first. */
+async function tcgdexCandidateSets(name: string, number: string): Promise<CandidateSet[]> {
+  const num = number.replace(/^#/, '').replace(/\/\d+$/, '');
+  const key = `tcgdex:cands:v2:${name.toLowerCase()}:${num}`;
+  const cached = await cacheGet<CandidateSet[]>(key);
+  if (cached) return cached;
+
+  const cards = await tcgdexJson<TcgdexCardBrief[]>(
+    `/cards?name=${encodeURIComponent(name)}&localId=${encodeURIComponent(num)}`,
+  );
+  if (!cards || cards.length === 0) return [];
+  const sets = await getTcgdexSets();
+
+  const exact: CandidateSet[] = [];
+  const loose: CandidateSet[] = [];
+  for (const c of cards) {
+    const setId = c.id.endsWith(`-${c.localId}`) ? c.id.slice(0, -(c.localId.length + 1)) : c.id.split('-')[0];
+    const setName = sets.get(setId);
+    if (!setName) continue; // unknown or Pocket set
+    const text = pcSetTextFor(setName);
+    const localNum = c.localId.replace(/^[A-Za-z]+/, '');
+    const bucket = parseInt(localNum, 10) === parseInt(num, 10) ? exact : loose;
+    const existing = exact.find((x) => x.text === text) ?? loose.find((x) => x.text === text);
+    if (existing) {
+      if (!existing.localIds.includes(c.localId)) existing.localIds.push(c.localId);
+    } else {
+      bucket.push({ text, localIds: [c.localId] });
+    }
+  }
+  const out = [...exact, ...loose].slice(0, MAX_CANDIDATE_SETS);
+  if (out.length > 0) await cacheSet(key, out, TTL_TCGDEX);
+  return out;
+}
+
+/** Set-less search: TCGdex candidate sets -> PriceCharting listing scan. */
+async function searchViaCandidateSets(sq: StructuredQuery): Promise<SearchResult[]> {
+  if (sq.game !== 'pokemon' || sq.lang || !sq.name || !sq.number) return [];
+  const candidates = await tcgdexCandidateSets(sq.name, sq.number);
+  if (candidates.length === 0) return [];
+  const index = await getSetIndex('pokemon');
+  const tried = new Set<string>();
+  for (const cand of candidates) {
+    const set = findSet(index, cand.text, null);
+    if (!set || tried.has(set.slug)) continue;
+    tried.add(set.slug);
+    const results = await scanSetListing(sq, set, cand.localIds);
+    if (results.length > 0) return results;
+  }
+  return [];
 }
 
 // ───── Query Variants ─────
@@ -933,6 +1097,13 @@ async function searchCard(query: string, sq: StructuredQuery): Promise<SearchRes
     const viaSet = await searchViaSetListing(sq);
     found = viaSet.results;
     setResolved = viaSet.setResolved;
+
+    // No Set given / not mappable: let TCGdex tell us which sets hold this
+    // name + number, then scan those listings.
+    if (found.length === 0 && !setResolved) {
+      found = await searchViaCandidateSets(sq);
+      if (found.length > 0) setResolved = true;
+    }
   }
 
   // Google (official Custom Search API), once per lookup, before we touch the
