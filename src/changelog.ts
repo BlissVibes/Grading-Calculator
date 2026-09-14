@@ -16,6 +16,14 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.25.0',
+    date: 'September 14, 2026',
+    items: [
+      { text: 'Paste a PriceCharting link as the card name and press 🔍: the row fills itself with the card\'s name, number, set, game, language and prices straight from that page. Works for new cards and existing rows.' },
+      { text: 'Cards remember their PriceCharting page. Once a card is linked (from a paste or a search match), 🔍 and Lookup All refresh prices from that exact page instead of searching again. Press the small ✕ next to the PC link to unlink and search by name.' },
+    ],
+  },
+  {
     version: '1.4.24.0',
     date: 'September 14, 2026',
     items: [

@@ -7,7 +7,7 @@ A web app to calculate grading profits, fees & upcharges for PSA, TAG, Beckett, 
 - **Profit Calculator**: Calculate ROI and multipliers for graded cards
 - **Multi-Company Support**: Compare fees/upcharges across PSA, TAG, Beckett, ARS, CGC
 - **CSV Import**: Import card lists from spreadsheets
-- **Price Lookup**: Auto-fetch raw and graded prices from PriceCharting
+- **Price Lookup**: Auto-fetch raw and graded prices from PriceCharting, or paste a PriceCharting link to import a card; linked cards refresh from their page
 - **Dark Mode**: Toggle between light and dark themes
 - **Local Storage**: All data saved to your browser
 
