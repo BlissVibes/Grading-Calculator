@@ -235,9 +235,20 @@ export async function lookupCard(card: GradingCard): Promise<PriceLookupResult> 
 
   const apiBase = getApiBase();
   const base = import.meta.env.BASE_URL;
+  // Free-text `q` (legacy + cache key) plus the structured fields, which let the
+  // server resolve the set to its PriceCharting listing page instead of using
+  // the (bot-challenged) search endpoint.
+  const params = new URLSearchParams({ q: query });
+  params.set('name', card.cardName.trim());
+  if (card.cardNumber?.trim()) params.set('number', card.cardNumber.trim());
+  if (card.set?.trim()) params.set('set', card.set.trim());
+  if (card.cardGame) params.set('game', card.cardGame);
+  const lang = card.language || detectLanguage(card.cardName);
+  if (lang) params.set('lang', lang);
+  if (card.pokemonCenter) params.set('pc', '1');
   const url = apiBase
-    ? `${apiBase}/api/price-lookup?q=${encodeURIComponent(query)}`
-    : `${base}api/price-lookup?q=${encodeURIComponent(query)}`;
+    ? `${apiBase}/api/price-lookup?${params}`
+    : `${base}api/price-lookup?${params}`;
 
   const resp = await fetch(url);
   if (!resp.ok) throw await LookupError.fromResponse(resp);
