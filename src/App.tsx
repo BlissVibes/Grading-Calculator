@@ -3,7 +3,7 @@ import type { GradingCard, GradingCompany, GradeNumber, TenVariantKey, AppSettin
 import { DEFAULT_SETTINGS, PREMIUM_TENS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
-import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, fieldsFromMatch } from './priceLookup';
+import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, fieldsFromMatch, importFieldsFromResult } from './priceLookup';
 import SiteHeader from './components/SiteHeader';
 import type { LookupStatus } from './priceLookup';
 import { isStampedMatch } from './pokemonCenterCards';
@@ -317,6 +317,7 @@ export default function App() {
         // Fill empty Set / Card # fields from the match so the user can confirm
         // the right card was found.
         const filled = fieldsFromMatch(card, result);
+        const imported = importFieldsFromResult(card, result);
         setDraftCard((d) => (d ? {
           ...d, ...updates,
           set: filled.set ?? d.set,
@@ -324,6 +325,7 @@ export default function App() {
           priceChartingUrl: result.url || d.priceChartingUrl,
           priceChartingTitle: result.matchedTitle || d.priceChartingTitle,
           pokemonCenter: stamped ? true : d.pokemonCenter,
+          ...imported,
         } : d));
         setDraftLookupStatus({ cardId: card.id, status: 'done', result, filled });
       }
@@ -391,6 +393,7 @@ export default function App() {
         // Fill empty Set / Card # fields from the match so the user can confirm
         // the right card was found.
         const filled = fieldsFromMatch(card, result);
+        const imported = importFieldsFromResult(card, result);
         setCards((prev) => prev.map((c) => (c.id === card.id ? {
           ...c, ...updates,
           set: filled.set ?? c.set,
@@ -398,6 +401,7 @@ export default function App() {
           priceChartingUrl: result.url || c.priceChartingUrl,
           priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
           pokemonCenter: stamped ? true : c.pokemonCenter,
+          ...imported,
         } : c)));
 
         setLookupStatuses((prev) => {
@@ -440,6 +444,7 @@ export default function App() {
               priceChartingUrl: result.url || c.priceChartingUrl,
               priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
               pokemonCenter: isStampedMatch(result.matchedTitle, result.url) ? true : c.pokemonCenter,
+              ...importFieldsFromResult(c, result),
             };
           })
         );

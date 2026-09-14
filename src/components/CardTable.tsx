@@ -501,7 +501,7 @@ export default function CardTable({
               <>
                 <tr className="draft-banner-row">
                   <td colSpan={100}>
-                    New card - fill in the details, search prices with 🔍, then press ✓ to add it (✕ discards).
+                    New card - type a name (or paste a PriceCharting link), search prices with 🔍, then press ✓ to add it (✕ discards).
                   </td>
                 </tr>
                 <CardRow
@@ -655,7 +655,7 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               autoFocus={isDraft}
               value={card.cardName}
               onChange={(e) => onUpdate({ cardName: e.target.value })}
-              placeholder="Card name"
+              placeholder="Card name or PriceCharting link"
             />
             {card.cardGame === 'Pokémon' && (isPkcEligible(card) || card.pokemonCenter) && (
               // Show the PKC button ONLY for cards that actually have a Pokémon
@@ -674,7 +674,9 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               className="row-action-btn lookup-btn-inline"
               onClick={onLookup}
               disabled={!card.cardName.trim() || lookupStatus?.status === 'loading'}
-              title="Lookup prices on PriceCharting"
+              title={card.priceChartingUrl
+                ? 'Refresh prices from the linked PriceCharting page'
+                : 'Lookup prices on PriceCharting (or paste a PriceCharting link as the name)'}
             >
               {lookupStatus?.status === 'loading' ? (
                 <span className="lookup-spinner" />
@@ -691,12 +693,23 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
                   target="_blank"
                   rel="noopener noreferrer"
                   className="lookup-link"
-                  title={`Matched: ${title || 'View on PriceCharting'}`}
+                  title={`Linked: ${title || 'View on PriceCharting'} - 🔍 refreshes prices from this page`}
                 >
                   PC
                 </a>
               );
             })()}
+            {card.priceChartingUrl && !isDraft && (
+              <button
+                type="button"
+                className="row-action-btn lookup-unlink"
+                onClick={(e) => { e.stopPropagation(); onUpdate({ priceChartingUrl: undefined, priceChartingTitle: undefined }); }}
+                title="Unlink from this PriceCharting page (🔍 will search by name again)"
+                style={{ fontSize: 10, opacity: 0.6, padding: '0 3px' }}
+              >
+                ✕
+              </button>
+            )}
           </div>
           {/* Matched title — from live lookup or persisted card data */}
           {(() => {

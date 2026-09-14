@@ -50,6 +50,8 @@ interface PriceResult {
   cgc10pristine: number;
   ace10: number;
   url: string;
+  /** "Charizard #4 [Pokemon Base Set]" — from the card page's <h1> (scrape mode). */
+  matchedTitle?: string;
 }
 
 interface SearchResult {
@@ -59,7 +61,7 @@ interface SearchResult {
   id?: string;
 }
 
-type Grades = Omit<PriceResult, 'url'>;
+type Grades = Omit<PriceResult, 'url' | 'matchedTitle'>;
 
 const EMPTY_GRADES: Grades = {
   raw: 0, grade1: 0, grade2: 0, grade3: 0, grade4: 0, grade5: 0, grade6: 0,
@@ -177,7 +179,7 @@ async function cacheSet(key: string, value: unknown, ttlSec: number): Promise<vo
 }
 
 const cacheKeyForQuery = (q: string) => `pc:search:v3:${q.toLowerCase().replace(/\s+/g, ' ').trim()}`;
-const cacheKeyForPrices = (path: string) => `pc:prices:v3:${path.replace(/^https?:\/\/www\.pricecharting\.com/, '')}`;
+const cacheKeyForPrices = (path: string) => `pc:prices:v4:${path.replace(/^https?:\/\/www\.pricecharting\.com/, '')}`;
 
 // ───── Global outbound limiter ─────
 //
@@ -1254,7 +1256,18 @@ function parseGradeTable(html: string): Partial<Omit<PriceResult, 'url'>> | null
 
 
 /** Fetch the card page once and parse every grade we can find (grade table + chart_data). */
-async function scrapePageGrades(cardPath: string): Promise<{ url: string; grades: Grades }> {
+/** "<h1 id="product_name"> Charizard #4 <a href="/console/...">Pokemon Base Set</a></h1>" -> "Charizard #4 [Pokemon Base Set]" */
+function parseCardPageTitle(html: string): string | undefined {
+  // The set link may wrap an <img>, so only read the link's leading text.
+  const m = html.match(/<h1[^>]*id="product_name"[^>]*>([^<]+)(?:<a[^>]*>([^<]*))?/i);
+  if (!m) return undefined;
+  const title = decodeEntities(m[1]).replace(/\s+/g, ' ').trim();
+  const set = decodeEntities(m[2] ?? '').replace(/\s+/g, ' ').trim();
+  if (!title) return undefined;
+  return set ? `${title} [${set}]` : title;
+}
+
+async function scrapePageGrades(cardPath: string): Promise<{ url: string; grades: Grades; title?: string }> {
   const url = cardPath.startsWith('http') ? cardPath : `https://www.pricecharting.com${cardPath}`;
   const resp = await scrapeFetch(url);
   if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
@@ -1263,6 +1276,7 @@ async function scrapePageGrades(cardPath: string): Promise<{ url: string; grades
   const finalUrl = resp.url && /\/game\//.test(resp.url) ? resp.url : url;
 
   const table = parseGradeTable(html);
+  const title = parseCardPageTitle(html);
 
   let chart: Partial<Grades> = {};
   const chartMatch = html.match(/VGPC\.chart_data\s*=\s*(\{[\s\S]*?\});/);
@@ -1287,14 +1301,14 @@ async function scrapePageGrades(cardPath: string): Promise<{ url: string; grades
 
   if (!table && !chartMatch) {
     const { url: _u, ...grades } = extractTablePrices(html, finalUrl);
-    return { url: finalUrl, grades };
+    return { url: finalUrl, grades, title };
   }
 
   const grades = { ...EMPTY_GRADES };
   for (const key of Object.keys(grades) as (keyof Grades)[]) {
     grades[key] = (table?.[key] || chart[key] || 0) as number;
   }
-  return { url: finalUrl, grades };
+  return { url: finalUrl, grades, title };
 }
 
 async function fetchPrices(match: SearchResult): Promise<PriceResult> {
@@ -1314,6 +1328,7 @@ async function fetchPrices(match: SearchResult): Promise<PriceResult> {
       try {
         const page = await scrapePageGrades(match.url);
         result.url = page.url;
+        if (page.title) result.matchedTitle = page.title;
         for (const key of Object.keys(EMPTY_GRADES) as (keyof Grades)[]) {
           if (!result[key] && page.grades[key]) result[key] = page.grades[key];
         }
@@ -1321,7 +1336,7 @@ async function fetchPrices(match: SearchResult): Promise<PriceResult> {
     }
   } else {
     const page = await scrapePageGrades(match.url);
-    result = { ...page.grades, url: page.url };
+    result = { ...page.grades, url: page.url, matchedTitle: page.title };
   }
 
   await cacheSet(cacheKey, result, TTL_PRICES);
@@ -1352,6 +1367,29 @@ function extractTablePrices(html: string, url: string): PriceResult {
 }
 
 // ───── API Handler ─────
+
+/**
+ * Accept only PriceCharting card pages for mode=prices: a "/game/..." path or a
+ * full (www.)pricecharting.com URL. Anything else is rejected — this function
+ * must never fetch arbitrary hosts.
+ */
+function normalizeCardPath(input: string): string | null {
+  let path = input.trim();
+  if (/^https?:\/\//i.test(path)) {
+    try {
+      const u = new URL(path);
+      if (!/^(www\.)?pricecharting\.com$/i.test(u.hostname)) return null;
+      path = u.pathname;
+    } catch {
+      return null;
+    }
+  } else {
+    path = path.replace(/^(www\.)?pricecharting\.com/i, ''); // scheme-less paste
+    if (!path.startsWith('/')) path = `/${path}`;
+  }
+  path = path.split('?')[0].split('#')[0];
+  return /^\/game\/[^/]+\/[^/]+$/.test(path) ? path : null;
+}
 
 function setEdgeCache(res: VercelResponse, maxAge: number) {
   // Vercel's CDN caches function GET responses that carry s-maxage — repeat
@@ -1390,9 +1428,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Mode 1: Direct price fetch from a known card path / URL
     if (mode === 'prices' && typeof path === 'string') {
-      const prices = await fetchPrices({ url: path, title: '' });
+      const cardPath = normalizeCardPath(path);
+      if (!cardPath) {
+        res.setHeader('Cache-Control', 'no-store');
+        return res.status(400).json({ error: 'path must be a pricecharting.com card page (/game/<set>/<card>)' });
+      }
+      const prices = await fetchPrices({ url: cardPath, title: '' });
       setEdgeCache(res, EDGE_MAX_AGE);
-      return res.status(200).json(prices);
+      return res.status(200).json({ ...prices, source: apiEnabled ? 'api' : 'scrape' });
     }
 
     // Mode 2: Search for cards
