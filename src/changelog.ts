@@ -16,6 +16,14 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.23.0',
+    date: 'September 14, 2026',
+    items: [
+      { text: 'Price lookup no longer needs a Set. Typing just "pikachu 227" (name + number) now works: the card database TCGdex tells us which sets hold that name and number, and the card is found on PriceCharting\'s listing for those sets. Promo numbers like SM227 / SWSH039 are recognised.' },
+      { text: 'Lookups are faster and lighter: set listings are filtered by card number (one small page) instead of paging through the whole set.' },
+    ],
+  },
+  {
     version: '1.4.22.0',
     date: 'September 14, 2026',
     items: [
