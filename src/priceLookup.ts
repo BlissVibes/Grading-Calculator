@@ -227,9 +227,83 @@ function buildQuery(card: GradingCard): string {
   return parts.join(' ');
 }
 
+// ───── PriceCharting URLs ─────
+
+/**
+ * If `input` is a PriceCharting card page (with or without scheme / www),
+ * return it as a canonical https URL; otherwise null.
+ */
+export function parsePriceChartingUrl(input: string | undefined | null): string | null {
+  if (!input) return null;
+  const m = input.trim().match(/^(?:https?:\/\/)?(?:www\.)?pricecharting\.com(\/game\/[^\s?#]+\/[^\s?#]+)/i);
+  return m ? `https://www.pricecharting.com${m[1]}` : null;
+}
+
+const GAME_BY_SLUG_PREFIX: [string, string][] = [
+  ['pokemon', 'Pokémon'],
+  ['magic', 'Magic: The Gathering'],
+  ['mtg', 'Magic: The Gathering'],
+  ['yugioh', 'Yu-Gi-Oh!'],
+  ['dragon-ball', 'Dragon Ball Super'],
+  ['dragonball', 'Dragon Ball Super'],
+  ['one-piece', 'One Piece'],
+  ['onepiece', 'One Piece'],
+  ['lorcana', 'Lorcana'],
+  ['flesh-and-blood', 'Flesh and Blood'],
+  ['digimon', 'Digimon'],
+  ['metazoo', 'MetaZoo'],
+  ['panini', 'Panini'],
+  ['topps', 'Topps'],
+];
+
+const LANG_BY_SLUG_WORD: Record<string, string> = {
+  japanese: 'JP', korean: 'KR', chinese: 'CN', german: 'DE', french: 'FR',
+  italian: 'IT', spanish: 'ES', portuguese: 'PT',
+};
+
+/**
+ * When the card's name field holds a PriceCharting link, derive every field
+ * (name, number, set, game, language) from the fetched page so the link turns
+ * into a proper row. Returns {} for normal name-based lookups.
+ */
+export function importFieldsFromResult(card: GradingCard, result: PriceLookupResult): Partial<GradingCard> {
+  if (!parsePriceChartingUrl(card.cardName)) return {};
+
+  const title = (result.matchedTitle || '').replace(/\s*\[[^\]]*\]\s*$/, '').trim(); // drop trailing "[Set]"
+  const number = cardNumberFromMatch(title, result.url);
+  let name = title
+    .replace(/\s*#\s*[A-Za-z0-9][A-Za-z0-9/\-]*\s*$/, '')            // "Charizard #4" -> "Charizard"
+    .replace(/\s+[A-Za-z]{1,4}\d{0,3}-\d{2,4}\s*$/, '')                // "... FB10-059" -> "..."
+    .trim();
+  if (!name) {
+    const slug = result.url.replace(/^https?:\/\/[^/]+/, '').split('?')[0].split('/').filter(Boolean).pop() ?? '';
+    name = slug.replace(/-\d+[a-z0-9]*$/i, '').split('-').map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(' ');
+  }
+
+  const consoleSlug = result.url.replace(/^https?:\/\/[^/]+/, '').split('/').filter(Boolean)[1] ?? '';
+  const game = GAME_BY_SLUG_PREFIX.find(([prefix]) => consoleSlug.startsWith(prefix))?.[1];
+  const langWord = Object.keys(LANG_BY_SLUG_WORD).find((w) => consoleSlug.split('-').includes(w));
+
+  return {
+    cardName: name,
+    cardNumber: number || card.cardNumber,
+    set: setNameFromUrl(result.url) || card.set,
+    cardGame: game ?? card.cardGame,
+    language: langWord ? LANG_BY_SLUG_WORD[langWord] : 'EN',
+    priceChartingUrl: result.url,
+    priceChartingTitle: result.matchedTitle,
+  };
+}
+
 // ───── Single Card Lookup ─────
 
 export async function lookupCard(card: GradingCard): Promise<PriceLookupResult> {
+  // A pasted PriceCharting link in the name field, or a link stored from an
+  // earlier match, is fetched directly — no search involved. Unlink the card
+  // (✕ next to the PC link) to search by name again.
+  const direct = parsePriceChartingUrl(card.cardName) ?? parsePriceChartingUrl(card.priceChartingUrl);
+  if (direct) return lookupByPath(direct);
+
   const query = buildQuery(card);
   if (!query) throw new Error('No card name to search for');
 
@@ -342,6 +416,8 @@ export function cardNumberFromMatch(title?: string, url?: string): string {
   if (title) {
     const m = title.match(/#\s*([A-Za-z0-9][A-Za-z0-9/\-]*)/);
     if (m) return m[1];
+    const code = title.match(/\b([A-Za-z]{1,4}\d{0,3}-\d{2,4})\b/); // "FB10-059", "OP05-119"
+    if (code) return code[1];
   }
   if (url) {
     const path = url.replace(/^https?:\/\/[^/]+/, '').split('?')[0];
