@@ -107,6 +107,8 @@ class UpstreamError extends Error {
   retryAfter: number; // seconds
   /** Optional actionable advice for the user, appended to the error message. */
   hint?: string;
+  /** True when only the (Cloudflare-challenged) search endpoint failed — not a global block. */
+  searchOnly = false;
 
   constructor(status: number, host: string, retryAfterHeader?: string | null) {
     const kind: UpstreamKind = status === 429 ? 'rate-limited' : 'blocked';
@@ -642,7 +644,7 @@ function rankResults(query: string, results: SearchResult[]): SearchResult[] {
 // back apart using the same shape buildQuery() on the client produces:
 //   "<game> [<language>] <name> <number> <set> [pokemon center]"
 
-type Game = 'pokemon' | 'magic' | 'yugioh';
+type Game = 'pokemon' | 'magic' | 'yugioh' | 'dragonball' | 'onepiece' | 'digimon';
 
 interface StructuredQuery {
   game: Game | null;
@@ -657,7 +659,18 @@ const GAME_WORDS: Record<string, Game> = {
   'pokemon': 'pokemon', 'pokémon': 'pokemon',
   'magic the gathering': 'magic', 'magic: the gathering': 'magic', 'magic': 'magic', 'mtg': 'magic',
   'yugioh': 'yugioh', 'yu-gi-oh!': 'yugioh', 'yu-gi-oh': 'yugioh',
+  'dragon ball': 'dragonball', 'dragonball': 'dragonball', 'fusion world': 'dragonball',
+  'one piece': 'onepiece', 'onepiece': 'onepiece',
+  'digimon': 'digimon',
 };
+
+/**
+ * Card numbers that carry their set code: "FB10-059" (Dragon Ball Fusion World),
+ * "OP05-119" (One Piece), "BT12-001" (Digimon / Dragon Ball Super), "ST01-001".
+ * The code alone identifies the set on PriceCharting ("Dragon Ball FB10").
+ */
+const SET_CODE_NUMBER_RE = /^([A-Za-z]{1,4}\d{0,3})-(\d{2,4})$/;
+const isSetCodeNumber = (n: string | null): n is string => !!n && SET_CODE_NUMBER_RE.test(n.trim());
 
 const LANG_CODE_WORDS: Record<string, string> = {
   JP: 'japanese', KR: 'korean', CN: 'chinese', DE: 'german', FR: 'french',
@@ -674,7 +687,7 @@ function parseFreeTextQuery(q: string): StructuredQuery {
   if (lm) { lang = lm[1].toLowerCase(); rest = rest.slice(lm[0].length); }
   let pokemonCenter = false;
   if (/\s+pokemon center$/i.test(rest)) { pokemonCenter = true; rest = rest.replace(/\s+pokemon center$/i, ''); }
-  const nm = rest.match(/^(.+?)\s+(#?\d{1,4}(?:\/\d{1,4})?)(?:\s+(.*))?$/);
+  const nm = rest.match(/^(.+?)\s+(#?\d{1,4}(?:\/\d{1,4})?|[A-Za-z]{1,4}\d{0,3}-\d{2,4})(?:\s+(.*))?$/);
   if (nm) return { game, lang, name: nm[1].trim(), number: nm[2], set: (nm[3] ?? '').trim(), pokemonCenter };
   return { game, lang, name: rest, number: null, set: '', pokemonCenter };
 }
@@ -693,7 +706,7 @@ function structuredFromParams(p: Record<string, string | string[] | undefined>, 
   let number: string | null = str('number') || null;
   // "pikachu 227" typed into the name field with no Card # -> name + number
   if (!number) {
-    const tail = name.match(/^(.+?)\s+#?(\d{1,4}(?:\/\d{1,4})?)$/);
+    const tail = name.match(/^(.+?)\s+#?(\d{1,4}(?:\/\d{1,4})?|[A-Za-z]{1,4}\d{0,3}-\d{2,4})$/);
     if (tail) { name = tail[1]; number = tail[2]; }
   }
   return { game, lang, name, number, set: str('set'), pokemonCenter: str('pc') === '1' };
@@ -705,7 +718,23 @@ const CATEGORY_BY_GAME: Record<Game, string> = {
   pokemon: 'pokemon-cards',
   magic: 'magic-cards',
   yugioh: 'yugioh-cards',
+  dragonball: 'dragon-ball-cards',
+  onepiece: 'one-piece-cards',
+  digimon: 'digimon-cards',
 };
+
+/** /console/ slug prefix that marks a set as belonging to the game. */
+const SLUG_PREFIX_BY_GAME: Record<Game, string> = {
+  pokemon: 'pokemon-',
+  magic: 'magic-',
+  yugioh: 'yugioh-',
+  dragonball: 'dragon-ball-',
+  onepiece: 'one-piece-',
+  digimon: 'digimon-',
+};
+
+/** Games whose card numbers carry a set code, in the order to try when the game is unknown. */
+const SET_CODE_GAMES: Game[] = ['dragonball', 'onepiece', 'digimon'];
 
 function decodeEntities(s: string): string {
   return s
@@ -732,7 +761,7 @@ async function getSetIndex(game: Game): Promise<SetEntry[]> {
     // Keep the slug exactly as the href has it (percent-encoding included, e.g.
     // "mcdonald%27s") — only HTML entities need decoding ("&amp;" -> "&").
     const slug = decodeEntities(m[1]);
-    if (!slug.startsWith(`${game}-`) || seen.has(slug)) continue;
+    if (!slug.startsWith(SLUG_PREFIX_BY_GAME[game]) || seen.has(slug)) continue;
     seen.add(slug);
     out.push({ slug, title: decodeEntities(m[2]).trim() });
   }
@@ -741,7 +770,7 @@ async function getSetIndex(game: Game): Promise<SetEntry[]> {
 }
 
 const SET_NOISE_TOKENS = new Set(['pokemon', 'magic', 'the', 'gathering', 'yugioh', 'cards', 'card', 'tcg',
-  ...LANGUAGE_KEYWORDS]);
+  'dragon', 'ball', 'one', 'piece', 'digimon', ...LANGUAGE_KEYWORDS]);
 
 function setTokens(s: string): string[] {
   return tokenize(s).filter((t) => !SET_NOISE_TOKENS.has(t));
@@ -909,6 +938,34 @@ async function scanSetListingPages(sq: StructuredQuery, set: SetEntry): Promise<
     scoreResult(cardQuery, top.url.split('/').pop()?.replace(/-/g, ' ') ?? '', top.url),
   );
   return topScore >= (sq.number ? 100 : 20) ? ranked : [];
+}
+
+// ───── Set-code lookups (Dragon Ball / One Piece / Digimon) ─────
+// "Son Gohan: Future FB10-059": the code "FB10" names the set, and PriceCharting
+// titles those sets with the code ("Dragon Ball FB10"). Resolve the set by code,
+// filter its listing by the full number, rank by name.
+
+async function searchViaSetCode(sq: StructuredQuery): Promise<SearchResult[]> {
+  if (!isSetCodeNumber(sq.number) || !sq.name) return [];
+  const m = sq.number.trim().match(SET_CODE_NUMBER_RE)!;
+  const code = m[1].toLowerCase();
+  const fullNumber = sq.number.trim().toUpperCase();
+
+  const games: Game[] = sq.game && SET_CODE_GAMES.includes(sq.game) ? [sq.game] : SET_CODE_GAMES;
+  for (const game of games) {
+    const index = await getSetIndex(game);
+    const set = index.find((e) => tokenize(e.title).includes(code));
+    if (!set) continue;
+
+    const rows = await getSetListingByNumber(set, fullNumber);
+    const withCode = rows.filter((r) => r.title.toLowerCase().includes(fullNumber.toLowerCase()) || r.url.toLowerCase().includes(fullNumber.toLowerCase()));
+    if (withCode.length === 0) continue;
+    // Rank by name only (the number is already exact); the scorer's extra-token
+    // penalty prefers the base printing over "[Alternate Art]" variants.
+    const ranked = keepSingleCards(sq.name, withCode);
+    if (ranked.length > 0) return ranked;
+  }
+  return [];
 }
 
 // ───── Set-less lookups: candidate sets from TCGdex (Pokémon, English) ─────
@@ -1093,10 +1150,18 @@ async function searchCard(query: string, sq: StructuredQuery): Promise<SearchRes
       if (found.length > 0) break;
     }
   } else {
+    // Set-code numbers (FB10-059, OP05-119, BT12-001) identify the set by themselves.
+    if (isSetCodeNumber(sq.number)) {
+      found = await searchViaSetCode(sq);
+      setResolved = true; // the code either resolves or the card is genuinely not listed
+    }
+
     // Primary: set listing pages (open, not challenged). Needs game + set.
-    const viaSet = await searchViaSetListing(sq);
-    found = viaSet.results;
-    setResolved = viaSet.setResolved;
+    if (found.length === 0 && !setResolved) {
+      const viaSet = await searchViaSetListing(sq);
+      found = viaSet.results;
+      setResolved = viaSet.setResolved;
+    }
 
     // No Set given / not mappable: let TCGdex tell us which sets hold this
     // name + number, then scan those listings.
@@ -1120,7 +1185,10 @@ async function searchCard(query: string, sq: StructuredQuery): Promise<SearchRes
     try {
       found = await searchViaLegacyEndpoints(query, variants);
     } catch (err) {
-      if (err instanceof UpstreamError && !sq.set) {
+      if (err instanceof UpstreamError) {
+        // Only the search endpoint is challenged; card and set pages still work.
+        // That is a per-card "can't find it this way", not a global block.
+        err.searchOnly = true;
         err.hint = 'PriceCharting search is bot-protected. Fill in the card\'s Set (and Card #) so it can be found from the set list instead.';
       }
       throw err;
@@ -1293,6 +1361,13 @@ function setEdgeCache(res: VercelResponse, maxAge: number) {
 
 function sendUpstreamError(res: VercelResponse, err: UpstreamError) {
   res.setHeader('Cache-Control', 'no-store');
+  if (err.searchOnly) {
+    // Deterministic per-card miss: report as not found (no retry, no batch stop).
+    return res.status(404).json({
+      error: `No match. ${err.hint ?? 'PriceCharting search is bot-protected; add the card\'s Set.'}`,
+      kind: 'search-blocked',
+    });
+  }
   res.setHeader('Retry-After', String(err.retryAfter));
   const base = err.kind === 'rate-limited'
     ? `PriceCharting is rate limiting us right now. Please wait ${err.retryAfter}s and try again.`
