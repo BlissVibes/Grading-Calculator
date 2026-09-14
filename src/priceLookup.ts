@@ -49,6 +49,40 @@ function getApiBase(): string {
   return localStorage.getItem('gc_api_base') || '';
 }
 
+// ───── Errors ─────
+
+/** Error from the lookup API, carrying the server's rate-limit hints when present. */
+export class LookupError extends Error {
+  status: number;
+  /** 'rate-limited' (429 upstream) or 'blocked' (403/503 bot protection) — undefined otherwise. */
+  kind?: 'rate-limited' | 'blocked';
+  /** Seconds the server asked us to wait before retrying. */
+  retryAfter?: number;
+
+  constructor(message: string, status: number, kind?: 'rate-limited' | 'blocked', retryAfter?: number) {
+    super(message);
+    this.name = 'LookupError';
+    this.status = status;
+    this.kind = kind;
+    this.retryAfter = retryAfter;
+  }
+
+  get isUpstreamLimit(): boolean {
+    return this.status === 429 || this.kind !== undefined;
+  }
+
+  static async fromResponse(resp: Response): Promise<LookupError> {
+    const data = (await resp.json().catch(() => ({}))) as {
+      error?: string; kind?: 'rate-limited' | 'blocked'; retryAfter?: number;
+    };
+    const headerRetry = parseInt(resp.headers.get('retry-after') ?? '', 10);
+    const retryAfter = typeof data.retryAfter === 'number'
+      ? data.retryAfter
+      : Number.isFinite(headerRetry) ? headerRetry : undefined;
+    return new LookupError(data.error || `Lookup failed: ${resp.status}`, resp.status, data.kind, retryAfter);
+  }
+}
+
 // ───── Rate Limiter ─────
 // PriceCharting is polite at ~1 req/sec. We use 1.2s gap to be safe.
 
@@ -206,10 +240,7 @@ export async function lookupCard(card: GradingCard): Promise<PriceLookupResult> 
     : `${base}api/price-lookup?q=${encodeURIComponent(query)}`;
 
   const resp = await fetch(url);
-  if (!resp.ok) {
-    const data = await resp.json().catch(() => ({}));
-    throw new Error(data.error || `Lookup failed: ${resp.status}`);
-  }
+  if (!resp.ok) throw await LookupError.fromResponse(resp);
 
   return resp.json();
 }
@@ -333,6 +364,9 @@ export function fieldsFromMatch(
 
 // ───── Batch Lookup with Rate Limiting ─────
 
+/** Cap on how long a single rate-limit pause can be (ms). */
+const MAX_BACKOFF_MS = 60_000;
+
 export async function lookupBatch(
   cards: GradingCard[],
   onProgress: (status: LookupStatus) => void,
@@ -340,7 +374,15 @@ export async function lookupBatch(
   // Clear any pending lookups
   limiter.clear();
 
-  for (const card of cards) {
+  // Once PriceCharting has told us to back off twice in a row, retrying card
+  // after card only makes the block last longer. Stop the batch instead and
+  // let the user re-run "Lookup All" once the pause has passed (results that
+  // did come back are cached server-side, so the re-run is cheap).
+  let consecutiveLimits = 0;
+  const STOP_AFTER_LIMITS = 2;
+
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
     if (!card.cardName) {
       onProgress({ cardId: card.id, status: 'error', error: 'No card name' });
       continue;
@@ -350,6 +392,7 @@ export async function lookupBatch(
 
     let retries = 0;
     const maxRetries = 2;
+    let stopBatch: string | null = null;
 
     while (retries <= maxRetries) {
       try {
@@ -360,23 +403,41 @@ export async function lookupBatch(
         } else {
           onProgress({ cardId: card.id, status: 'done', result });
         }
+        consecutiveLimits = 0;
         break; // success — exit retry loop
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Lookup failed';
+        const limited = err instanceof LookupError
+          ? err.isUpstreamLimit
+          : message.includes('429') || /rate limit/i.test(message);
 
-        // If rate limited, pause and retry
-        if (message.includes('429') || message.includes('Rate limit')) {
+        if (limited) {
           retries++;
+          const hinted = err instanceof LookupError && err.retryAfter ? err.retryAfter * 1000 : 0;
           if (retries <= maxRetries) {
-            // Exponential backoff: 5s, 10s
-            await new Promise((r) => setTimeout(r, 5000 * retries));
+            // Honour the server's Retry-After; otherwise back off 5s, 10s.
+            const wait = Math.min(Math.max(hinted, 5000 * retries), MAX_BACKOFF_MS);
+            await new Promise((r) => setTimeout(r, wait));
             continue;
+          }
+          consecutiveLimits++;
+          if (consecutiveLimits >= STOP_AFTER_LIMITS) {
+            stopBatch = err instanceof LookupError && err.kind === 'blocked'
+              ? 'PriceCharting blocked our requests. Wait a minute, then run Lookup All again.'
+              : 'PriceCharting is rate limiting us. Wait a minute, then run Lookup All again.';
           }
         }
 
         onProgress({ cardId: card.id, status: 'error', error: message });
         break;
       }
+    }
+
+    if (stopBatch) {
+      for (const rest of cards.slice(i + 1)) {
+        onProgress({ cardId: rest.id, status: 'error', error: `Skipped - ${stopBatch}` });
+      }
+      return;
     }
   }
 }
@@ -391,10 +452,7 @@ export async function lookupByPath(path: string): Promise<PriceLookupResult> {
     : `${base}api/price-lookup?mode=prices&path=${encodeURIComponent(path)}`;
 
   const resp = await fetch(url);
-  if (!resp.ok) {
-    const data = await resp.json().catch(() => ({}));
-    throw new Error(data.error || `Lookup failed: ${resp.status}`);
-  }
+  if (!resp.ok) throw await LookupError.fromResponse(resp);
 
   return resp.json();
 }
