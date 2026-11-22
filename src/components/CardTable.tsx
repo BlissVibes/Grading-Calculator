@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSettings, CompanyFeeStructure, TenVariantKey } from '../types';
-import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES, TEN_VARIANTS, PREMIUM_TENS, TEN_VARIANT_COMPANY } from '../types';
+import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES, TEN_VARIANTS, PREMIUM_TENS, TEN_VARIANT_COMPANY, COMPANY_STANDARD_TEN } from '../types';
 import { COMPANY_FEES } from '../gradingData';
-import { compareCompanies, estimatePsaUpcharge, calculateCard, describeGradingFee } from '../gradingCalculator';
+import { compareCompanies, estimatePsaUpcharge, calculateCard, describeGradingFee, resolveTenVariant, effectiveGradeValue } from '../gradingCalculator';
 import { isPkcEligible } from '../pokemonCenterCards';
 import NumberStepper from './NumberStepper';
 import type { LookupStatus } from '../priceLookup';
@@ -849,15 +849,25 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
           />
         </td>
 
-        {/* Grade Price columns */}
-        {settings.visibleGrades.map((g) => (
-          <td key={`price-${g}`} className={`td-center${aboveTarget(g) ? ' col-above-target' : ''}`}>
-            <NumberStepper
-              value={card.gradeValues[g] ?? 0}
-              onChange={(v) => onUpdateGrade(g, v)}
-            />
-          </td>
-        ))}
+        {/* Grade Price columns. Grade 10 shows the price the card is actually
+            valued at under its grader (BGS 10 for Beckett, TAG 10 for TAG, a
+            picked premium), and edits that same price. */}
+        {settings.visibleGrades.map((g) => {
+          const tenKey = g === 10 && effectiveCompany ? resolveTenVariant(card, effectiveCompany) : null;
+          const tenLabel = tenKey ? TEN_VARIANTS.find((v) => v.key === tenKey)?.label : null;
+          return (
+            <td key={`price-${g}`} className={`td-center${aboveTarget(g) ? ' col-above-target' : ''}`}>
+              <NumberStepper
+                value={tenKey ? effectiveGradeValue(card, 10, effectiveCompany ?? undefined) : (card.gradeValues[g] ?? 0)}
+                onChange={(v) => tenKey
+                  ? onUpdate({ tenVariants: { ...card.tenVariants, [tenKey]: v } })
+                  : onUpdateGrade(g, v)}
+                title={tenKey ? `${tenLabel} price (what this card is valued at under ${effectiveCompany})` : undefined}
+              />
+              {tenLabel && <div className="grade-price-src">{tenLabel}</div>}
+            </td>
+          );
+        })}
 
         {/* Profit columns */}
         {settings.visibleGrades.map((g) => {
@@ -990,20 +1000,32 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
           {/* Premium "10" grade selector — only the variant(s) for this card's
               grader, and only when the card has such prices. */}
           {!card.noGrading && (() => {
+            const auto = effectiveCompany ? COMPANY_STANDARD_TEN[effectiveCompany] : undefined;
+            const autoPrice = auto ? (card.tenVariants?.[auto] ?? 0) : 0;
+            const autoLabel = auto ? TEN_VARIANTS.find((v) => v.key === auto)?.label : undefined;
             const variants = TEN_VARIANTS.filter(
-              (v) => (card.tenVariants?.[v.key] ?? 0) > 0 && TEN_VARIANT_COMPANY[v.key] === effectiveCompany,
+              (v) => v.key !== auto && (card.tenVariants?.[v.key] ?? 0) > 0 && TEN_VARIANT_COMPANY[v.key] === effectiveCompany,
             );
-            if (variants.length === 0) return null;
+            if (variants.length === 0 && autoPrice <= 0) return null;
             const stdPrice = card.gradeValues[10] ?? 0;
+            // When the grader has its own 10 that is the default; PSA 10 becomes an explicit pick.
+            const value = card.tenVariant === 'psa10' ? 'psa10' : (card.tenVariant && card.tenVariant !== auto ? card.tenVariant : '');
             return (
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: 3 }}>
                 <select
-                  className={`company-cell-select ten-variant-select${card.tenVariant ? ' ten-variant-select--active' : ''}`}
-                  value={card.tenVariant ?? ''}
+                  className={`company-cell-select ten-variant-select${value ? ' ten-variant-select--active' : ''}`}
+                  value={value}
                   onChange={(e) => onUpdate({ tenVariant: (e.target.value || null) as TenVariantKey | null })}
-                  title="Which '10' grade to value this card at (default: PSA 10)"
+                  title={`Which '10' grade to value this card at (default: ${autoPrice > 0 ? autoLabel : 'PSA 10'})`}
                 >
-                  <option value="">10 ▸ PSA{stdPrice > 0 ? ` (${fmtMoney(stdPrice)})` : ''}</option>
+                  {autoPrice > 0 ? (
+                    <>
+                      <option value="">10 ▸ {autoLabel} ({fmtMoney(autoPrice)})</option>
+                      <option value="psa10">10 ▸ PSA 10{stdPrice > 0 ? ` (${fmtMoney(stdPrice)})` : ''}</option>
+                    </>
+                  ) : (
+                    <option value="">10 ▸ PSA{stdPrice > 0 ? ` (${fmtMoney(stdPrice)})` : ''}</option>
+                  )}
                   {variants.map((v) => (
                     <option key={v.key} value={v.key}>
                       10 ▸ {v.label} ({fmtMoney(card.tenVariants![v.key]!)})
@@ -1147,12 +1169,22 @@ function InlineComparison({ card, settings, onUpdate }: { card: GradingCard; set
               </>
             ) : (
               <>
-                <span className="comparison-grade-label" style={{ marginLeft: 8 }}>Grade {selectedGrade} price $</span>
-                <NumberStepper
-                  value={card.gradeValues[selectedGrade] ?? 0}
-                  onChange={(v) => onUpdate({ gradeValues: { ...card.gradeValues, [selectedGrade]: v } })}
-                  title={`Expected sale price at grade ${selectedGrade}`}
-                />
+                {(() => {
+                  const tenKey = selectedGrade === 10 && selectedCompany ? resolveTenVariant(card, selectedCompany) : null;
+                  const label = tenKey ? TEN_VARIANTS.find((v) => v.key === tenKey)?.label : `Grade ${selectedGrade}`;
+                  return (
+                    <>
+                      <span className="comparison-grade-label" style={{ marginLeft: 8 }}>{label} price $</span>
+                      <NumberStepper
+                        value={tenKey ? (card.tenVariants?.[tenKey] ?? 0) : (card.gradeValues[selectedGrade] ?? 0)}
+                        onChange={(v) => tenKey
+                          ? onUpdate({ tenVariants: { ...card.tenVariants, [tenKey]: v } })
+                          : onUpdate({ gradeValues: { ...card.gradeValues, [selectedGrade]: v } })}
+                        title={`Expected sale price at ${label}`}
+                      />
+                    </>
+                  );
+                })()}
               </>
             )}
           </div>

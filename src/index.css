@@ -617,6 +617,7 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 .cell-input--fee-derived:focus { color: var(--text); border-style: solid; }
 .row-action-btn--clear-fee { font-size: 0.65rem; padding: 0 4px; line-height: 1.4; flex-shrink: 0; }
 .company-bar__presets { max-width: 220px; }
+.grade-price-src { font-size: 0.62rem; color: var(--text-muted); line-height: 1.1; margin-top: 1px; letter-spacing: 0.02em; }
 .cell-input--name { min-width: 140px; }
 .cell-input--set  { min-width: 110px; }
 
