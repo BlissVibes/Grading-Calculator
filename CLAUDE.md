@@ -28,4 +28,15 @@ PSA, TAG, Beckett, ARS, CGC). **It is also embedded into the ShinyCardboard site
   `package.json` version AND add a matching `src/changelog.ts` entry or the build
   fails.
 
-Branch for integration work: `claude/shinycardboard-project-integration-tg1db7`.
+## Branch / release rule (owner rule — follow every time)
+
+- **Production = `main`.** The website's production `vercel.json` proxies
+  `/calculator` to this repo's **git-main** Vercel alias. Land every change on
+  `main` via PR.
+- **Every feature also goes to `beta`, in the same release.** After merging to
+  `main`, sync `beta` (`git checkout -B <branch>-beta-sync origin/beta && git merge
+  origin/main`, push, PR into `beta`, merge). The beta site
+  (beta.shinycardboard.win) proxies to the **git-beta** alias, so `beta` must
+  never fall behind `main`. There are no beta-only files in this repo.
+- Pushing to a `claude/*` working branch deploys nothing; only `main` and `beta`
+  are wired to the site.
