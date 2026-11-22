@@ -1,4 +1,4 @@
-import type { GradingCompany } from '../types';
+import type { GradingCompany, FeePreset } from '../types';
 import { GRADING_COMPANIES, COMPANY_LABELS } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 import NumberStepper from './NumberStepper';
@@ -11,6 +11,9 @@ interface Props {
   onServiceLevelChange: (level: string) => void;
   onApplyToAll: () => void;
   onGlobalCustomFeeChange: (fee: number | null) => void;
+  presets: FeePreset[];
+  onApplyPreset: (presetId: string) => void;
+  onAddPreset: () => void;
 }
 
 export default function CompanySelector({
@@ -21,6 +24,9 @@ export default function CompanySelector({
   onServiceLevelChange,
   onApplyToAll,
   onGlobalCustomFeeChange,
+  presets,
+  onApplyPreset,
+  onAddPreset,
 }: Props) {
   const serviceLevels = selectedCompany ? COMPANY_FEES[selectedCompany].serviceLevels : [];
   const customActive = globalCustomFee != null;
@@ -75,6 +81,26 @@ export default function CompanySelector({
           </>
         )}
       </div>
+
+      {/* Saved fee presets: apply one to every card, or save a new one */}
+      <select
+        className="service-select company-bar__presets"
+        value=""
+        title="Apply a saved grading price to all cards"
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === '__add') onAddPreset();
+          else if (v) onApplyPreset(v);
+        }}
+      >
+        <option value="">Presets…</option>
+        {presets.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name} — ${p.price}/card{p.company ? ` (${COMPANY_LABELS[p.company]})` : ''}
+          </option>
+        ))}
+        <option value="__add">＋ Save new preset…</option>
+      </select>
 
       {selectedCompany && (
         <div className="company-bar__actions">
