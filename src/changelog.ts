@@ -16,6 +16,15 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.29.0',
+    date: 'November 22, 2026',
+    items: [
+      { text: 'Fixed: the submission tab totals disagreed with Best Grade Profit. They now use the same rule: each card at its expected grade (not always the top grade), and the raw card cost is added back when "Remove from profit" is unticked.' },
+      { text: 'Fixed: printing words typed after a set-code number ("son goku st01-004 alt art") were read as a set name and ignored, so the base print was chosen.' },
+      { text: 'Event / promo prints: "promo", "promos", "tournament", "special tournament promo", "regionals", "judge" etc. on a set-coded card find the print filed in the game\'s promo sets (e.g. "son goku fb07-104 tournament" → the Special Tournament Promo page), while "alt art" still picks the booster\'s [Alternate Art].' },
+    ],
+  },
+  {
     version: '1.4.28.0',
     date: 'November 22, 2026',
     items: [

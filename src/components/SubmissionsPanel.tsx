@@ -68,14 +68,22 @@ export default function SubmissionsPanel({
 
   const calcById = new Map(calculations.map((c) => [c.cardId, c]));
 
-  // Best-grade profit for the cards matching a predicate (counted cards only).
+  // Profit for the cards matching a predicate (counted cards only), using the
+  // same rule as the summary bar's "Best Grade Profit": each card at its
+  // expected grade (or the top grade when none is set), and the raw card cost
+  // added back when the user has unticked "Remove from profit".
+  const deductRaw = settings.deductRawFromProfit ?? true;
   const profitFor = (pred: (c: GradingCard) => boolean): number => {
     let p = 0;
     for (const card of cards) {
       if (!pred(card) || !card.includeInTotal) continue;
       const calc = calcById.get(card.id);
-      const best = calc?.grades[calc.grades.length - 1];
-      if (best) p += best.profit * card.quantity;
+      if (!calc) continue;
+      const best = (card.targetGrade != null && calc.grades.find((g) => g.grade === card.targetGrade))
+        || calc.grades[calc.grades.length - 1];
+      if (!best) continue;
+      const rawCost = card.pricePaid || card.rawPrice || 0;
+      p += (best.profit + (deductRaw ? 0 : rawCost)) * card.quantity;
     }
     return p;
   };
