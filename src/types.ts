@@ -155,6 +155,7 @@ export interface GradingCard {
   pokemonCenter: boolean;              // Pokemon Center stamped variant (higher value)
   priceChartingUrl?: string;           // last successfully matched PriceCharting URL
   priceChartingTitle?: string;         // last successfully matched card title
+  priceChartingLinkedKey?: string;     // name|number|set the link was made under; a later edit makes 🔍 search again
   notes: string;
   source: 'manual' | 'import';
 }
