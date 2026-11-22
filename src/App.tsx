@@ -3,7 +3,7 @@ import type { GradingCard, GradingCompany, GradeNumber, TenVariantKey, AppSettin
 import { DEFAULT_SETTINGS, PREMIUM_TENS } from './types';
 import { parseImport } from './csvParser';
 import { calculateAll } from './gradingCalculator';
-import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, fieldsFromMatch, importFieldsFromResult } from './priceLookup';
+import { lookupCard, lookupBatch, applyPricesToCard, detectLanguage, fieldsFromMatch, importFieldsFromResult, linkKey } from './priceLookup';
 import SiteHeader from './components/SiteHeader';
 import type { LookupStatus } from './priceLookup';
 import { isStampedMatch } from './pokemonCenterCards';
@@ -49,6 +49,11 @@ function loadCards(): GradingCard[] {
       // Backfill custom grading fee (null = use tier / global custom)
       if (card.customGradingFee === undefined) {
         card.customGradingFee = null;
+      }
+      // Cards linked before link freshness existed: treat them as linked under
+      // their current fields, so only a later edit triggers a new search.
+      if (card.priceChartingUrl && card.priceChartingLinkedKey === undefined) {
+        card.priceChartingLinkedKey = linkKey(card);
       }
     }
     return cards;
@@ -318,15 +323,19 @@ export default function App() {
         // the right card was found.
         const filled = fieldsFromMatch(card, result);
         const imported = importFieldsFromResult(card, result);
-        setDraftCard((d) => (d ? {
-          ...d, ...updates,
-          set: filled.set ?? d.set,
-          cardNumber: filled.number ?? d.cardNumber,
-          priceChartingUrl: result.url || d.priceChartingUrl,
-          priceChartingTitle: result.matchedTitle || d.priceChartingTitle,
-          pokemonCenter: stamped ? true : d.pokemonCenter,
-          ...imported,
-        } : d));
+        setDraftCard((d) => {
+          if (!d) return d;
+          const next = {
+            ...d, ...updates,
+            set: filled.set ?? d.set,
+            cardNumber: filled.number ?? d.cardNumber,
+            priceChartingUrl: result.url || d.priceChartingUrl,
+            priceChartingTitle: result.matchedTitle || d.priceChartingTitle,
+            pokemonCenter: stamped ? true : d.pokemonCenter,
+            ...imported,
+          };
+          return { ...next, priceChartingLinkedKey: linkKey(next) };
+        });
         setDraftLookupStatus({ cardId: card.id, status: 'done', result, filled });
       }
     } catch (err) {
@@ -424,15 +433,19 @@ export default function App() {
         // the right card was found.
         const filled = fieldsFromMatch(card, result);
         const imported = importFieldsFromResult(card, result);
-        setCards((prev) => prev.map((c) => (c.id === card.id ? {
-          ...c, ...updates,
-          set: filled.set ?? c.set,
-          cardNumber: filled.number ?? c.cardNumber,
-          priceChartingUrl: result.url || c.priceChartingUrl,
-          priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
-          pokemonCenter: stamped ? true : c.pokemonCenter,
-          ...imported,
-        } : c)));
+        setCards((prev) => prev.map((c) => {
+          if (c.id !== card.id) return c;
+          const next = {
+            ...c, ...updates,
+            set: filled.set ?? c.set,
+            cardNumber: filled.number ?? c.cardNumber,
+            priceChartingUrl: result.url || c.priceChartingUrl,
+            priceChartingTitle: result.matchedTitle || c.priceChartingTitle,
+            pokemonCenter: stamped ? true : c.pokemonCenter,
+            ...imported,
+          };
+          return { ...next, priceChartingLinkedKey: linkKey(next) };
+        }));
 
         setLookupStatuses((prev) => {
           const next = new Map(prev);
@@ -467,7 +480,7 @@ export default function App() {
             if (c.id !== status.cardId) return c;
             const updates = applyPricesToCard(c, result);
             const f = fieldsFromMatch(c, result);
-            return {
+            const next = {
               ...c, ...updates,
               set: f.set ?? c.set,
               cardNumber: f.number ?? c.cardNumber,
@@ -476,6 +489,7 @@ export default function App() {
               pokemonCenter: isStampedMatch(result.matchedTitle, result.url) ? true : c.pokemonCenter,
               ...importFieldsFromResult(c, result),
             };
+            return { ...next, priceChartingLinkedKey: linkKey(next) };
           })
         );
         setLookupStatuses((prev) => {
