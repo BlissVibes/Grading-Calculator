@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { GradingCard, CardCalculation, AppSettings, Submission, GradingCompany } from '../types';
 import { COMPANY_LABELS, GRADING_COMPANIES } from '../types';
 import { COMPANY_FEES } from '../gradingData';
+import { hasAnyPrice } from '../gradingCalculator';
 
 interface Props {
   submissions: Submission[];
@@ -73,10 +74,12 @@ export default function SubmissionsPanel({
   // expected grade (or the top grade when none is set), and the raw card cost
   // added back when the user has unticked "Remove from profit".
   const deductRaw = settings.deductRawFromProfit ?? true;
+  const skipUnpriced = settings.skipUnpricedCards === true;
   const profitFor = (pred: (c: GradingCard) => boolean): number => {
     let p = 0;
     for (const card of cards) {
       if (!pred(card) || !card.includeInTotal) continue;
+      if (skipUnpriced && !hasAnyPrice(card)) continue;
       const calc = calcById.get(card.id);
       if (!calc) continue;
       const best = (card.targetGrade != null && calc.grades.find((g) => g.grade === card.targetGrade))
@@ -89,7 +92,7 @@ export default function SubmissionsPanel({
   };
 
   const countFor = (pred: (c: GradingCard) => boolean): number =>
-    cards.reduce((n, c) => (pred(c) ? n + c.quantity : n), 0);
+    cards.reduce((n, c) => (pred(c) && !(skipUnpriced && !hasAnyPrice(c)) ? n + c.quantity : n), 0);
 
   const allProfit = profitFor(() => true);
 

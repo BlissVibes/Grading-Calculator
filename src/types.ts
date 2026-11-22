@@ -234,6 +234,7 @@ export interface AppSettings {
   promoCodes: PromoCode[];                 // grader promo / affiliate code discounts
   feePresets: FeePreset[];                 // saved custom per-card grading prices
   deductRawFromProfit: boolean;            // subtract raw card cost from the summary's Best Grade Profit (default true)
+  skipUnpricedCards: boolean;              // leave cards with no lookup prices out of the totals (no point grading them)
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -267,4 +268,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ],
   feePresets: [],
   deductRawFromProfit: true,
+  skipUnpricedCards: false,
 };
