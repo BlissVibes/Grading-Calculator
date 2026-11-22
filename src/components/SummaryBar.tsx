@@ -1,19 +1,24 @@
 import type { CardCalculation, GradingCard } from '../types';
+import { hasAnyPrice } from '../gradingCalculator';
 
 interface Props {
   cards: GradingCard[];
   calculations: CardCalculation[];
   deductRawFromProfit: boolean;
   onToggleDeductRaw: (next: boolean) => void;
+  skipUnpriced: boolean;
+  onToggleSkipUnpriced: (next: boolean) => void;
 }
 
 function fmt(n: number): string {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
 }
 
-export default function SummaryBar({ cards, calculations, deductRawFromProfit, onToggleDeductRaw }: Props) {
-  // Only cards flagged to count toward totals
-  const included = cards.filter((c) => c.includeInTotal);
+export default function SummaryBar({ cards, calculations, deductRawFromProfit, onToggleDeductRaw, skipUnpriced, onToggleSkipUnpriced }: Props) {
+  // Only cards flagged to count toward totals (and, when asked, only cards
+  // that actually have a price to grade toward).
+  const included = cards.filter((c) => c.includeInTotal && (!skipUnpriced || hasAnyPrice(c)));
+  const unpricedCount = cards.filter((c) => c.includeInTotal && !hasAnyPrice(c)).reduce((n, c) => n + c.quantity, 0);
   const includedIds = new Set(included.map((c) => c.id));
   const qtyById = new Map(cards.map((c) => [c.id, c.quantity]));
   const cardById = new Map(cards.map((c) => [c.id, c]));
@@ -99,6 +104,14 @@ export default function SummaryBar({ cards, calculations, deductRawFromProfit, o
       <div className="summary-stat summary-stat--cost">
         <span className="summary-stat__label">Total Grading Charges</span>
         <span className="summary-stat__value">{fmt(totalGradingCharges)}</span>
+        <label className="summary-stat__check" title="Leave cards with no lookup prices out of every total — there is nothing to grade toward, so their fees only inflate the cost">
+          <input
+            type="checkbox"
+            checked={skipUnpriced}
+            onChange={(e) => onToggleSkipUnpriced(e.target.checked)}
+          />
+          <span>Skip unpriced cards{unpricedCount > 0 ? ` (${unpricedCount})` : ''}</span>
+        </label>
       </div>
       <div className={`summary-stat summary-stat--profit ${profitClass}`}>
         <span className="summary-stat__label">Best Grade Profit</span>
