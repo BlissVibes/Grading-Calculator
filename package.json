@@ -1,7 +1,7 @@
 {
   "name": "grading-calculator",
   "private": true,
-  "version": "1.4.29.0",
+  "version": "1.4.30.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

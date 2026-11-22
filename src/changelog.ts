@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.30.0',
+    date: 'November 22, 2026',
+    items: [
+      { text: 'Fixed: editing the name (or number / set) of a card that already matched a PriceCharting page did nothing on 🔍 — it just refreshed the old page. A card now remembers what it was linked under; once you change those details the PC link shows struck through and 🔍 searches again with the new text.' },
+    ],
+  },
+  {
     version: '1.4.29.0',
     date: 'November 22, 2026',
     items: [
