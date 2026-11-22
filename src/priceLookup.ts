@@ -251,6 +251,7 @@ const GAME_BY_SLUG_PREFIX: [string, string][] = [
   ['lorcana', 'Lorcana'],
   ['flesh-and-blood', 'Flesh and Blood'],
   ['digimon', 'Digimon'],
+  ['gundam', 'Gundam'],
   ['metazoo', 'MetaZoo'],
   ['panini', 'Panini'],
   ['topps', 'Topps'],

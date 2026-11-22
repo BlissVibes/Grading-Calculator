@@ -8,23 +8,39 @@ import type {
   AppSettings,
 } from './types';
 import { COMPANY_FEES, PSA_RETIER_LADDER } from './gradingData';
-import { TEN_VARIANT_COMPANY } from './types';
+import { TEN_VARIANT_COMPANY, COMPANY_STANDARD_TEN } from './types';
+import type { TenVariantKey } from './types';
 import type { ServiceLevel } from './types';
 
-// Grade value used in calculations. For grade 10, honor a selected premium
-// variant (Black Label, CGC Pristine, TAG Pristine, …) — but only when the
-// variant's grader matches the company the card is being valued under, since a
-// premium "10+" only exists for that grader. Otherwise the plain grade-10 value.
+// Which "10" price a card is valued at under a given grader:
+//  • an explicit pick (card.tenVariant) wins when it belongs to that grader
+//    ('psa10' = the plain PSA 10 price, usable under any grader);
+//  • otherwise the grader's own standard 10 (BGS 10 for Beckett, TAG 10 for
+//    TAG) when the lookup found a price for it;
+//  • otherwise null = the plain grade-10 value (PSA 10).
+export function resolveTenVariant(card: GradingCard, company?: GradingCompany): TenVariantKey | null {
+  if (card.tenVariant === 'psa10') return null;
+  if (card.tenVariant) {
+    const variantCompany = TEN_VARIANT_COMPANY[card.tenVariant];
+    if (variantCompany && variantCompany === company) return card.tenVariant;
+  }
+  const auto = company ? COMPANY_STANDARD_TEN[company] : undefined;
+  if (auto && (card.tenVariants?.[auto] ?? 0) > 0) return auto;
+  return null;
+}
+
+// Grade value used in calculations. For grade 10, value the card at the "10"
+// that matches the grader it is being valued under (see resolveTenVariant), so
+// a Beckett card is priced at BGS 10 rather than PSA 10. A premium "10+" only
+// counts for its own grader.
 export function effectiveGradeValue(
   card: GradingCard,
   grade: GradeNumber,
   company?: GradingCompany,
 ): number {
-  if (grade === 10 && card.tenVariant) {
-    const variantCompany = TEN_VARIANT_COMPANY[card.tenVariant];
-    if (variantCompany && variantCompany === company) {
-      return card.tenVariants?.[card.tenVariant] ?? card.gradeValues[10] ?? 0;
-    }
+  if (grade === 10) {
+    const key = resolveTenVariant(card, company);
+    if (key) return card.tenVariants?.[key] ?? card.gradeValues[10] ?? 0;
     return card.gradeValues[10] ?? 0;
   }
   return card.gradeValues[grade] ?? 0;
