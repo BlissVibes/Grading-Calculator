@@ -621,11 +621,24 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
   // printing (slugs always carry it: "...-alternate-art-fb09-072").
   const slugNorm = resultUrl ? normalizeForMatch(resultUrl.split('/').pop()?.replace(/-/g, ' ') ?? '') : '';
   // Listing rows carry a trailing "[Set name]" — judge the card's own brackets only.
+  const setSuffix = resultTitle.match(/\[([^\]]*)\]\s*$/)?.[1] ?? '';
+  const setNorm = normalizeForMatch(setSuffix);
   const titleNoSet = normalizeForMatch(resultTitle.replace(/\s*\[[^\]]*\]\s*$/, ''));
+  // Event / promo words that the result's SET name satisfies ("[... Special
+  // Tournament Promo]") are not a missing printing — they are a match.
+  const setWords = setNorm ? tokenize(setNorm).filter((t) => PROMO_WORDS.test(t)) : [];
+  const qForMarkers = setWords.length > 0
+    ? tokenize(qNorm).filter((t) => !setWords.includes(t) && !(t === 'promo' && setWords.includes('promos')) && !(t === 'promos' && setWords.includes('promo'))).join(' ')
+    : qNorm;
   score -= Math.min(
-    variantMismatchPenalty(qNorm, titleNoSet),
-    slugNorm ? variantMismatchPenalty(qNorm, slugNorm) : Infinity,
+    variantMismatchPenalty(qForMarkers, titleNoSet),
+    slugNorm ? variantMismatchPenalty(qForMarkers, slugNorm) : Infinity,
   );
+  // Bonus for each promo / event word the query shares with the set name.
+  for (const t of tokenize(qNorm)) {
+    if (!PROMO_WORDS.test(t)) continue;
+    if (setWords.includes(t) || (t.replace(/s$/, '') === 'promo' && setWords.some((w) => w.startsWith('promo')))) score += 50;
+  }
 
   const queryWantsPC = qNorm.includes('pokemon center');
   const resultHasPC = tNorm.includes('pokemon center') || (resultUrl ? resultUrl.toLowerCase().includes('pokemon-center') : false);
@@ -777,7 +790,15 @@ function parseFreeTextQuery(q: string): StructuredQuery {
   let pokemonCenter = false;
   if (/\s+pokemon center$/i.test(rest)) { pokemonCenter = true; rest = rest.replace(/\s+pokemon center$/i, ''); }
   const nm = rest.match(/^(.+?)\s+(#?\d{1,4}(?:\/\d{1,4})?|[A-Za-z]{1,4}\d{0,3}-\d{2,4})(?:\s+(.*))?$/);
-  if (nm) return { game, lang, name: canonicalizeVariantTerms(nm[1]), number: nm[2], set: (nm[3] ?? '').trim(), pokemonCenter };
+  if (nm) {
+    const trailing = (nm[3] ?? '').trim();
+    // A set-code number already names the set, so what follows it is the
+    // printing ("son goku st01-004 alt art"), not a set.
+    if (isSetCodeNumber(nm[2])) {
+      return { game, lang, name: canonicalizeVariantTerms(`${nm[1]} ${trailing}`), number: nm[2], set: '', pokemonCenter };
+    }
+    return { game, lang, name: canonicalizeVariantTerms(nm[1]), number: nm[2], set: trailing, pokemonCenter };
+  }
   // "son goku st01-023 alt art": a set-code number anywhere in the text.
   const mid = splitSetCodeNumber(rest);
   if (mid) return { game, lang, name: canonicalizeVariantTerms(mid.name), number: mid.number, set: '', pokemonCenter };
@@ -850,7 +871,7 @@ const GAME_BY_CODE_PREFIX: Record<string, Game> = {
  * "Dragon Ball Fusion World FWE" (slug dragon-ball-fusion-world-energy-markers).
  */
 /** Printing words that mean the card is an event / promo issue, which lives in a promo set, not the numbered set. */
-const PROMO_WORDS = /\b(?:regionals?|nationals?|judge|winner|finalist|tournament|store|event|promo|championship|prerelease|pre release|release)\b/i;
+const PROMO_WORDS = /\b(?:regionals?|nationals?|judge|winner|finalist|tournament|store|event|promos?|championship|prerelease|pre release|release|special)\b/i;
 const MAX_PROMO_SETS = 8;
 
 const SET_CODE_ALIASES: Record<string, { game: Game; slug: string }> = {
