@@ -296,13 +296,27 @@ export function importFieldsFromResult(card: GradingCard, result: PriceLookupRes
   };
 }
 
+// ───── Link freshness ─────
+// A card linked to a PriceCharting page refreshes from that page — but only
+// while the fields it was linked under are unchanged. Editing the name, number
+// or set means the user wants a different card, so 🔍 searches again.
+
+export function linkKey(card: Pick<GradingCard, 'cardName' | 'cardNumber' | 'set'>): string {
+  return [card.cardName, card.cardNumber, card.set].map((v) => (v ?? '').trim().toLowerCase()).join('|');
+}
+
+export function isLinkCurrent(card: GradingCard): boolean {
+  return !!card.priceChartingUrl && card.priceChartingLinkedKey === linkKey(card);
+}
+
 // ───── Single Card Lookup ─────
 
 export async function lookupCard(card: GradingCard): Promise<PriceLookupResult> {
   // A pasted PriceCharting link in the name field, or a link stored from an
   // earlier match, is fetched directly — no search involved. Unlink the card
   // (✕ next to the PC link) to search by name again.
-  const direct = parsePriceChartingUrl(card.cardName) ?? parsePriceChartingUrl(card.priceChartingUrl);
+  const direct = parsePriceChartingUrl(card.cardName)
+    ?? (isLinkCurrent(card) ? parsePriceChartingUrl(card.priceChartingUrl) : null);
   if (direct) return lookupByPath(direct);
 
   const query = buildQuery(card);

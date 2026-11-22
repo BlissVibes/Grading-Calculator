@@ -6,6 +6,7 @@ import { compareCompanies, estimatePsaUpcharge, calculateCard, describeGradingFe
 import { isPkcEligible } from '../pokemonCenterCards';
 import NumberStepper from './NumberStepper';
 import type { LookupStatus } from '../priceLookup';
+import { isLinkCurrent } from '../priceLookup';
 import { exportCSV, downloadCSV, EXPORT_SORT_OPTIONS } from '../csvExporter';
 import type { ExportSortKey } from '../csvExporter';
 
@@ -677,9 +678,11 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               className="row-action-btn lookup-btn-inline"
               onClick={onLookup}
               disabled={!card.cardName.trim() || lookupStatus?.status === 'loading'}
-              title={card.priceChartingUrl
+              title={isLinkCurrent(card)
                 ? 'Refresh prices from the linked PriceCharting page'
-                : 'Lookup prices on PriceCharting (or paste a PriceCharting link as the name)'}
+                : card.priceChartingUrl
+                  ? 'Card details changed since it was linked — search PriceCharting again'
+                  : 'Lookup prices on PriceCharting (or paste a PriceCharting link as the name)'}
             >
               {lookupStatus?.status === 'loading' ? (
                 <span className="lookup-spinner" />
@@ -690,13 +693,16 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
               const url = lookupStatus?.status === 'done' ? lookupStatus.result?.url : card.priceChartingUrl;
               const title = lookupStatus?.status === 'done' ? lookupStatus.result?.matchedTitle : card.priceChartingTitle;
               if (!url) return null;
+              const stale = !isLinkCurrent(card);
               return (
                 <a
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="lookup-link"
-                  title={`Linked: ${title || 'View on PriceCharting'} - 🔍 refreshes prices from this page`}
+                  className={`lookup-link${stale ? ' lookup-link--stale' : ''}`}
+                  title={stale
+                    ? `Was: ${title || 'PriceCharting page'} - details changed, 🔍 will search again`
+                    : `Linked: ${title || 'View on PriceCharting'} - 🔍 refreshes prices from this page`}
                 >
                   PC
                 </a>
