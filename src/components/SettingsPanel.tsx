@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AppSettings, GradeNumber, GradingCompany, PromoCode } from '../types';
+import type { AppSettings, GradeNumber, GradingCompany, PromoCode, FeePreset } from '../types';
 import { ALL_GRADES, GRADING_COMPANIES, COMPANY_LABELS, PREMIUM_TENS } from '../types';
 import { COMPANY_FEES } from '../gradingData';
 
@@ -23,6 +23,18 @@ export default function SettingsPanel({ settings, onUpdate, onOpenChangelog }: P
   };
   const removePromoCode = (id: string) => {
     onUpdate({ ...settings, promoCodes: promoCodes.filter((p) => p.id !== id) });
+  };
+
+  const feePresets = settings.feePresets ?? [];
+  const addPreset = () => {
+    const preset: FeePreset = { id: crypto.randomUUID(), name: '', company: null, price: 0 };
+    onUpdate({ ...settings, feePresets: [...feePresets, preset] });
+  };
+  const updatePreset = (id: string, patch: Partial<FeePreset>) => {
+    onUpdate({ ...settings, feePresets: feePresets.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
+  };
+  const removePreset = (id: string) => {
+    onUpdate({ ...settings, feePresets: feePresets.filter((p) => p.id !== id) });
   };
 
   const toggleGrade = (grade: GradeNumber) => {
@@ -214,9 +226,9 @@ export default function SettingsPanel({ settings, onUpdate, onOpenChangelog }: P
           {/* Global Custom Grading Price */}
           <div className="settings-section-title">Custom Grading Price</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>
-            Flat grading price applied to every card, overriding the tier price.
-            Leave blank to use service-level tiers. Individual cards can still
-            override this with their own price or tier.
+            Flat grading price applied to every card, overriding tier prices.
+            Leave blank to use service-level tiers. A card's own custom price or
+            preset still wins over this.
           </div>
           <div className="settings-item">
             <span className="settings-item__label">All cards ($)</span>
@@ -233,6 +245,49 @@ export default function SettingsPanel({ settings, onUpdate, onOpenChangelog }: P
               }}
             />
           </div>
+
+          {/* Fee Presets */}
+          <div className="settings-section-title">Grading Price Presets</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>
+            Saved flat per-card prices (e.g. a show special or bulk deal). Pick one
+            from a card's tier dropdown, or use the Presets menu in the company bar
+            to apply it to every card. Editing a price here updates every card using it.
+          </div>
+          {feePresets.map((p) => (
+            <div className="promo-row" key={p.id}>
+              <input
+                className="settings-fee-input promo-row__code"
+                style={{ width: 140 }}
+                placeholder="Preset name"
+                value={p.name}
+                onChange={(e) => updatePreset(p.id, { name: e.target.value })}
+              />
+              <select
+                className="settings-select"
+                value={p.company ?? ''}
+                onChange={(e) => updatePreset(p.id, { company: (e.target.value || null) as GradingCompany | null })}
+              >
+                <option value="">Any grader</option>
+                {GRADING_COMPANIES.map((c) => (
+                  <option key={c} value={c}>{COMPANY_LABELS[c]}</option>
+                ))}
+              </select>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>$</span>
+              <input
+                className="settings-fee-input"
+                style={{ width: 64 }}
+                type="number"
+                min="0"
+                step="0.01"
+                value={p.price || ''}
+                placeholder="0"
+                onChange={(e) => updatePreset(p.id, { price: Math.max(0, parseFloat(e.target.value) || 0) })}
+              />
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>/card</span>
+              <button className="promo-row__del" onClick={() => removePreset(p.id)} title="Remove preset">✕</button>
+            </div>
+          ))}
+          <button className="settings-add-promo" onClick={addPreset}>+ Add preset</button>
 
           {/* Profit Row Highlights */}
           <div className="settings-section-title">Row Profit Highlights</div>

@@ -351,6 +351,8 @@ export default function App() {
   }, []);
 
   const handleApplyToAll = useCallback(() => {
+    // Stamp the default grader + tier on every card and drop per-card price
+    // overrides so the chosen tier really is what every card is charged.
     setCards((prev) =>
       prev.map((c) => ({
         ...c,
@@ -358,9 +360,37 @@ export default function App() {
         serviceLevel: settings.defaultCompany
           ? settings.defaultServiceLevel[settings.defaultCompany]
           : null,
+        customGradingFee: null,
+        feePresetId: null,
       }))
     );
   }, [settings.defaultCompany, settings.defaultServiceLevel]);
+
+  // Apply a saved fee preset to every card (switching grader too if the preset
+  // names one). Cards marked "No Grading" are left alone.
+  const handleApplyPreset = useCallback((presetId: string) => {
+    const preset = (settings.feePresets ?? []).find((p) => p.id === presetId);
+    if (!preset) return;
+    setCards((prev) =>
+      prev.map((c) => (c.noGrading ? c : {
+        ...c,
+        feePresetId: preset.id,
+        customGradingFee: preset.price,
+        ...(preset.company ? { company: preset.company, serviceLevel: null } : {}),
+      }))
+    );
+  }, [settings.feePresets]);
+
+  // Quick-add a preset from the company bar (full editing lives in Settings).
+  const handleAddPreset = useCallback(() => {
+    const name = window.prompt('Preset name (e.g. "Beckett show special"):');
+    if (name == null || !name.trim()) return;
+    const priceStr = window.prompt(`Price per card for "${name.trim()}" ($):`, '18');
+    if (priceStr == null) return;
+    const price = Math.max(0, parseFloat(priceStr) || 0);
+    const preset = { id: newId(), name: name.trim(), company: settings.defaultCompany, price };
+    setSettings((prev) => ({ ...prev, feePresets: [...(prev.feePresets ?? []), preset] }));
+  }, [settings.defaultCompany]);
 
   const currentServiceLevel = settings.defaultCompany
     ? settings.defaultServiceLevel[settings.defaultCompany]
@@ -535,6 +565,9 @@ export default function App() {
           onCompanyChange={handleCompanyChange}
           onServiceLevelChange={handleServiceLevelChange}
           onApplyToAll={handleApplyToAll}
+          presets={settings.feePresets ?? []}
+          onApplyPreset={handleApplyPreset}
+          onAddPreset={handleAddPreset}
           onGlobalCustomFeeChange={(fee) =>
             setSettings((prev) => ({ ...prev, globalCustomGradingFee: fee }))
           }

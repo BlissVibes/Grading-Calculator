@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { GradingCard, GradingCompany, GradeNumber, CardCalculation, AppSettings, CompanyFeeStructure, TenVariantKey } from '../types';
 import { GRADING_COMPANIES, COMPANY_LABELS, CARD_GAMES, TEN_VARIANTS, PREMIUM_TENS, TEN_VARIANT_COMPANY } from '../types';
 import { COMPANY_FEES } from '../gradingData';
-import { compareCompanies, estimatePsaUpcharge, calculateCard } from '../gradingCalculator';
+import { compareCompanies, estimatePsaUpcharge, calculateCard, describeGradingFee } from '../gradingCalculator';
 import { isPkcEligible } from '../pokemonCenterCards';
 import NumberStepper from './NumberStepper';
 import type { LookupStatus } from '../priceLookup';
@@ -592,6 +592,9 @@ interface CardRowProps {
 
 function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitTier, onToggleExpand, onUpdate, onUpdateGrade, onDelete, onLookup, isDraft, onConfirm }: CardRowProps) {
   const effectiveCompany = card.noGrading ? null : (card.company ?? settings.defaultCompany);
+  const feeInfo = describeGradingFee(card, settings);
+  // Presets for this card's grader (company-less presets apply to any grader).
+  const presets = (settings.feePresets ?? []).filter((p) => !p.company || !effectiveCompany || p.company === effectiveCompany);
 
   // Expected grade — columns for grades above it are greyed out (they're moot
   // once you expect a lower grade). Default: the top visible grade.
@@ -917,14 +920,23 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
             <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center', marginTop: 2 }}>
               <select
                 className="company-cell-select"
-                value={card.customGradingFee != null ? '__custom' : (card.serviceLevel ?? '')}
+                value={feeInfo.source === 'preset' ? `preset:${card.feePresetId}` : card.customGradingFee != null ? '__custom' : (card.serviceLevel ?? '')}
+                title={`Grading price: ${feeInfo.label}`}
                 onChange={(e) => {
                   const v = e.target.value;
                   if (v === '__custom') {
-                    const seed = [...gradeResults.values()][0]?.gradingFee ?? 0;
-                    onUpdate({ customGradingFee: seed });
+                    onUpdate({ customGradingFee: feeInfo.fee, feePresetId: null });
+                  } else if (v.startsWith('preset:')) {
+                    const preset = presets.find((p) => p.id === v.slice(7));
+                    if (preset) {
+                      onUpdate({
+                        feePresetId: preset.id,
+                        customGradingFee: preset.price,
+                        ...(preset.company ? { company: preset.company, serviceLevel: null } : {}),
+                      });
+                    }
                   } else {
-                    onUpdate({ serviceLevel: v || null, customGradingFee: null });
+                    onUpdate({ serviceLevel: v || null, customGradingFee: null, feePresetId: null });
                   }
                 }}
               >
@@ -933,14 +945,33 @@ function CardRow({ card, gradeResults, settings, expanded, lookupStatus, profitT
                   <option key={sl.id} value={sl.id}>{sl.name}</option>
                 ))}
                 <option value="__custom">Custom $…</option>
+                {presets.length > 0 && (
+                  <optgroup label="Presets">
+                    {presets.map((p) => (
+                      <option key={p.id} value={`preset:${p.id}`}>{p.name} (${p.price})</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
-              {card.customGradingFee != null && (
-                <NumberStepper
-                  value={card.customGradingFee}
-                  onChange={(v) => onUpdate({ customGradingFee: v })}
-                  inputClassName="cell-input cell-input--custom-fee"
-                  title="Custom grading price for this card"
-                />
+              {/* Per-card grading price — always editable. Typing a value sets
+                  this card's own custom price (and detaches it from a preset);
+                  ✕ returns the card to its tier price. */}
+              <NumberStepper
+                value={feeInfo.fee}
+                blankWhenZero={false}
+                onChange={(v) => onUpdate({ customGradingFee: v, feePresetId: null })}
+                inputClassName={`cell-input cell-input--custom-fee${feeInfo.source === 'tier' || feeInfo.source === 'global' ? ' cell-input--fee-derived' : ''}`}
+                title={feeInfo.source === 'card' ? 'Custom grading price for this card' : `Grading price (${feeInfo.label}) — type to set a custom price for this card`}
+              />
+              {(card.customGradingFee != null || card.feePresetId) && (
+                <button
+                  type="button"
+                  className="row-action-btn row-action-btn--clear-fee"
+                  onClick={() => onUpdate({ customGradingFee: null, feePresetId: null })}
+                  title="Clear custom price (use tier price)"
+                >
+                  ✕
+                </button>
               )}
               {card.cardName.trim() && (
                 <a

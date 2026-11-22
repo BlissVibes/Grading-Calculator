@@ -136,6 +136,7 @@ export interface GradingCard {
   company: GradingCompany | null;      // per-card override (null = use global)
   serviceLevel: string | null;         // per-card override (null = use global)
   customGradingFee: number | null;     // per-card flat grading price override (null = use tier / global custom)
+  feePresetId?: string | null;         // saved fee preset this card uses (its live price wins over customGradingFee)
   noGrading: boolean;                  // exclude from grading calculations entirely
   scoring: boolean;                    // TAG scoring add-on
   pokemonCenter: boolean;              // Pokemon Center stamped variant (higher value)
@@ -189,6 +190,16 @@ export interface PromoCode {
   enabled: boolean;              // only applied when on
 }
 
+// A saved, named flat grading price (e.g. "Beckett show special $18") that can
+// be applied to a card or to every card in one click. Company is optional and
+// only used to also switch the card's grader when applied.
+export interface FeePreset {
+  id: string;
+  name: string;
+  company: GradingCompany | null;
+  price: number;
+}
+
 export interface ProfitThresholds {
   green: number;        // profit >= green → green row
   yellow: number;       // profit >= yellow (and < green) → yellow row; below yellow → red row
@@ -207,6 +218,7 @@ export interface AppSettings {
   profitThresholds: ProfitThresholds;
   globalCustomGradingFee: number | null;  // flat grading price applied to all cards (null = use tiers)
   promoCodes: PromoCode[];                 // grader promo / affiliate code discounts
+  feePresets: FeePreset[];                 // saved custom per-card grading prices
   deductRawFromProfit: boolean;            // subtract raw card cost from the summary's Best Grade Profit (default true)
 }
 
@@ -239,5 +251,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     { id: 'psg-psasux', code: 'PSASUX', company: 'PSG', serviceLevel: 'standard', type: 'flat', value: 17, enabled: false },
     { id: 'psg-express20', code: 'EXPRESS20', company: 'PSG', serviceLevel: 'express', type: 'flat', value: 20, enabled: false },
   ],
+  feePresets: [],
   deductRawFromProfit: true,
 };
