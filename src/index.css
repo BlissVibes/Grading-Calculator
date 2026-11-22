@@ -612,6 +612,11 @@ input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 :root[data-theme="light"] .qty-btn:active { background: #c2b6ff; }
 
 .cell-input--custom-fee { width: 64px; text-align: right; font-variant-numeric: tabular-nums; padding: 2px 4px; font-size: 0.78rem; }
+/* Fee box showing a derived (tier / global) price rather than a per-card one */
+.cell-input--fee-derived { color: var(--text-muted); border-style: dashed; }
+.cell-input--fee-derived:focus { color: var(--text); border-style: solid; }
+.row-action-btn--clear-fee { font-size: 0.65rem; padding: 0 4px; line-height: 1.4; flex-shrink: 0; }
+.company-bar__presets { max-width: 220px; }
 .cell-input--name { min-width: 140px; }
 .cell-input--set  { min-width: 110px; }
 

@@ -57,21 +57,37 @@ function getBaseFee(company: GradingCompany, serviceLevelId: string, settings: A
 }
 
 // Resolve the grading fee actually charged for a card, honoring custom-price
-// precedence: card's own custom price > card's own tier > global custom price >
-// global default tier.
-function getEffectiveGradingFee(
+// precedence: card's fee preset (live price) > card's own custom price >
+// global custom price > card's own tier > global default tier.
+// The global custom price deliberately beats a per-card TIER: "Apply to All"
+// stamps the default tier onto every card, and the global flat price must still
+// take effect afterwards (it used to be silently ignored for those cards).
+export function getEffectiveGradingFee(
   card: GradingCard,
   company: GradingCompany,
   serviceLevelId: string,
   settings: AppSettings,
 ): number {
   // An explicit per-card price is taken as-is (no promo applied on top).
-  if (card.customGradingFee != null) return card.customGradingFee;
+  const preset = card.feePresetId ? (settings.feePresets ?? []).find((p) => p.id === card.feePresetId) : undefined;
+  if (preset) return Math.max(0, preset.price);
+  if (card.customGradingFee != null) return Math.max(0, card.customGradingFee);
+  if (settings.globalCustomGradingFee != null) return Math.max(0, settings.globalCustomGradingFee);
+  return applyPromo(company, serviceLevelId, getBaseFee(company, serviceLevelId, settings), settings);
+}
 
-  const base = (card.serviceLevel == null && settings.globalCustomGradingFee != null)
-    ? settings.globalCustomGradingFee
-    : getBaseFee(company, serviceLevelId, settings);
-  return applyPromo(company, serviceLevelId, base, settings);
+// Convenience for the UI: the fee a card is charged right now, plus where it
+// came from, without needing a full calculation.
+export type FeeSource = 'preset' | 'card' | 'global' | 'tier';
+export function describeGradingFee(card: GradingCard, settings: AppSettings): { fee: number; source: FeeSource; label: string } {
+  const company = card.company ?? settings.defaultCompany ?? 'PSA';
+  const serviceLevelId = card.serviceLevel ?? settings.defaultServiceLevel[company];
+  const fee = getEffectiveGradingFee(card, company, serviceLevelId, settings);
+  const preset = card.feePresetId ? (settings.feePresets ?? []).find((p) => p.id === card.feePresetId) : undefined;
+  if (preset) return { fee, source: 'preset', label: preset.name };
+  if (card.customGradingFee != null) return { fee, source: 'card', label: 'Custom price' };
+  if (settings.globalCustomGradingFee != null) return { fee, source: 'global', label: 'Global custom price' };
+  return { fee, source: 'tier', label: getSelectedTier(company, serviceLevelId, settings).name };
 }
 
 // Apply the best matching enabled promo code to a grader's fee. A code matches

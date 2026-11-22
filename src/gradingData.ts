@@ -143,6 +143,13 @@ export const BECKETT_FEES: CompanyFeeStructure = {
   company: 'Beckett',
   serviceLevels: [
     {
+      id: 'bulk',
+      name: 'Bulk',
+      baseFee: 18,
+      turnaround: '60-120+ business days',
+      maxDeclaredValue: 499,
+    },
+    {
       id: 'economy',
       name: 'Economy',
       baseFee: 20,

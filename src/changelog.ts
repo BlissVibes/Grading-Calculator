@@ -16,6 +16,17 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.26.0',
+    date: 'November 22, 2026',
+    items: [
+      { text: 'Fixed: the Custom $ per-card price in the company bar was silently ignored for any card that had a tier set on it (which "Apply to All Cards" does to every card). The global custom price now applies to every card unless that card has its own custom price or preset.' },
+      { text: 'Every card row now has an always-visible, editable grading price box next to its tier dropdown. Type a value to give that card its own price; press ✕ to go back to the tier price. Dashed = tier/global price, solid = this card\'s own price.' },
+      { text: 'Grading price presets: save named flat prices (e.g. "Beckett show special $18") in Settings → Grading Price Presets, or via the new Presets… menu in the company bar. Pick a preset from any card\'s tier dropdown, or apply it to all cards at once. Editing a preset\'s price updates every card using it.' },
+      { text: 'Added a Beckett Bulk tier at $18/card.' },
+      { text: '"Apply to All Cards" now also clears per-card custom prices, so the chosen tier is what every card is actually charged.' },
+    ],
+  },
+  {
     version: '1.4.25.0',
     date: 'September 14, 2026',
     items: [
