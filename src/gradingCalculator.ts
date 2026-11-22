@@ -46,6 +46,15 @@ export function effectiveGradeValue(
   return card.gradeValues[grade] ?? 0;
 }
 
+// A card with no graded price at any grade (lookup found nothing, or nothing
+// entered) — there is no sale value to grade toward, so its fees are noise in
+// the totals when "Skip unpriced cards" is on.
+export function hasAnyPrice(card: GradingCard): boolean {
+  if (Object.values(card.gradeValues ?? {}).some((v) => (v ?? 0) > 0)) return true;
+  if (Object.values(card.tenVariants ?? {}).some((v) => (v ?? 0) > 0)) return true;
+  return false;
+}
+
 // ───── Fee Calculation ─────
 
 function getUpcharge(company: GradingCompany, declaredValue: number): number {

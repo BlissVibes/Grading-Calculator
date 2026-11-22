@@ -594,6 +594,8 @@ export default function App() {
             calculations={viewCalcs}
             deductRawFromProfit={settings.deductRawFromProfit !== false}
             onToggleDeductRaw={(next) => setSettings((prev) => ({ ...prev, deductRawFromProfit: next }))}
+            skipUnpriced={settings.skipUnpricedCards === true}
+            onToggleSkipUnpriced={(next) => setSettings((prev) => ({ ...prev, skipUnpricedCards: next }))}
           />
         )}
 

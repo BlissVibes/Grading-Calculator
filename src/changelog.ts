@@ -16,6 +16,13 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.31.0',
+    date: 'November 22, 2026',
+    items: [
+      { text: 'New "Skip unpriced cards" checkbox under Total Grading Charges. When on, cards whose lookup found no prices at any grade are left out of every total (card count, fees, upcharges, profit) and out of the submission tab totals — there is nothing to grade toward, so their fees only inflated the cost. The count of skipped cards is shown next to the box.' },
+    ],
+  },
+  {
     version: '1.4.30.0',
     date: 'November 22, 2026',
     items: [
