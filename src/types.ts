@@ -24,6 +24,7 @@ export const CARD_GAMES = [
   'Lorcana',
   'Flesh and Blood',
   'Digimon',
+  'Gundam',
   'Star Wars: Unlimited',
   'MetaZoo',
   'Panini',
@@ -72,7 +73,18 @@ export type GradeNumber = 1 | 1.5 | 2 | 2.5 | 3 | 3.5 | 4 | 4.5 | 5 | 5.5 | 6 | 
 // ───── Premium / alternate "10" grades ─────
 // PriceCharting tracks several distinct "10" grades. PSA 10 is the default
 // grade-10 value; users can opt a card into one of these premium variants.
-export type TenVariantKey = 'tag10' | 'tag10pristine' | 'bgs10' | 'bgs10black' | 'cgc10pristine' | 'ace10';
+export type TenVariantKey = 'tag10' | 'tag10pristine' | 'bgs10' | 'bgs10black' | 'cgc10pristine' | 'ace10' | 'psa10';
+// 'psa10' is not a lookup column — it is an explicit "value this card at the
+// plain PSA 10 price" pick, for a card whose grader would otherwise default to
+// its own 10 (see COMPANY_STANDARD_TEN).
+
+// The grader's own standard "10" price that a card graded by that company is
+// valued at by default (a BGS 10 is not a PSA 10). Graders without their own
+// PriceCharting column (ARS, PSG, CGC's non-Pristine 10) fall back to PSA 10.
+export const COMPANY_STANDARD_TEN: Partial<Record<GradingCompany, TenVariantKey>> = {
+  Beckett: 'bgs10',
+  TAG: 'tag10',
+};
 
 export const TEN_VARIANTS: { key: TenVariantKey; label: string }[] = [
   { key: 'bgs10black', label: 'BGS Black Label' },
@@ -97,6 +109,7 @@ export const TEN_VARIANT_COMPANY: Partial<Record<TenVariantKey, GradingCompany>>
   tag10: 'TAG', tag10pristine: 'TAG',
   bgs10: 'Beckett', bgs10black: 'Beckett',
   cgc10pristine: 'CGC',
+  psa10: 'PSA',
 };
 
 // The default expected grade can be a normal grade (1–10) or a premium 10+.

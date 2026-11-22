@@ -16,6 +16,18 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.27.0',
+    date: 'November 22, 2026',
+    items: [
+      { text: 'Fixed: a card set to Beckett or TAG was still valued and profit-calculated at the PSA 10 price. Grade 10 now defaults to the grader\'s own 10 (BGS 10 for Beckett, TAG 10 for TAG) whenever the price lookup found one; the Grade 10 column shows that price with a small label and edits it directly. The 10 ▸ dropdown lets you switch a card back to the PSA 10 price explicitly.' },
+      { text: 'The company comparison panel values each grader at its own 10 as well, so Beckett vs PSA profit is an apples-to-apples comparison.' },
+      { text: 'Grader 10 prices (BGS 10, BGS Black Label, CGC Pristine, TAG 10, ACE 10) are only imported when PriceCharting has recorded at least one sale at that grade. Its price table shows an estimate for every grade, which previously appeared as if it were a real BGS 10 market price.' },
+      { text: 'Lookup understands printings and rarity shorthand for Dragon Ball, One Piece and Gundam: "sr star" / "SR★" / "alt art" / "aa" / "parallel" find the [Alternate Art] print, "spr" / "saa" the Super Alternate Art, "manga", "wanted", "foil", "gold" / "silver", and Gundam\'s LR+ / LR++ tiers. Bare rarity codes (SR, SEC, L, R, C, UC) are ignored. Without a printing word, the base print is chosen.' },
+      { text: 'Dragon Ball Fusion World energy markers (E-43, E01-10) now resolve to their PriceCharting set.' },
+      { text: 'Gundam Card Game cards are supported (GD01-024, ST01-001 style numbers; "Gundam" added to the game list).' },
+    ],
+  },
+  {
     version: '1.4.26.0',
     date: 'November 22, 2026',
     items: [

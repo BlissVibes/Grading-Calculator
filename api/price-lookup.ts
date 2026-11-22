@@ -178,8 +178,8 @@ async function cacheSet(key: string, value: unknown, ttlSec: number): Promise<vo
   await redis(['SET', key, JSON.stringify(value), 'EX', ttlSec]);
 }
 
-const cacheKeyForQuery = (q: string) => `pc:search:v3:${q.toLowerCase().replace(/\s+/g, ' ').trim()}`;
-const cacheKeyForPrices = (path: string) => `pc:prices:v4:${path.replace(/^https?:\/\/www\.pricecharting\.com/, '')}`;
+const cacheKeyForQuery = (q: string) => `pc:search:v4:${q.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+const cacheKeyForPrices = (path: string) => `pc:prices:v5:${path.replace(/^https?:\/\/www\.pricecharting\.com/, '')}`;
 
 // ───── Global outbound limiter ─────
 //
@@ -423,6 +423,7 @@ function normalizeForMatch(s: string): string {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // "Pokémon" -> "pokemon"
     .replace(/['']/g, '')            // remove apostrophes
     .replace(/[-–—]/g, ' ')          // dashes to spaces
+    .replace(/\+/g, ' plus ')        // "LR++" -> "lr plus plus" (Gundam rarity tiers stay distinct)
     .replace(/[^a-z0-9#.\s]/g, ' ') // strip special chars
     .replace(/\s+/g, ' ')
     .trim();
@@ -615,6 +616,15 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
   // PriceCharting titles include "Pokemon Center" for stamped variants.
   // If the query asks for "pokemon center" but the result doesn't have it (or vice versa),
   // apply a penalty to avoid matching the wrong variant.
+  // ── Printing / variant mismatch (alt art, manga, foil, gold/silver, LR+ ...) ──
+  // Judge against the title, or the URL slug when the title lacks the bracketed
+  // printing (slugs always carry it: "...-alternate-art-fb09-072").
+  const slugNorm = resultUrl ? normalizeForMatch(resultUrl.split('/').pop()?.replace(/-/g, ' ') ?? '') : '';
+  score -= Math.min(
+    variantMismatchPenalty(qNorm, tNorm),
+    slugNorm ? variantMismatchPenalty(qNorm, slugNorm) : Infinity,
+  );
+
   const queryWantsPC = qNorm.includes('pokemon center');
   const resultHasPC = tNorm.includes('pokemon center') || (resultUrl ? resultUrl.toLowerCase().includes('pokemon-center') : false);
   if (queryWantsPC && !resultHasPC) {
@@ -624,6 +634,69 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
   }
 
   return score;
+}
+
+// ───── Printing / variant vocabulary ─────
+// PriceCharting titles carry the printing in brackets: "[Alternate Art]",
+// "[Super Alternate Art]", "[Manga]", "[Wanted]", "[SP]", "[Foil]", "[Gold]",
+// "[LR+]" ... Collectors type the same thing many ways ("alt art", "aa",
+// "SR★" / "sr star" = the parallel-art print of a Super Rare, "SPR" / "saa" =
+// super parallel). Canonicalise the user's words to the title vocabulary, and
+// drop bare rarity codes (SR, SEC, L, R, C, UC ...) that titles never carry.
+const VARIANT_SYNONYMS: [RegExp, string][] = [
+  // Rarity + star (★ / * / "star") = the parallel / alternate-art print of that rarity.
+  [/\b(?:sr|scr|sec|lr|l|r|uc|u|c|p|sp|pr)\s*(?:★|☆|\*|star)(?:\s+(?:parallel|para|rare))?/gi, ' alternate art '],
+  [/(?:★|☆)/g, ' alternate art '],
+  // Super parallel (Dragon Ball Fusion World SPR, One Piece "super alt art")
+  [/\b(?:spr|saa|super\s*(?:alt|alternate|parallel|para)(?:\s*art)?)\b/gi, ' super alternate art '],
+  // Alternate art / parallel
+  [/\b(?:alt(?:ernate)?[\s-]*art|aa|alt|parallel|para|prl)\b/gi, ' alternate art '],
+  // Manga art (One Piece manga rares)
+  [/\b(?:manga(?:\s*(?:art|rare))?|mr)\b/gi, ' manga '],
+  // Wanted poster (One Piece)
+  [/\bwanted(?:\s*poster)?\b/gi, ' wanted '],
+  // Bare rarity codes that PriceCharting titles never include (Gundam's LR / LR+ are kept — titles use them).
+  [/\b(?:sr|scr|sec|uc|pr)\b/gi, ' '],
+  // Single-letter rarities only when they sit right before the card number or end the name.
+  [/\b(?:l|r|c|u|p)\s+(?=(?:#?[A-Za-z]{1,4}\d{0,3}-\d{2,4}|#?\d{1,4})\b)/gi, ' '],
+  [/\s+\b(?:l|r|c|u|p)\s*$/gi, ' '],
+];
+
+/** Rewrite rarity / printing shorthand to the words PriceCharting titles use. */
+function canonicalizeVariantTerms(s: string): string {
+  let out = s;
+  for (const [re, to] of VARIANT_SYNONYMS) out = out.replace(re, to);
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+// Printing markers that must agree between query and result. A query that names
+// one wants exactly that print; a query that doesn't wants the base print.
+// Longer phrases first so "super alternate art" is judged before "alternate art".
+const VARIANT_MARKERS = [
+  'super alternate art', 'alternate art', 'manga', 'wanted', 'foil', 'holo',
+  'gold', 'silver', 'parallel', 'special', 'treasure', 'box topper', 'jumbo',
+  'prerelease', 'pre release', 'championship', 'anniversary', 'sp',
+  'lr plus plus', 'lr plus', 'r plus', 'c plus plus', 'c plus',
+];
+
+function hasMarker(norm: string, marker: string): boolean {
+  return (' ' + norm + ' ').includes(' ' + marker + ' ');
+}
+
+/** Penalty for every printing marker the query and the result disagree on. */
+function variantMismatchPenalty(qNorm: string, tNorm: string): number {
+  let penalty = 0;
+  let q = ' ' + qNorm + ' ';
+  let t = ' ' + tNorm + ' ';
+  for (const marker of VARIANT_MARKERS) {
+    const inQ = q.includes(' ' + marker + ' ');
+    const inT = t.includes(' ' + marker + ' ');
+    if (inQ !== inT) penalty += 80;
+    // Consume the phrase so "alternate art" isn't re-judged inside "super alternate art".
+    if (inQ) q = q.replace(' ' + marker + ' ', ' ');
+    if (inT) t = t.replace(' ' + marker + ' ', ' ');
+  }
+  return penalty;
 }
 
 function rankResults(query: string, results: SearchResult[]): SearchResult[] {
@@ -646,7 +719,7 @@ function rankResults(query: string, results: SearchResult[]): SearchResult[] {
 // back apart using the same shape buildQuery() on the client produces:
 //   "<game> [<language>] <name> <number> <set> [pokemon center]"
 
-type Game = 'pokemon' | 'magic' | 'yugioh' | 'dragonball' | 'onepiece' | 'digimon';
+type Game = 'pokemon' | 'magic' | 'yugioh' | 'dragonball' | 'onepiece' | 'digimon' | 'gundam';
 
 interface StructuredQuery {
   game: Game | null;
@@ -664,6 +737,7 @@ const GAME_WORDS: Record<string, Game> = {
   'dragon ball': 'dragonball', 'dragonball': 'dragonball', 'fusion world': 'dragonball',
   'one piece': 'onepiece', 'onepiece': 'onepiece',
   'digimon': 'digimon',
+  'gundam': 'gundam', 'gundam card game': 'gundam',
 };
 
 /**
@@ -679,6 +753,14 @@ const LANG_CODE_WORDS: Record<string, string> = {
   IT: 'italian', ES: 'spanish', PT: 'portuguese',
 };
 
+/** Pull a set-code number ("ST01-023", "FB09-072") out of free text wherever it sits. */
+function splitSetCodeNumber(text: string): { name: string; number: string } | null {
+  const m = text.match(/(?:^|\s)#?([A-Za-z]{1,4}\d{0,3}-\d{2,4})(?=\s|$)/);
+  if (!m) return null;
+  const name = (text.slice(0, m.index) + ' ' + text.slice(m.index! + m[0].length)).replace(/\s+/g, ' ').trim();
+  return name ? { name, number: m[1] } : null;
+}
+
 function parseFreeTextQuery(q: string): StructuredQuery {
   let rest = q.trim();
   let game: Game | null = null;
@@ -690,8 +772,11 @@ function parseFreeTextQuery(q: string): StructuredQuery {
   let pokemonCenter = false;
   if (/\s+pokemon center$/i.test(rest)) { pokemonCenter = true; rest = rest.replace(/\s+pokemon center$/i, ''); }
   const nm = rest.match(/^(.+?)\s+(#?\d{1,4}(?:\/\d{1,4})?|[A-Za-z]{1,4}\d{0,3}-\d{2,4})(?:\s+(.*))?$/);
-  if (nm) return { game, lang, name: nm[1].trim(), number: nm[2], set: (nm[3] ?? '').trim(), pokemonCenter };
-  return { game, lang, name: rest, number: null, set: '', pokemonCenter };
+  if (nm) return { game, lang, name: canonicalizeVariantTerms(nm[1]), number: nm[2], set: (nm[3] ?? '').trim(), pokemonCenter };
+  // "son goku st01-023 alt art": a set-code number anywhere in the text.
+  const mid = splitSetCodeNumber(rest);
+  if (mid) return { game, lang, name: canonicalizeVariantTerms(mid.name), number: mid.number, set: '', pokemonCenter };
+  return { game, lang, name: canonicalizeVariantTerms(rest), number: null, set: '', pokemonCenter };
 }
 
 function structuredFromParams(p: Record<string, string | string[] | undefined>, q: string): StructuredQuery {
@@ -702,14 +787,17 @@ function structuredFromParams(p: Record<string, string | string[] | undefined>, 
   const game: Game | null = gameKey ? GAME_WORDS[gameKey] : null;
   const langRaw = str('lang').toUpperCase();
   const lang = langRaw && langRaw !== 'EN' ? (LANG_CODE_WORDS[langRaw] ?? null) : null;
-  let name = str('name')
-    .replace(/\s*\(([A-Za-z]{2,3})\)\s*/g, (m, code) => (LANG_CODE_WORDS[code.toUpperCase()] ? ' ' : m))
-    .replace(/\s+/g, ' ').trim();
+  let name = canonicalizeVariantTerms(str('name')
+    .replace(/\s*\(([A-Za-z]{2,3})\)\s*/g, (m, code) => (LANG_CODE_WORDS[code.toUpperCase()] ? ' ' : m)));
   let number: string | null = str('number') || null;
   // "pikachu 227" typed into the name field with no Card # -> name + number
   if (!number) {
     const tail = name.match(/^(.+?)\s+#?(\d{1,4}(?:\/\d{1,4})?|[A-Za-z]{1,4}\d{0,3}-\d{2,4})$/);
-    if (tail) { name = tail[1]; number = tail[2]; }
+    if (tail) { name = canonicalizeVariantTerms(tail[1]); number = tail[2]; }
+    else {
+      const mid = splitSetCodeNumber(name);
+      if (mid) { name = canonicalizeVariantTerms(mid.name); number = mid.number; }
+    }
   }
   return { game, lang, name, number, set: str('set'), pokemonCenter: str('pc') === '1' };
 }
@@ -723,6 +811,7 @@ const CATEGORY_BY_GAME: Record<Game, string> = {
   dragonball: 'dragon-ball-cards',
   onepiece: 'one-piece-cards',
   digimon: 'digimon-cards',
+  gundam: 'other-tcg-cards',   // PriceCharting files the Gundam Card Game under "Other TCG"
 };
 
 /** /console/ slug prefix that marks a set as belonging to the game. */
@@ -733,10 +822,32 @@ const SLUG_PREFIX_BY_GAME: Record<Game, string> = {
   dragonball: 'dragon-ball-',
   onepiece: 'one-piece-',
   digimon: 'digimon-',
+  gundam: 'gundam-',
 };
 
 /** Games whose card numbers carry a set code, in the order to try when the game is unknown. */
-const SET_CODE_GAMES: Game[] = ['dragonball', 'onepiece', 'digimon'];
+const SET_CODE_GAMES: Game[] = ['dragonball', 'onepiece', 'digimon', 'gundam'];
+
+/**
+ * Set-code prefixes that belong to one game, so an ambiguous code like "ST01"
+ * (every Bandai game has starter decks) is only resolved across all games when
+ * the prefix itself doesn't settle it.
+ */
+const GAME_BY_CODE_PREFIX: Record<string, Game> = {
+  fb: 'dragonball', e: 'dragonball', e01: 'dragonball',
+  op: 'onepiece', eb: 'onepiece', prb: 'onepiece',
+  gd: 'gundam',
+};
+
+/**
+ * Codes whose set isn't titled with the code on PriceCharting. Fusion World
+ * energy markers are numbered "E-43" / "E01-10" but the set is listed as
+ * "Dragon Ball Fusion World FWE" (slug dragon-ball-fusion-world-energy-markers).
+ */
+const SET_CODE_ALIASES: Record<string, { game: Game; slug: string }> = {
+  e: { game: 'dragonball', slug: 'dragon-ball-fusion-world-energy-markers' },
+  e01: { game: 'dragonball', slug: 'dragon-ball-fusion-world-energy-markers' },
+};
 
 function decodeEntities(s: string): string {
   return s
@@ -772,7 +883,7 @@ async function getSetIndex(game: Game): Promise<SetEntry[]> {
 }
 
 const SET_NOISE_TOKENS = new Set(['pokemon', 'magic', 'the', 'gathering', 'yugioh', 'cards', 'card', 'tcg',
-  'dragon', 'ball', 'one', 'piece', 'digimon', ...LANGUAGE_KEYWORDS]);
+  'dragon', 'ball', 'one', 'piece', 'digimon', 'gundam', ...LANGUAGE_KEYWORDS]);
 
 function setTokens(s: string): string[] {
   return tokenize(s).filter((t) => !SET_NOISE_TOKENS.has(t));
@@ -947,27 +1058,39 @@ async function scanSetListingPages(sq: StructuredQuery, set: SetEntry): Promise<
 // titles those sets with the code ("Dragon Ball FB10"). Resolve the set by code,
 // filter its listing by the full number, rank by name.
 
-async function searchViaSetCode(sq: StructuredQuery): Promise<SearchResult[]> {
-  if (!isSetCodeNumber(sq.number) || !sq.name) return [];
+async function searchViaSetCode(sq: StructuredQuery): Promise<{ results: SearchResult[]; setResolved: boolean }> {
+  if (!isSetCodeNumber(sq.number) || !sq.name) return { results: [], setResolved: false };
   const m = sq.number.trim().match(SET_CODE_NUMBER_RE)!;
   const code = m[1].toLowerCase();
   const fullNumber = sq.number.trim().toUpperCase();
+  const prefix = code.replace(/\d+$/, '');
 
-  const games: Game[] = sq.game && SET_CODE_GAMES.includes(sq.game) ? [sq.game] : SET_CODE_GAMES;
+  // Narrow by the game the user set, else by what the code prefix implies,
+  // else try every set-code game (ambiguous "ST01"/"BT01" style codes).
+  const alias = SET_CODE_ALIASES[code];
+  const games: Game[] = sq.game && SET_CODE_GAMES.includes(sq.game) ? [sq.game]
+    : alias ? [alias.game]
+    : GAME_BY_CODE_PREFIX[code] ? [GAME_BY_CODE_PREFIX[code]]
+    : GAME_BY_CODE_PREFIX[prefix] ? [GAME_BY_CODE_PREFIX[prefix]]
+    : SET_CODE_GAMES;
+  let setResolved = false;
   for (const game of games) {
     const index = await getSetIndex(game);
-    const set = index.find((e) => tokenize(e.title).includes(code));
+    const set = index.find((e) => tokenize(e.title).includes(code))
+      ?? (alias && alias.game === game ? index.find((e) => e.slug === alias.slug) : undefined);
     if (!set) continue;
+    setResolved = true;
 
     const rows = await getSetListingByNumber(set, fullNumber);
     const withCode = rows.filter((r) => r.title.toLowerCase().includes(fullNumber.toLowerCase()) || r.url.toLowerCase().includes(fullNumber.toLowerCase()));
     if (withCode.length === 0) continue;
-    // Rank by name only (the number is already exact); the scorer's extra-token
-    // penalty prefers the base printing over "[Alternate Art]" variants.
+    // Rank by name only (the number is already exact). The name carries any
+    // printing words ("alternate art", "manga", "gold" ...) so the scorer's
+    // variant rule picks that print, or the base print when none was asked for.
     const ranked = keepSingleCards(sq.name, withCode);
-    if (ranked.length > 0) return ranked;
+    if (ranked.length > 0) return { results: ranked, setResolved };
   }
-  return [];
+  return { results: [], setResolved };
 }
 
 // ───── Set-less lookups: candidate sets from TCGdex (Pokémon, English) ─────
@@ -1154,8 +1277,11 @@ async function searchCard(query: string, sq: StructuredQuery): Promise<SearchRes
   } else {
     // Set-code numbers (FB10-059, OP05-119, BT12-001) identify the set by themselves.
     if (isSetCodeNumber(sq.number)) {
-      found = await searchViaSetCode(sq);
-      setResolved = true; // the code either resolves or the card is genuinely not listed
+      const viaCode = await searchViaSetCode(sq);
+      found = viaCode.results;
+      // A resolved set with no such number is a genuine "not listed"; an
+      // unknown code falls through to the other strategies.
+      setResolved = viaCode.setResolved;
     }
 
     // Primary: set listing pages (open, not challenged). Needs game + set.
@@ -1255,6 +1381,45 @@ function parseGradeTable(html: string): Partial<Omit<PriceResult, 'url'>> | null
 }
 
 
+// PriceCharting's price table lists a figure for every grade, including grader
+// 10s it has never seen sell (an estimate). The page's sales-history selector
+// carries the real per-grade sale counts ("BGS 10 (0)", "PSA 10 (3)"), so a
+// grader-specific 10 with zero recorded sales is dropped rather than shown as
+// if it were a market price.
+const SALE_COUNT_KEYS: [RegExp, keyof Grades][] = [
+  [/^bgs 10 black/, 'bgs10black'],
+  [/^bgs 10$/, 'bgs10'],
+  [/^cgc 10 prist/, 'cgc10pristine'],
+  [/^tag 10 prist/, 'tag10pristine'],
+  [/^tag 10$/, 'tag10'],
+  [/^ace 10$/, 'ace10'],
+];
+
+function parseSaleCounts(html: string): Map<keyof Grades, number> {
+  const out = new Map<keyof Grades, number>();
+  const idx = html.indexOf('id="completed-auctions-condition"');
+  if (idx === -1) return out;
+  const end = html.indexOf('</select>', idx);
+  const sel = html.slice(idx, end === -1 ? undefined : end);
+  const re = /<option[^>]*>\s*([^<(]+?)\s*\((\d+)\)\s*<\/option>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(sel)) !== null) {
+    const label = m[1].trim().toLowerCase();
+    for (const [pat, key] of SALE_COUNT_KEYS) {
+      if (pat.test(label)) { out.set(key, parseInt(m[2], 10) || 0); break; }
+    }
+  }
+  return out;
+}
+
+function dropUnsoldPremiumTens(grades: Grades, html: string): Grades {
+  const counts = parseSaleCounts(html);
+  if (counts.size === 0) return grades;
+  const out = { ...grades };
+  for (const [key, n] of counts) if (n === 0) out[key] = 0;
+  return out;
+}
+
 /** Fetch the card page once and parse every grade we can find (grade table + chart_data). */
 /** "<h1 id="product_name"> Charizard #4 <a href="/console/...">Pokemon Base Set</a></h1>" -> "Charizard #4 [Pokemon Base Set]" */
 function parseCardPageTitle(html: string): string | undefined {
@@ -1301,14 +1466,14 @@ async function scrapePageGrades(cardPath: string): Promise<{ url: string; grades
 
   if (!table && !chartMatch) {
     const { url: _u, ...grades } = extractTablePrices(html, finalUrl);
-    return { url: finalUrl, grades, title };
+    return { url: finalUrl, grades: dropUnsoldPremiumTens(grades as Grades, html), title };
   }
 
   const grades = { ...EMPTY_GRADES };
   for (const key of Object.keys(grades) as (keyof Grades)[]) {
     grades[key] = (table?.[key] || chart[key] || 0) as number;
   }
-  return { url: finalUrl, grades, title };
+  return { url: finalUrl, grades: dropUnsoldPremiumTens(grades, html), title };
 }
 
 async function fetchPrices(match: SearchResult): Promise<PriceResult> {
@@ -1440,7 +1605,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Mode 2: Search for cards
     if (typeof q === 'string' && q.trim()) {
-      const results = await searchCard(q.trim(), structuredFromParams(req.query, q.trim()));
+      const query = canonicalizeVariantTerms(q.trim());
+      const results = await searchCard(query, structuredFromParams(req.query, query));
 
       if (mode === 'search') {
         setEdgeCache(res, results.length > 0 ? EDGE_MAX_AGE : EDGE_MISS_MAX_AGE);
