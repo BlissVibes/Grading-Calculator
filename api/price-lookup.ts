@@ -620,8 +620,10 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
   // Judge against the title, or the URL slug when the title lacks the bracketed
   // printing (slugs always carry it: "...-alternate-art-fb09-072").
   const slugNorm = resultUrl ? normalizeForMatch(resultUrl.split('/').pop()?.replace(/-/g, ' ') ?? '') : '';
+  // Listing rows carry a trailing "[Set name]" — judge the card's own brackets only.
+  const titleNoSet = normalizeForMatch(resultTitle.replace(/\s*\[[^\]]*\]\s*$/, ''));
   score -= Math.min(
-    variantMismatchPenalty(qNorm, tNorm),
+    variantMismatchPenalty(qNorm, titleNoSet),
     slugNorm ? variantMismatchPenalty(qNorm, slugNorm) : Infinity,
   );
 
@@ -644,6 +646,8 @@ function scoreResult(query: string, resultTitle: string, resultUrl?: string): nu
 // super parallel). Canonicalise the user's words to the title vocabulary, and
 // drop bare rarity codes (SR, SEC, L, R, C, UC ...) that titles never carry.
 const VARIANT_SYNONYMS: [RegExp, string][] = [
+  // Secret rare (SCR) = the alternate-art print of a starter / booster card.
+  [/\b(?:secret\s*rare|scr)\b/gi, ' alternate art '],
   // Rarity + star (★ / * / "star") = the parallel / alternate-art print of that rarity.
   [/\b(?:sr|scr|sec|lr|l|r|uc|u|c|p|sp|pr)\s*(?:★|☆|\*|star)(?:\s+(?:parallel|para|rare))?/gi, ' alternate art '],
   [/(?:★|☆)/g, ' alternate art '],
@@ -656,7 +660,7 @@ const VARIANT_SYNONYMS: [RegExp, string][] = [
   // Wanted poster (One Piece)
   [/\bwanted(?:\s*poster)?\b/gi, ' wanted '],
   // Bare rarity codes that PriceCharting titles never include (Gundam's LR / LR+ are kept — titles use them).
-  [/\b(?:sr|scr|sec|uc|pr)\b/gi, ' '],
+  [/\b(?:sr|sec|uc|pr)\b/gi, ' '],
   // Single-letter rarities only when they sit right before the card number or end the name.
   [/\b(?:l|r|c|u|p)\s+(?=(?:#?[A-Za-z]{1,4}\d{0,3}-\d{2,4}|#?\d{1,4})\b)/gi, ' '],
   [/\s+\b(?:l|r|c|u|p)\s*$/gi, ' '],
@@ -676,6 +680,7 @@ const VARIANT_MARKERS = [
   'super alternate art', 'alternate art', 'manga', 'wanted', 'foil', 'holo',
   'gold', 'silver', 'parallel', 'special', 'treasure', 'box topper', 'jumbo',
   'prerelease', 'pre release', 'championship', 'anniversary', 'sp',
+  'regionals', 'regional', 'nationals', 'judge', 'winner', 'finalist', 'tournament', 'store', 'event',
   'lr plus plus', 'lr plus', 'r plus', 'c plus plus', 'c plus',
 ];
 
@@ -844,6 +849,10 @@ const GAME_BY_CODE_PREFIX: Record<string, Game> = {
  * energy markers are numbered "E-43" / "E01-10" but the set is listed as
  * "Dragon Ball Fusion World FWE" (slug dragon-ball-fusion-world-energy-markers).
  */
+/** Printing words that mean the card is an event / promo issue, which lives in a promo set, not the numbered set. */
+const PROMO_WORDS = /\b(?:regionals?|nationals?|judge|winner|finalist|tournament|store|event|promo|championship|prerelease|pre release|release)\b/i;
+const MAX_PROMO_SETS = 8;
+
 const SET_CODE_ALIASES: Record<string, { game: Game; slug: string }> = {
   e: { game: 'dragonball', slug: 'dragon-ball-fusion-world-energy-markers' },
   e01: { game: 'dragonball', slug: 'dragon-ball-fusion-world-energy-markers' },
@@ -1081,7 +1090,14 @@ async function searchViaSetCode(sq: StructuredQuery): Promise<{ results: SearchR
     if (!set) continue;
     setResolved = true;
 
-    const rows = await getSetListingByNumber(set, fullNumber);
+    let rows = await getSetListingByNumber(set, fullNumber);
+    // "vegeta fb02-133 regionals": event prints keep the booster number but are
+    // filed under the game's promo sets — include those listings too.
+    if (PROMO_WORDS.test(sq.name)) {
+      const promoSets = index.filter((e) => e !== set && /promo/.test(e.slug)
+        && (LANGUAGE_KEYWORDS.find((l) => e.slug.includes(`-${l}-`) || e.slug.endsWith(`-${l}`)) ?? null) === (sq.lang ?? null));
+      for (const ps of promoSets.slice(0, MAX_PROMO_SETS)) rows = rows.concat(await getSetListingByNumber(ps, fullNumber));
+    }
     const withCode = rows.filter((r) => r.title.toLowerCase().includes(fullNumber.toLowerCase()) || r.url.toLowerCase().includes(fullNumber.toLowerCase()));
     if (withCode.length === 0) continue;
     // Rank by name only (the number is already exact). The name carries any

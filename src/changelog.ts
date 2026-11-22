@@ -16,6 +16,14 @@ export interface ChangelogRelease {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: '1.4.28.0',
+    date: 'November 22, 2026',
+    items: [
+      { text: '"secret rare" / "scr" now selects the [Alternate Art] print (e.g. "family st01-015 secret rare").' },
+      { text: 'Event prints are found in their promo sets: adding "regionals", "nationals", "judge", "winner", "finalist", "tournament", "store" or "event" to a set-coded card (e.g. "vegeta fb02-133 regionals") also searches the game\'s promo sets and prefers that print.' },
+    ],
+  },
+  {
     version: '1.4.27.0',
     date: 'November 22, 2026',
     items: [
